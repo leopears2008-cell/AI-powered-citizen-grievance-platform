@@ -579,9 +579,19 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                     className="w-full pl-9 p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none bg-white"
                   />
                   <datalist id="constituencies-list">
-                    {availableConstituencies.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
+                    {availableConstituencies.map((c) => {
+                      const mla = getMLAForConstituency(district, c);
+                      const extraSearchTerms = [
+                        ...(mla.pincodes || []),
+                        ...(mla.locations || [])
+                      ].join(', ');
+                      
+                      return (
+                        <option key={c} value={c}>
+                          {mla.name} ({mla.party}) {extraSearchTerms ? `- ${extraSearchTerms}` : ''}
+                        </option>
+                      );
+                    })}
                   </datalist>
                 </div>
               </div>

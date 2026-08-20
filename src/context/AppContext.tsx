@@ -6,7 +6,7 @@ import { auth, loginWithGoogle, logoutUser } from '../lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
 export type AppLanguage = 'en' | 'ta';
-export type AppTab = 'home' | 'file' | 'track' | 'history' | 'admin' | 'officer' | 'analytics';
+export type AppTab = 'home' | 'file' | 'track' | 'history' | 'admin' | 'officer' | 'analytics' | 'directory';
 
 interface ToastInfo {
   id: string;

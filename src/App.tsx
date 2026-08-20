@@ -9,6 +9,7 @@ import { CitizenHistory } from './components/CitizenHistory';
 import { AdminDashboard } from './components/AdminDashboard';
 import { OfficerPortal } from './components/OfficerPortal';
 import { AnalyticsView } from './components/AnalyticsView';
+import { MLADirectory } from './components/MLADirectory';
 import { InteractiveMap } from './components/InteractiveMap';
 import {
   Phone,
@@ -130,6 +131,12 @@ const MainLayout: React.FC = () => {
         {activeTab === 'analytics' && (
           <div className="animate-in fade-in duration-300">
             <AnalyticsView />
+          </div>
+        )}
+
+        {activeTab === 'directory' && (
+          <div className="animate-in fade-in duration-300">
+            <MLADirectory />
           </div>
         )}
       </main>

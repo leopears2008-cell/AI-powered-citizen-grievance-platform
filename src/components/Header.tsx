@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   AlertCircle,
   ExternalLink,
+  Contact,
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -160,6 +161,17 @@ export const Header: React.FC = () => {
             >
               <BarChart3 className="w-4 h-4" />
               <span>{t.navAnalytics}</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('directory')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center space-x-1.5 ${
+                activeTab === 'directory'
+                  ? 'bg-slate-800 text-white font-semibold'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <Contact className="w-4 h-4" />
+              <span>{t.navDirectory}</span>
             </button>
           </nav>
 
@@ -348,6 +360,15 @@ export const Header: React.FC = () => {
               className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100"
             >
               {t.navHistory}
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('directory');
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100"
+            >
+              {t.navDirectory}
             </button>
             <button
               onClick={() => {

@@ -11,6 +11,7 @@ export const translations = {
     navAdmin: 'Admin Portal',
     navOfficer: 'Officer Desk',
     navAnalytics: 'Analytics & SLA',
+    navDirectory: 'MLA Directory',
     heroBadge: 'Smart Civic Response 2026',
     heroHeadline: 'Voice Your Concern in Tamil or English.',
     heroSubheadline:
@@ -137,6 +138,7 @@ export const translations = {
     navAdmin: 'நிர்வாக தளம்',
     navOfficer: 'அதிகாரி பிரிவு',
     navAnalytics: 'பகுப்பாய்வு',
+    navDirectory: 'சட்டமன்ற உறுப்பினர் கையேடு',
     heroBadge: 'ஸ்மார்ட் குடிமக்கள் சேவை 2026',
     heroHeadline: 'உங்கள் குறைகளை தமிழில் அல்லது ஆங்கிலத்தில் பேசுங்கள்.',
     heroSubheadline:
