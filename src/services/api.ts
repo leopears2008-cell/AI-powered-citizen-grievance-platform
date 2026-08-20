@@ -8,6 +8,8 @@ import {
   DuplicateMatch,
   GrievanceStatus,
 } from '../types';
+import { db } from '../lib/firebase';
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
 
 export const api = {
   // AI Analysis
@@ -77,36 +79,66 @@ export const api = {
     departmentId?: string;
     officerId?: string;
   }): Promise<Grievance[]> {
-    const query = new URLSearchParams();
-    if (params?.search) query.append('search', params.search);
-    if (params?.category) query.append('category', params.category);
-    if (params?.status) query.append('status', params.status);
-    if (params?.priority) query.append('priority', params.priority);
-    if (params?.departmentId) query.append('departmentId', params.departmentId);
-    if (params?.officerId) query.append('officerId', params.officerId);
+    const grievancesRef = collection(db, 'grievances');
+    const q = query(grievancesRef);
+    // Applying local filtering for simplicity since Firestore indexes might not exist for complex querying
+    const snapshot = await getDocs(q);
+    let results: Grievance[] = [];
+    snapshot.forEach((doc) => {
+      results.push(doc.data() as Grievance);
+    });
 
-    const res = await fetch(`/api/complaints?${query.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch complaints');
-    return res.json();
+    if (params) {
+      if (params.category) results = results.filter(r => r.category === params.category);
+      if (params.status) results = results.filter(r => r.status === params.status);
+      if (params.priority) results = results.filter(r => r.priority === params.priority);
+      if (params.departmentId) results = results.filter(r => r.departmentId === params.departmentId);
+      if (params.officerId) results = results.filter(r => r.assignedOfficerId === params.officerId);
+      if (params.search) {
+        const search = params.search.toLowerCase();
+        results = results.filter(r => 
+          r.trackId?.toLowerCase().includes(search) || 
+          r.summaryEn?.toLowerCase().includes(search)
+        );
+      }
+    }
+    // sort by creation date descending
+    results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return results;
   },
 
   async getComplaintById(id: string): Promise<Grievance> {
+    const docRef = doc(db, 'grievances', id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as Grievance;
+    }
+    
+    // Fallback to fetch from mock api just in case we are looking for seeded data
     const res = await fetch(`/api/complaints/${encodeURIComponent(id)}`);
     if (!res.ok) throw new Error('Complaint not found');
     return res.json();
   },
 
   async createComplaint(data: Partial<Grievance>): Promise<Grievance> {
-    const res = await fetch('/api/complaints', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: 'Failed to create' }));
-      throw new Error(err.error || 'Failed to submit grievance');
-    }
-    return res.json();
+    const trackId = `GRV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+    const docRef = doc(db, 'grievances', trackId);
+    const newGrievance = {
+      ...data,
+      id: trackId,
+      status: 'Submitted' as GrievanceStatus,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      statusHistory: [{
+        status: 'Submitted',
+        timestamp: new Date().toISOString(),
+        remarks: 'Complaint registered successfully by Citizen',
+        updatedBy: 'Citizen',
+        role: 'CITIZEN'
+      }]
+    };
+    await setDoc(docRef, newGrievance);
+    return newGrievance as Grievance;
   },
 
   async updateComplaintStatus(
@@ -119,36 +151,83 @@ export const api = {
       evidenceUrl?: string;
     }
   ): Promise<Grievance> {
-    const res = await fetch(`/api/complaints/${encodeURIComponent(id)}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+    const grievance = await this.getComplaintById(id);
+    const updatedHistory = [
+      ...grievance.statusHistory,
+      {
+        status: payload.status,
+        timestamp: new Date().toISOString(),
+        remarks: payload.remarks,
+        updatedBy: payload.updatedBy,
+        role: payload.role,
+        evidenceUrl: payload.evidenceUrl
+      }
+    ];
+
+    const docRef = doc(db, 'grievances', grievance.id);
+    await updateDoc(docRef, {
+      status: payload.status,
+      statusHistory: updatedHistory,
+      updatedAt: new Date().toISOString()
     });
-    if (!res.ok) throw new Error('Failed to update status');
-    return res.json();
+    return this.getComplaintById(id);
   },
 
   async assignOfficer(id: string, officerId: string, adminName?: string): Promise<Grievance> {
-    const res = await fetch(`/api/complaints/${encodeURIComponent(id)}/assign`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ officerId, adminName }),
+    const grievance = await this.getComplaintById(id);
+    const docRef = doc(db, 'grievances', grievance.id);
+    const newHistory = [
+      ...grievance.statusHistory,
+      {
+        status: 'Assigned',
+        timestamp: new Date().toISOString(),
+        remarks: `Assigned to Field Officer ID: ${officerId}`,
+        updatedBy: adminName || 'System Admin',
+        role: 'ADMIN'
+      }
+    ];
+    await updateDoc(docRef, {
+      status: 'Assigned',
+      assignedOfficerId: officerId,
+      statusHistory: newHistory,
+      updatedAt: new Date().toISOString()
     });
-    if (!res.ok) throw new Error('Failed to assign officer');
-    return res.json();
+    return this.getComplaintById(id);
   },
 
   async submitFeedback(
     id: string,
     payload: { rating: number; comment: string; isResolvedSatisfied: boolean }
   ): Promise<Grievance> {
-    const res = await fetch(`/api/complaints/${encodeURIComponent(id)}/feedback`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error('Failed to submit feedback');
-    return res.json();
+    const grievance = await this.getComplaintById(id);
+    const docRef = doc(db, 'grievances', grievance.id);
+    
+    if (payload.isResolvedSatisfied) {
+      await updateDoc(docRef, {
+        resolutionFeedback: {
+          rating: payload.rating,
+          comment: payload.comment,
+          submittedAt: new Date().toISOString()
+        }
+      });
+    } else {
+      const newHistory = [
+        ...grievance.statusHistory,
+        {
+          status: 'Reopened',
+          timestamp: new Date().toISOString(),
+          remarks: `Citizen unsatisfied. Reason: ${payload.comment}`,
+          updatedBy: 'Citizen',
+          role: 'CITIZEN'
+        }
+      ];
+      await updateDoc(docRef, {
+        status: 'Reopened',
+        statusHistory: newHistory,
+        updatedAt: new Date().toISOString()
+      });
+    }
+    return this.getComplaintById(id);
   },
 
   // Departments & Officers

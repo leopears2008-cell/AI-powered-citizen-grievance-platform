@@ -31,6 +31,9 @@ export const Header: React.FC = () => {
     unreadCount,
     markAsRead,
     navigateToTrack,
+    user,
+    login,
+    logout,
   } = useApp();
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -233,6 +236,27 @@ export const Header: React.FC = () => {
                     )}
                   </div>
                 </div>
+              )}
+            </div>
+
+            {/* Auth Button */}
+            <div className="hidden sm:flex items-center">
+              {user ? (
+                <button
+                  onClick={logout}
+                  className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-medium transition-colors"
+                >
+                  <img src={user.photoURL || ''} alt="User" className="w-5 h-5 rounded-full" />
+                  <span>Logout</span>
+                </button>
+              ) : (
+                <button
+                  onClick={login}
+                  className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Sign In</span>
+                </button>
               )}
             </div>
 

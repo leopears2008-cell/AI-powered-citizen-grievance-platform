@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
 import { AIAnalysisResponse, GrievanceCategory, GrievancePriority, DuplicateMatch } from '../types';
+import { getConstituenciesForDistrict, getMLAForConstituency } from '../data/mlaProfiles';
 import {
   Mic,
   FileText,
@@ -25,6 +26,8 @@ import {
   FileCheck,
   ChevronRight,
   Eye,
+  Landmark,
+  Search,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -39,7 +42,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
   initialLanguage = 'Tamil',
   onOpenVoiceModal,
 }) => {
-  const { language, t, navigateToTrack, showToast, triggerRefresh } = useApp();
+  const { language, t, navigateToTrack, showToast, triggerRefresh, user } = useApp();
 
   // Wizard Step: 1 = Input & Evidence, 2 = AI Scanning Loader, 3 = Citizen Confirmation, 4 = Success
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -57,11 +60,20 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
 
   // Location details
   const [district, setDistrict] = useState('Chennai');
+  const [constituency, setConstituency] = useState('Chepauk-Thiruvallikeni');
   const [address, setAddress] = useState('No. 42, Kamarajar Salai, Triplicane');
   const [landmark, setLandmark] = useState('Opposite Marina Beach Light House');
   const [wardNumber, setWardNumber] = useState('Ward 114');
   const [pincode, setPincode] = useState('600005');
   const [isLocating, setIsLocating] = useState(false);
+
+  const availableConstituencies = useMemo(() => getConstituenciesForDistrict(district), [district]);
+  
+  useEffect(() => {
+    if (!availableConstituencies.includes(constituency)) {
+      setConstituency(availableConstituencies[0]);
+    }
+  }, [district, availableConstituencies, constituency]);
 
   // Attachments
   const [attachments, setAttachments] = useState<
@@ -75,6 +87,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
   // Editable overrides on Confirmation screen
   const [editedCategory, setEditedCategory] = useState<GrievanceCategory>('Street Light');
   const [editedPriority, setEditedPriority] = useState<GrievancePriority>('Medium');
+  const [editedDepartment, setEditedDepartment] = useState<string>('Civic Services');
   const [editedSummary, setEditedSummary] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -181,6 +194,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
       setAiResult(result);
       setEditedCategory(result.category);
       setEditedPriority(result.priority);
+      setEditedDepartment(result.department);
       setEditedSummary(language === 'ta' && result.summaryTamil ? result.summaryTamil : result.summary);
 
       // 2. Check for duplicate complaints in background
@@ -206,6 +220,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
 
     try {
       const payload = {
+        citizenId: user?.uid || 'anonymous',
         citizenName,
         citizenPhone,
         citizenEmail,
@@ -214,8 +229,8 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
         summaryEn: aiResult.summary,
         summaryTa: aiResult.summaryTamil || editedSummary,
         category: editedCategory,
-        departmentId: aiResult.departmentId,
-        departmentName: aiResult.department,
+        departmentId: editedDepartment.toLowerCase().replace(/\s+/g, '-'),
+        departmentName: editedDepartment,
         priority: editedPriority,
         priorityReason: aiResult.priorityReason,
         confidenceScore: aiResult.confidence,
@@ -223,6 +238,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
           address: address || 'Main City Area',
           landmark: landmark || '',
           district: district || 'Chennai',
+          constituency: constituency || '',
           wardNumber: wardNumber || '',
           pincode: pincode || '',
           lat: 13.0827,
@@ -500,7 +516,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">{t.districtLabel} *</label>
                 <select
@@ -549,6 +565,56 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                 </select>
               </div>
 
+              <div className="relative">
+                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  {language === 'ta' ? 'சட்டமன்ற தொகுதி' : 'Constituency (Search)'} *
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
+                  <input
+                    list="constituencies-list"
+                    value={constituency}
+                    onChange={(e) => setConstituency(e.target.value)}
+                    placeholder={language === 'ta' ? 'தொகுதியை தேடுங்கள்...' : 'Search constituency...'}
+                    className="w-full pl-9 p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none bg-white"
+                  />
+                  <datalist id="constituencies-list">
+                    {availableConstituencies.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </datalist>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-xl mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center space-x-3">
+                <img 
+                  src={getMLAForConstituency(district, constituency).avatar} 
+                  alt="MLA Avatar" 
+                  className="w-10 h-10 rounded-full border border-indigo-200 shadow-sm"
+                />
+                <div>
+                  <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider block">
+                    {language === 'ta' ? 'உங்கள் தொகுதி சட்டமன்ற உறுப்பினர்' : 'Your Constituency MLA'}
+                  </span>
+                  <p className="text-sm font-bold text-indigo-950">
+                    {getMLAForConstituency(district, constituency).name} <span className="text-xs text-indigo-700 font-medium">({getMLAForConstituency(district, constituency).party})</span>
+                  </p>
+                  <p className="text-xs text-slate-600 mt-0.5 line-clamp-1">
+                    {getMLAForConstituency(district, constituency).officeAddress}
+                  </p>
+                </div>
+              </div>
+              <div className="flex sm:flex-col gap-2 sm:gap-1 shrink-0">
+                <a href={`tel:${getMLAForConstituency(district, constituency).phone}`} className="flex items-center space-x-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-800 bg-white px-2 py-1 rounded-md border border-indigo-100 shadow-sm">
+                  <Phone className="w-3 h-3" />
+                  <span>{getMLAForConstituency(district, constituency).phone}</span>
+                </a>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">{t.wardLabel}</label>
                 <input
@@ -720,9 +786,20 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
 
               <div className="flex justify-between border-b border-slate-50 pb-3 items-center">
                 <span className="text-sm text-slate-500">Department</span>
-                <span className="text-sm font-semibold text-slate-800 text-right">
-                  {aiResult.department}
-                </span>
+                <select
+                  value={editedDepartment}
+                  onChange={(e) => setEditedDepartment(e.target.value)}
+                  className="text-sm font-semibold text-slate-800 bg-transparent border-none focus:ring-0 pr-0 text-right max-w-[200px]"
+                >
+                  <option value={aiResult.department}>{aiResult.department}</option>
+                  <option value="Civic Services">Civic Services</option>
+                  <option value="Urban Lighting & Street Infrastructure Wing">Urban Lighting & Street Infrastructure Wing</option>
+                  <option value="Municipal Water Supply & Drainage Board">Municipal Water Supply & Drainage Board</option>
+                  <option value="Tamil Nadu Generation & Distribution Corp">Tamil Nadu Generation & Distribution Corp</option>
+                  <option value="Solid Waste Management & Public Sanitation">Solid Waste Management & Public Sanitation</option>
+                  <option value="Highways & Municipal Works Department">Highways & Municipal Works Department</option>
+                  <option value="Public Health & Fogging Department">Public Health & Fogging Department</option>
+                </select>
               </div>
 
               <div className="flex justify-between border-b border-slate-50 pb-3 items-center">

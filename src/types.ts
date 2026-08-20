@@ -63,7 +63,9 @@ export interface Department {
 }
 
 export interface Grievance {
-  id: string; // GRV-2026-XXXXX
+  id: string; // Document ID
+  trackId: string; // GRV-2026-XXXXX
+  citizenId?: string; // Firebase Auth UID
   citizenName: string;
   citizenPhone: string;
   citizenEmail?: string;
@@ -81,6 +83,7 @@ export interface Grievance {
     address: string;
     landmark?: string;
     district: string;
+    constituency?: string;
     wardNumber?: string;
     pincode?: string;
     lat?: number;

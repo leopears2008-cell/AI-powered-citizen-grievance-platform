@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
 import { Grievance, GrievanceStatus, GrievancePriority } from '../types';
-import { getMLAForDistrict, MLAProfile } from '../data/mlaProfiles';
+import { getMLAForDistrict, getMLAForConstituency, MLAProfile } from '../data/mlaProfiles';
 import {
   Search,
   CheckCircle2,
@@ -102,7 +102,9 @@ export const CitizenTracker: React.FC = () => {
     if (!grievance) return;
     setIsEscalating(true);
     
-    const mla = getMLAForDistrict(grievance.location.district);
+    const mla = grievance.location.constituency 
+      ? getMLAForConstituency(grievance.location.district, grievance.location.constituency) 
+      : getMLAForDistrict(grievance.location.district);
     
     try {
       // Mock escalation: we patch the status history and status if needed.
@@ -424,7 +426,7 @@ export const CitizenTracker: React.FC = () => {
               <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div className="flex items-center space-x-3">
                   <img 
-                    src={getMLAForDistrict(grievance.location.district).avatar} 
+                    src={grievance.location.constituency ? getMLAForConstituency(grievance.location.district, grievance.location.constituency).avatar : getMLAForDistrict(grievance.location.district).avatar} 
                     alt="MLA" 
                     className="w-10 h-10 rounded-full border-2 border-indigo-300 shadow-sm"
                   />
@@ -433,10 +435,10 @@ export const CitizenTracker: React.FC = () => {
                       {language === 'ta' ? 'சட்டமன்ற உறுப்பினர் (MLA)' : 'Constituency MLA'}
                     </span>
                     <p className="text-sm font-bold text-indigo-950">
-                      {getMLAForDistrict(grievance.location.district).name}
+                      {grievance.location.constituency ? getMLAForConstituency(grievance.location.district, grievance.location.constituency).name : getMLAForDistrict(grievance.location.district).name}
                     </p>
                     <p className="text-xs text-indigo-600 font-medium">
-                      {getMLAForDistrict(grievance.location.district).constituency} - {getMLAForDistrict(grievance.location.district).party}
+                      {grievance.location.constituency ? getMLAForConstituency(grievance.location.district, grievance.location.constituency).constituency : getMLAForDistrict(grievance.location.district).constituency} - {grievance.location.constituency ? getMLAForConstituency(grievance.location.district, grievance.location.constituency).party : getMLAForDistrict(grievance.location.district).party}
                     </p>
                   </div>
                 </div>

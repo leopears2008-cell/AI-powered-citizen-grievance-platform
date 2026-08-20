@@ -572,6 +572,7 @@ app.post('/api/complaints', (req, res) => {
 
     const newGrievance: Grievance = {
       id: newId,
+      trackId: newId,
       citizenName: data.citizenName || 'Concerned Citizen',
       citizenPhone: data.citizenPhone || '+91 98000 00000',
       citizenEmail: data.citizenEmail || '',

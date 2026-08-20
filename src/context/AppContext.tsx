@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserRole, NotificationItem } from '../types';
 import { translations } from '../locales/translations';
 import { api } from '../services/api';
+import { auth, loginWithGoogle, logoutUser } from '../lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 export type AppLanguage = 'en' | 'ta';
 export type AppTab = 'home' | 'file' | 'track' | 'history' | 'admin' | 'officer' | 'analytics';
@@ -31,6 +33,9 @@ interface AppContextType {
   toasts: ToastInfo[];
   showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
   removeToast: (id: string) => void;
+  user: User | null;
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -43,8 +48,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [toasts, setToasts] = useState<ToastInfo[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const login = async () => {
+    try {
+      await loginWithGoogle();
+      showToast('Logged in successfully', 'success');
+    } catch (error) {
+      showToast('Login failed', 'error');
+    }
+  };
+
+  const logout = async () => {
+    await logoutUser();
+    showToast('Logged out successfully', 'success');
+  };
 
   const t = translations[language] || translations.en;
+
 
   const triggerRefresh = () => {
     setRefreshKey((prev) => prev + 1);
@@ -108,6 +136,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toasts,
         showToast,
         removeToast,
+        user,
+        login,
+        logout,
       }}
     >
       {children}

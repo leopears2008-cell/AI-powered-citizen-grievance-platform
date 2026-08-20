@@ -190,6 +190,7 @@ export const INITIAL_OFFICERS: Officer[] = [
 
 export const INITIAL_COMPLAINTS: Grievance[] = [
   {
+    trackId: 'GRV-2026-00124',
     id: 'GRV-2026-00124',
     citizenName: 'M. Murugesan',
     citizenPhone: '+91 98401 23456',
@@ -267,6 +268,7 @@ export const INITIAL_COMPLAINTS: Grievance[] = [
     updatedAt: '2026-08-19T14:40:00.000Z',
   },
   {
+    trackId: 'GRV-2026-00125',
     id: 'GRV-2026-00125',
     citizenName: 'S. Kavitha',
     citizenPhone: '+91 94443 89102',
@@ -367,6 +369,7 @@ export const INITIAL_COMPLAINTS: Grievance[] = [
     updatedAt: '2026-08-19T20:10:00.000Z',
   },
   {
+    trackId: 'GRV-2026-00126',
     id: 'GRV-2026-00126',
     citizenName: 'R. Balaji',
     citizenPhone: '+91 97908 45612',
@@ -444,6 +447,7 @@ export const INITIAL_COMPLAINTS: Grievance[] = [
     updatedAt: '2026-08-20T06:50:00.000Z',
   },
   {
+    trackId: 'GRV-2026-00127',
     id: 'GRV-2026-00127',
     citizenName: 'T. Subhashree',
     citizenPhone: '+91 98840 33211',
