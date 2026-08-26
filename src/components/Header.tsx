@@ -258,7 +258,7 @@ export const Header: React.FC = () => {
                   onClick={logout}
                   className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-medium transition-colors"
                 >
-                  <img src={user.photoURL || ''} alt="User" className="w-5 h-5 rounded-full" />
+                  <img src={user.user_metadata?.avatar_url || ''} alt="User" className="w-5 h-5 rounded-full" />
                   <span>Logout</span>
                 </button>
               ) : (

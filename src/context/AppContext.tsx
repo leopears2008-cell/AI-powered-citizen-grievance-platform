@@ -2,8 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserRole, NotificationItem } from '../types';
 import { translations } from '../locales/translations';
 import { api } from '../services/api';
-import { auth, loginWithGoogle, logoutUser } from '../lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { supabase } from '../lib/supabase';
+import { User } from '@supabase/supabase-js';
 
 export type AppLanguage = 'en' | 'ta';
 export type AppTab = 'home' | 'file' | 'track' | 'history' | 'admin' | 'officer' | 'analytics' | 'directory';
@@ -51,23 +51,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
     });
-    return () => unsubscribe();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async () => {
     try {
-      await loginWithGoogle();
-      showToast('Logged in successfully', 'success');
+      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+      if (error) throw error;
+      // Note: User will be redirected, toast won't show immediately
     } catch (error) {
       showToast('Login failed', 'error');
     }
   };
 
   const logout = async () => {
-    await logoutUser();
+    await supabase.auth.signOut();
     showToast('Logged out successfully', 'success');
   };
 

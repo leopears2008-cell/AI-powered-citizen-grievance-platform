@@ -137,7 +137,7 @@ Priority Rules:
 Provide accurate confidence score between 0.80 and 0.99. If language is Tamil, extract summary in both English and Tamil script.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-3.6-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -387,7 +387,7 @@ ${JSON.stringify(
 Return any grievances that describe the exact same civic issue in the same neighborhood or street with high semantic similarity.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-3.6-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -471,7 +471,7 @@ Generate:
 5. "preventiveAction": Suggested future preventive maintenance.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-3.6-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
