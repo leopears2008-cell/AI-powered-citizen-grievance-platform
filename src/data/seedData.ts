@@ -6,7 +6,7 @@ export const INITIAL_DEPARTMENTS: Department[] = [
     name: 'Municipal Water Supply & Drainage Board (CMWSSB/TWAD)',
     nameTamil: 'குடிநீர் வழங்கல் மற்றும் கழிவுநீரகற்று வாரியம்',
     code: 'WATER',
-    headName: 'Er. S. Manickam, Chief Engineer',
+    headName: 'N.Anand',
     contactNumber: '044-28451300',
     email: 'waterboard.grievances@tn.gov.in',
     totalGrievances: 142,
