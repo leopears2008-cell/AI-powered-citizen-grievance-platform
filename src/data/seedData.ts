@@ -569,7 +569,7 @@ export const INITIAL_COMPLAINTS: Grievance[] = [
     summaryTa:
       'மழைக்குப் பிறகு கொசு ஒழிப்பு நடவடிக்கை கோரிக்கை.',
 
-    category: 'Public Health & Vector Control',
+    category: 'Public Health & Fogging',
 
     departmentId: 'dept-health',
     departmentName:

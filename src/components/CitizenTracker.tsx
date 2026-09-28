@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
 import { Grievance, GrievanceStatus, GrievancePriority } from '../types';
-import { getMLAForDistrict, getMLAForConstituency, MLAProfile } from '../data/mlaProfiles';
 import {
   Search,
   CheckCircle2,
@@ -30,7 +29,7 @@ import confetti from 'canvas-confetti';
 
 export const CitizenTracker: React.FC = () => {
   const { language, t, trackId, setTrackId, showToast, triggerRefresh, refreshKey } = useApp();
-  const [searchInput, setSearchInput] = useState(trackId || 'GRV-2026-00124');
+  const [searchInput, setSearchInput] = useState(trackId || '');
   const [grievance, setGrievance] = useState<Grievance | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -96,41 +95,6 @@ export const CitizenTracker: React.FC = () => {
     fetchGrievance(searchInput.trim().toUpperCase());
   };
 
-  const [isEscalating, setIsEscalating] = useState(false);
-
-  const handleMLAEscalation = async () => {
-    if (!grievance) return;
-    setIsEscalating(true);
-    
-    const mla = grievance.location.constituency 
-      ? getMLAForConstituency(grievance.location.district, grievance.location.constituency) 
-      : getMLAForDistrict(grievance.location.district);
-    
-    try {
-      // Mock escalation: we patch the status history and status if needed.
-      // But we can just use the status update API to add a remark or change state to escalate.
-      // Here we'll append to status history via API update
-      const updated = await api.updateComplaintStatus(grievance.id, {
-        status: 'Under Review', // Or 'Assigned', or keep current status but add history
-        remarks: `ESCALATED: Direct notification sent to Constitutional MLA ${mla.name} for urgent intervention.`,
-        updatedBy: 'Citizen Escalation',
-        role: 'CITIZEN'
-      });
-      
-      setGrievance(updated);
-      showToast(
-        language === 'ta' 
-          ? `புகார் சட்டமன்ற உறுப்பினர் ${mla.name} அவர்களின் கவனத்திற்கு கொண்டு செல்லப்பட்டது.`
-          : `Grievance successfully escalated to Constitutional MLA ${mla.name}.`,
-        'success'
-      );
-      triggerRefresh();
-    } catch (err: any) {
-      showToast(err.message || 'Failed to escalate to MLA', 'error');
-    } finally {
-      setIsEscalating(false);
-    }
-  };
 
   const handleFeedbackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,21 +110,15 @@ export const CitizenTracker: React.FC = () => {
       setFeedbackSubmitted(true);
       setIsSubmittingFeedback(false);
       triggerRefresh();
-
       if (isSatisfied) {
-        try {
-          confetti({ particleCount: 50, spread: 60 });
-        } catch {}
-        showToast(
-          language === 'ta' ? 'உங்கள் கருத்துக்கு நன்றி!' : 'Thank you for your feedback!',
-          'success'
-        );
+        try { confetti({ particleCount: 50, spread: 60 }); } catch {}
+        showToast(language === 'ta' ? 'உங்கள் கருத்துக்கு நன்றி!' : 'Thank you for your feedback!', 'success');
       } else {
         showToast(
           language === 'ta'
-            ? 'புகார் மீண்டும் திறக்கப்பட்டு துறை கண்காணிப்பாளருக்கு அனுப்பப்பட்டது.'
-            : 'Grievance reopened and escalated to senior administrator.',
-          'warning'
+            ? 'உங்கள் கருத்து பதிவு செய்யப்பட்டது. நிர்வாக குழு மதிப்பாய்வு செய்யலாம்.'
+            : 'Your feedback was recorded for administrative review.',
+          'info'
         );
       }
     } catch (err: any) {
@@ -169,32 +127,21 @@ export const CitizenTracker: React.FC = () => {
     }
   };
 
-  // Stepper calculations
   const steps: { key: GrievanceStatus; labelEn: string; labelTa: string }[] = [
     { key: 'Submitted', labelEn: 'Complaint Submitted', labelTa: 'புகார் பெறப்பட்டது' },
     { key: 'AI Classified', labelEn: 'AI Classified', labelTa: 'AI வகைப்படுத்தியது' },
     { key: 'Assigned', labelEn: 'Assigned to Officer', labelTa: 'அதிகாரிக்கு ஒதுக்கப்பட்டது' },
     { key: 'Under Review', labelEn: 'Site Inspection', labelTa: 'கள ஆய்வு' },
     { key: 'In Progress', labelEn: 'Work in Progress', labelTa: 'சரிசெய்யும் பணி' },
-    { key: 'Resolved', labelEn: 'Resolved & Verified', labelTa: 'தீர்வு காணப்பட்டது' },
+    { key: 'Resolved', labelEn: 'Resolved', labelTa: 'தீர்வு காணப்பட்டது' },
   ];
 
   const getStepStatus = (stepKey: GrievanceStatus) => {
     if (!grievance) return 'pending';
     if (grievance.status === 'Reopened') return 'reopened';
-
-    const order: GrievanceStatus[] = [
-      'Submitted',
-      'AI Classified',
-      'Assigned',
-      'Under Review',
-      'In Progress',
-      'Resolved',
-    ];
-
+    const order: GrievanceStatus[] = ['Submitted', 'AI Classified', 'Assigned', 'Under Review', 'In Progress', 'Resolved'];
     const currentIndex = order.indexOf(grievance.status);
     const targetIndex = order.indexOf(stepKey);
-
     if (currentIndex > targetIndex || grievance.status === 'Resolved') return 'completed';
     if (currentIndex === targetIndex) return 'current';
     return 'pending';
@@ -202,16 +149,11 @@ export const CitizenTracker: React.FC = () => {
 
   const getPriorityBadgeClass = (priority: GrievancePriority) => {
     switch (priority) {
-      case 'Critical':
-        return 'bg-red-100 text-red-800 border-red-300';
-      case 'High':
-        return 'bg-orange-100 text-orange-800 border-orange-300';
-      case 'Medium':
-        return 'bg-amber-100 text-amber-800 border-amber-300';
-      case 'Low':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-300';
-      default:
-        return 'bg-slate-100 text-slate-800 border-slate-300';
+      case 'Critical': return 'bg-red-100 text-red-800 border-red-300';
+      case 'High': return 'bg-orange-100 text-orange-800 border-orange-300';
+      case 'Medium': return 'bg-amber-100 text-amber-800 border-amber-300';
+      case 'Low': return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+      default: return 'bg-slate-100 text-slate-800 border-slate-300';
     }
   };
 
@@ -243,46 +185,6 @@ export const CitizenTracker: React.FC = () => {
             {isLoading ? (language === 'ta' ? 'தேடுகிறது...' : 'Searching...') : t.btnSearchTrack}
           </button>
         </form>
-
-        {/* Quick Sample IDs */}
-        <div className="flex items-center space-x-2 pt-1 text-xs text-slate-500">
-          <span>{language === 'ta' ? 'மாதிரி புகார் எண்கள்:' : 'Try sample IDs:'}</span>
-          <button
-            type="button"
-            onClick={() => {
-              setSearchInput('GRV-2026-00124');
-              setTrackId('GRV-2026-00124');
-              fetchGrievance('GRV-2026-00124');
-            }}
-            className="font-mono text-indigo-600 font-bold hover:underline"
-          >
-            GRV-2026-00124
-          </button>
-          <span>•</span>
-          <button
-            type="button"
-            onClick={() => {
-              setSearchInput('GRV-2026-00125');
-              setTrackId('GRV-2026-00125');
-              fetchGrievance('GRV-2026-00125');
-            }}
-            className="font-mono text-indigo-600 font-bold hover:underline"
-          >
-            GRV-2026-00125
-          </button>
-          <span>•</span>
-          <button
-            type="button"
-            onClick={() => {
-              setSearchInput('GRV-2026-00126');
-              setTrackId('GRV-2026-00126');
-              fetchGrievance('GRV-2026-00126');
-            }}
-            className="font-mono text-indigo-600 font-bold hover:underline"
-          >
-            GRV-2026-00126
-          </button>
-        </div>
       </div>
 
       {errorMsg && (
@@ -418,47 +320,6 @@ export const CitizenTracker: React.FC = () => {
                     <span>{language === 'ta' ? 'அழைக்க' : 'Call Officer'}</span>
                   </a>
                 )}
-              </div>
-            )}
-
-            {/* Constituency MLA Escalation Profile */}
-            {grievance.location.district && grievance.status !== 'Resolved' && grievance.status !== 'Rejected' && (
-              <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                <div className="flex items-center space-x-3">
-                  <img 
-                    src={grievance.location.constituency ? getMLAForConstituency(grievance.location.district, grievance.location.constituency).avatar : getMLAForDistrict(grievance.location.district).avatar} 
-                    alt="MLA" 
-                    className="w-10 h-10 rounded-full border-2 border-indigo-300 shadow-sm"
-                  />
-                  <div>
-                    <span className="text-[10px] text-indigo-700 font-bold uppercase tracking-wider block">
-                      {language === 'ta' ? 'சட்டமன்ற உறுப்பினர் (MLA)' : 'Constituency MLA'}
-                    </span>
-                    <p className="text-sm font-bold text-indigo-950">
-                      {grievance.location.constituency ? getMLAForConstituency(grievance.location.district, grievance.location.constituency).name : getMLAForDistrict(grievance.location.district).name}
-                    </p>
-                    <p className="text-xs text-indigo-600 font-medium">
-                      {grievance.location.constituency ? getMLAForConstituency(grievance.location.district, grievance.location.constituency).constituency : getMLAForDistrict(grievance.location.district).constituency} - {grievance.location.constituency ? getMLAForConstituency(grievance.location.district, grievance.location.constituency).party : getMLAForDistrict(grievance.location.district).party}
-                    </p>
-                  </div>
-                </div>
-                
-                <button
-                  onClick={handleMLAEscalation}
-                  disabled={isEscalating || grievance.statusHistory.some(h => h.remarks.includes('ESCALATED'))}
-                  className={`px-3.5 py-1.5 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 transition-all w-full sm:w-auto ${
-                    grievance.statusHistory.some(h => h.remarks.includes('ESCALATED'))
-                      ? 'bg-indigo-200 text-indigo-500 cursor-not-allowed'
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md'
-                  }`}
-                >
-                  <Megaphone className="w-3.5 h-3.5" />
-                  <span>
-                    {grievance.statusHistory.some(h => h.remarks.includes('ESCALATED'))
-                      ? (language === 'ta' ? 'கவனத்திற்கு சென்றது' : 'Escalated')
-                      : (language === 'ta' ? 'எம்.எல்.ஏ விற்கு தெரிவி' : 'Escalate to MLA')}
-                  </span>
-                </button>
               </div>
             )}
 

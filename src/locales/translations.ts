@@ -2,7 +2,7 @@ export const translations = {
   en: {
     appTitle: 'NivaranAI',
     appSubtitle: 'AI-Powered Citizen Grievance Redressal Portal',
-    portalTagline: 'Government of Tamil Nadu | Public Grievances Platform',
+    portalTagline: 'Civic Grievance Platform',
     emblemSubtitle: 'Truth Alone Triumphs | வாய்மையே வெல்லும்',
     navHome: 'Home',
     navFileComplaint: 'File Grievance',

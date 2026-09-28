@@ -5,13 +5,11 @@ import {
   Bell,
   Globe,
   ShieldCheck,
-  User,
   Menu,
   X,
   FileText,
   Search,
   LayoutDashboard,
-  HardHat,
   BarChart3,
   CheckCircle2,
   AlertCircle,
@@ -24,8 +22,6 @@ export const Header: React.FC = () => {
     language,
     setLanguage,
     t,
-    role,
-    setRole,
     activeTab,
     setActiveTab,
     notifications,
@@ -33,19 +29,12 @@ export const Header: React.FC = () => {
     markAsRead,
     navigateToTrack,
     user,
-    login,
+    isAdmin,
     logout,
   } = useApp();
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const handleRoleChange = (newRole: UserRole) => {
-    setRole(newRole);
-    if (newRole === 'ADMIN') setActiveTab('admin');
-    else if (newRole === 'OFFICER') setActiveTab('officer');
-    else setActiveTab('home');
-  };
 
   return (
     <header className="sticky top-0 z-40 bg-slate-900 text-white border-b border-slate-800 shadow-lg shrink-0">
@@ -151,7 +140,7 @@ export const Header: React.FC = () => {
             >
               {t.navHistory}
             </button>
-            <button
+            {isAdmin && <button
               onClick={() => setActiveTab('analytics')}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center space-x-1.5 ${
                 activeTab === 'analytics'
@@ -161,18 +150,7 @@ export const Header: React.FC = () => {
             >
               <BarChart3 className="w-4 h-4" />
               <span>{t.navAnalytics}</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('directory')}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center space-x-1.5 ${
-                activeTab === 'directory'
-                  ? 'bg-slate-800 text-white font-semibold'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <Contact className="w-4 h-4" />
-              <span>{t.navDirectory}</span>
-            </button>
+            </button>}
           </nav>
 
           {/* Right Controls: Notifications & Demo Role Switcher */}
@@ -251,65 +229,26 @@ export const Header: React.FC = () => {
               )}
             </div>
 
-            {/* Auth Button */}
-            <div className="hidden sm:flex items-center">
-              {user ? (
+            {/* Separate admin access */}
+            <div className="hidden sm:flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('admin')}
+                className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-medium transition-colors"
+                aria-label="Open admin dashboard"
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-300" />
+                <span>Admin</span>
+              </button>
+              {isAdmin && (
                 <button
+                  type="button"
                   onClick={logout}
-                  className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-medium transition-colors"
+                  className="text-xs font-semibold text-slate-300 hover:text-white px-2 py-1"
                 >
-                  <img src={user.user_metadata?.avatar_url || ''} alt="User" className="w-5 h-5 rounded-full" />
-                  <span>Logout</span>
-                </button>
-              ) : (
-                <button
-                  onClick={login}
-                  className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                >
-                  <User className="w-4 h-4" />
-                  <span>Sign In</span>
+                  Logout
                 </button>
               )}
-            </div>
-
-            {/* Role Switcher Pill Bar */}
-            <div className="bg-slate-800 p-1 rounded-xl flex items-center border border-slate-700">
-              <button
-                onClick={() => handleRoleChange('CITIZEN')}
-                className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all flex items-center space-x-1 ${
-                  role === 'CITIZEN'
-                    ? 'bg-indigo-600 text-white shadow-xs font-bold'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="Citizen view"
-              >
-                <User className="w-3.5 h-3.5 text-indigo-300" />
-                <span className="hidden sm:inline">{t.roleCitizen}</span>
-              </button>
-              <button
-                onClick={() => handleRoleChange('OFFICER')}
-                className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all flex items-center space-x-1 ${
-                  role === 'OFFICER'
-                    ? 'bg-indigo-600 text-white shadow-xs font-bold'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="Field Officer Desk"
-              >
-                <HardHat className="w-3.5 h-3.5 text-orange-300" />
-                <span className="hidden sm:inline">{t.roleOfficer}</span>
-              </button>
-              <button
-                onClick={() => handleRoleChange('ADMIN')}
-                className={`px-2.5 py-1 text-xs rounded-lg font-medium transition-all flex items-center space-x-1 ${
-                  role === 'ADMIN'
-                    ? 'bg-indigo-600 text-white shadow-xs font-bold'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="Admin Command Center"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-green-300" />
-                <span className="hidden sm:inline">{t.roleAdmin}</span>
-              </button>
             </div>
 
             {/* Mobile Menu Button */}
@@ -363,22 +302,25 @@ export const Header: React.FC = () => {
             </button>
             <button
               onClick={() => {
-                setActiveTab('directory');
+                setActiveTab('admin');
                 setIsMobileMenuOpen(false);
               }}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100"
+              className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-indigo-700 bg-indigo-50"
             >
-              {t.navDirectory}
+              Admin Dashboard
             </button>
-            <button
-              onClick={() => {
-                setActiveTab('analytics');
-                setIsMobileMenuOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100"
-            >
-              {t.navAnalytics}
-            </button>
+
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setActiveTab('analytics');
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100"
+              >
+                {t.navAnalytics}
+              </button>
+            )}
           </div>
         )}
       </div>

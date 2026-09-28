@@ -1,5 +1,5 @@
 {
-  "name": "react-example",
+  "name": "nivaranai-grievance-platform",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,11 +9,11 @@
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "provision-admin": "node scripts/provision-admin.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
-    "@supabase/supabase-js": "^2.112.4",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "canvas-confetti": "^1.9.4",
@@ -25,7 +25,8 @@
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "recharts": "^3.10.1",
-    "vite": "^6.2.3"
+    "vite": "^6.2.3",
+    "firebase-admin": "^13.5.0"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",

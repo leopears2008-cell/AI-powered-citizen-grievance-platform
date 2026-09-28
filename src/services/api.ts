@@ -8,13 +8,33 @@ import {
   DuplicateMatch,
   GrievanceStatus,
 } from '../types';
-import { db } from '../lib/firebase';
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  query,
+  where,
+} from 'firebase/firestore';
+
+async function authHeaders() {
+  const user = auth.currentUser;
+  if (!user) return {};
+  const token = await user.getIdToken();
+  return { Authorization: `Bearer ${token}` };
+}
+
+async function jsonFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+  const headers = { ...(await authHeaders()), ...(init.headers || {}) };
+  return fetch(input, { ...init, headers });
+}
 
 export const api = {
-  // AI Analysis
   async analyzeComplaint(text: string, languageHint?: string): Promise<AIAnalysisResponse> {
-    const res = await fetch('/api/ai/analyze-complaint', {
+    const res = await jsonFetch('/api/ai/analyze-complaint', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text, languageHint }),
@@ -26,10 +46,9 @@ export const api = {
     return res.json();
   },
 
-  // Duplicate Check
   async checkDuplicates(text: string, category: string, district?: string): Promise<DuplicateMatch[]> {
     try {
-      const res = await fetch('/api/ai/check-duplicates', {
+      const res = await jsonFetch('/api/ai/check-duplicates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, category, district }),
@@ -42,9 +61,8 @@ export const api = {
     }
   },
 
-  // AI Resolution Suggestions
   async suggestResolution(grievanceId: string, actionTaken?: string) {
-    const res = await fetch('/api/ai/suggest-resolution', {
+    const res = await jsonFetch('/api/ai/suggest-resolution', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ grievanceId, actionTaken }),
@@ -53,9 +71,9 @@ export const api = {
     return res.json();
   },
 
-  async draftResolution(category: string, summary: string, actionTaken?: string): Promise<{ resolutionEn: string; resolutionTa: string }> {
+  async draftResolution(category: string, summary: string, actionTaken?: string) {
     try {
-      const res = await fetch('/api/ai/suggest-resolution', {
+      const res = await jsonFetch('/api/ai/suggest-resolution', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category, summary, actionTaken }),
@@ -64,29 +82,24 @@ export const api = {
       return res.json();
     } catch {
       return {
-        resolutionEn: 'Issue rectified on-site by zonal maintenance unit. Functionality restored and verified.',
-        resolutionTa: 'கள பராமரிப்பு குழுவால் பிரச்சனை சரிசெய்யப்பட்டு செயல்பாடுகள் உறுதி செய்யப்பட்டன.',
+        resolutionEn: 'AI draft unavailable. Review the case and write verified remarks manually.',
+        resolutionTa: 'AI வரைவு கிடைக்கவில்லை. வழக்கை சரிபார்த்து அதிகாரப்பூர்வ குறிப்பை கைமுறையாக எழுதவும்.',
       };
     }
   },
 
-  // Complaints
   async getComplaints(params?: {
-    search?: string;
-    category?: string;
-    status?: string;
-    priority?: string;
-    departmentId?: string;
-    officerId?: string;
+    search?: string; category?: string; status?: string; priority?: string;
+    departmentId?: string; officerId?: string;
   }): Promise<Grievance[]> {
-    const grievancesRef = collection(db, 'grievances');
-    const q = query(grievancesRef);
-    // Applying local filtering for simplicity since Firestore indexes might not exist for complex querying
+    const user = auth.currentUser;
+    if (!user) return [];
+    const base = collection(db, 'grievances');
+    const q = user.isAnonymous
+      ? query(base, where('citizenId', '==', user.uid))
+      : query(base);
     const snapshot = await getDocs(q);
-    let results: Grievance[] = [];
-    snapshot.forEach((doc) => {
-      results.push(doc.data() as Grievance);
-    });
+    let results = snapshot.docs.map((d) => d.data() as Grievance);
 
     if (params) {
       if (params.category) results = results.filter(r => r.category === params.category);
@@ -96,174 +109,222 @@ export const api = {
       if (params.officerId) results = results.filter(r => r.assignedOfficerId === params.officerId);
       if (params.search) {
         const search = params.search.toLowerCase();
-        results = results.filter(r => 
-          r.trackId?.toLowerCase().includes(search) || 
+        results = results.filter(r =>
+          r.trackId?.toLowerCase().includes(search) ||
+          (user.isAnonymous ? false : r.citizenName?.toLowerCase().includes(search)) ||
           r.summaryEn?.toLowerCase().includes(search)
         );
       }
     }
-    // sort by creation date descending
-    results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return results;
+    return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
   async getComplaintById(id: string): Promise<Grievance> {
-    const docRef = doc(db, 'grievances', id);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return docSnap.data() as Grievance;
+    const user = auth.currentUser;
+    if (!user) throw new Error('Authentication session is not ready.');
+
+    if (user.isAnonymous) {
+      const q = query(collection(db, 'grievances'), where('id', '==', id), where('citizenId', '==', user.uid));
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) throw new Error('Grievance not found or not accessible.');
+      return snapshot.docs[0].data() as Grievance;
     }
-    
-    // Fallback to fetch from mock api just in case we are looking for seeded data
-    const res = await fetch(`/api/complaints/${encodeURIComponent(id)}`);
-    if (!res.ok) throw new Error('Complaint not found');
-    return res.json();
+
+    const snap = await getDoc(doc(db, 'grievances', id));
+    if (!snap.exists()) throw new Error('Grievance not found');
+    return snap.data() as Grievance;
   },
 
   async createComplaint(data: Partial<Grievance>): Promise<Grievance> {
-    const trackId = `GRV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
-    const docRef = doc(db, 'grievances', trackId);
+    const user = auth.currentUser;
+    if (!user) throw new Error('Authentication session is not ready.');
+
+    const trackId = `GRV-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+    const now = new Date().toISOString();
     const newGrievance = {
       ...data,
       id: trackId,
+      trackId,
+      citizenId: user.uid,
       status: 'Submitted' as GrievanceStatus,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
       statusHistory: [{
         status: 'Submitted',
-        timestamp: new Date().toISOString(),
+        timestamp: now,
         remarks: 'Complaint registered successfully by Citizen',
         updatedBy: 'Citizen',
-        role: 'CITIZEN'
-      }]
+        role: 'CITIZEN',
+      }],
     };
-    await setDoc(docRef, newGrievance);
+    await setDoc(doc(db, 'grievances', trackId), newGrievance);
     return newGrievance as Grievance;
   },
 
-  async updateComplaintStatus(
-    id: string,
-    payload: {
-      status: GrievanceStatus;
-      remarks: string;
-      updatedBy: string;
-      role: 'CITIZEN' | 'OFFICER' | 'ADMIN';
-      evidenceUrl?: string;
-    }
-  ): Promise<Grievance> {
+  async updateComplaintStatus(id: string, payload: {
+    status: GrievanceStatus; remarks: string; updatedBy: string;
+    role: 'CITIZEN' | 'OFFICER' | 'ADMIN'; evidenceUrl?: string;
+  }): Promise<Grievance> {
+    if (auth.currentUser?.isAnonymous) throw new Error('Only authorized staff can change grievance status.');
     const grievance = await this.getComplaintById(id);
-    const updatedHistory = [
-      ...grievance.statusHistory,
-      {
-        status: payload.status,
-        timestamp: new Date().toISOString(),
-        remarks: payload.remarks,
-        updatedBy: payload.updatedBy,
-        role: payload.role,
-        evidenceUrl: payload.evidenceUrl
-      }
-    ];
-
-    const docRef = doc(db, 'grievances', grievance.id);
-    await updateDoc(docRef, {
+    const updatedHistory = [...grievance.statusHistory, {
+      status: payload.status, timestamp: new Date().toISOString(),
+      remarks: payload.remarks, updatedBy: payload.updatedBy, role: payload.role,
+      evidenceUrl: payload.evidenceUrl,
+    }];
+    await updateDoc(doc(db, 'grievances', id), {
       status: payload.status,
       statusHistory: updatedHistory,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      ...(payload.status === 'Resolved' ? {
+        resolvedAt: new Date().toISOString(),
+        resolutionRemarks: payload.remarks,
+        ...(payload.evidenceUrl ? { resolutionEvidenceUrl: payload.evidenceUrl } : {}),
+      } : {}),
     });
+    await this.addAuditLog('STATUS_UPDATE', `Updated ${id} to ${payload.status}`, id);
     return this.getComplaintById(id);
   },
 
   async assignOfficer(id: string, officerId: string, adminName?: string): Promise<Grievance> {
+    if (auth.currentUser?.isAnonymous) throw new Error('Admin authentication required.');
     const grievance = await this.getComplaintById(id);
-    const docRef = doc(db, 'grievances', grievance.id);
-    const newHistory = [
-      ...grievance.statusHistory,
-      {
-        status: 'Assigned',
-        timestamp: new Date().toISOString(),
-        remarks: `Assigned to Field Officer ID: ${officerId}`,
-        updatedBy: adminName || 'System Admin',
-        role: 'ADMIN'
-      }
-    ];
-    await updateDoc(docRef, {
+    const now = new Date().toISOString();
+    await updateDoc(doc(db, 'grievances', id), {
       status: 'Assigned',
       assignedOfficerId: officerId,
-      statusHistory: newHistory,
-      updatedAt: new Date().toISOString()
+      assignedAt: now,
+      statusHistory: [...grievance.statusHistory, {
+        status: 'Assigned',
+        timestamp: now,
+        remarks: `Assigned to Field Officer ID: ${officerId}`,
+        updatedBy: adminName || 'System Admin',
+        role: 'ADMIN',
+      }],
+      updatedAt: now,
+    });
+    await this.addAuditLog('OFFICER_ASSIGNMENT', `Assigned ${id} to officer ${officerId}`, id);
+    return this.getComplaintById(id);
+  },
+
+  async submitFeedback(id: string, payload: { rating: number; comment: string; isResolvedSatisfied: boolean }) {
+    const grievance = await this.getComplaintById(id);
+    if (grievance.citizenId !== auth.currentUser?.uid) throw new Error('You can only provide feedback for your own grievance.');
+    await updateDoc(doc(db, 'grievances', id), {
+      resolutionFeedback: {
+        rating: Math.max(1, Math.min(5, Number(payload.rating) || 1)),
+        comment: String(payload.comment || '').slice(0, 1000),
+        isResolvedSatisfied: Boolean(payload.isResolvedSatisfied),
+        submittedAt: new Date().toISOString(),
+      },
+      updatedAt: new Date().toISOString(),
     });
     return this.getComplaintById(id);
   },
 
-  async submitFeedback(
-    id: string,
-    payload: { rating: number; comment: string; isResolvedSatisfied: boolean }
-  ): Promise<Grievance> {
-    const grievance = await this.getComplaintById(id);
-    const docRef = doc(db, 'grievances', grievance.id);
-    
-    if (payload.isResolvedSatisfied) {
-      await updateDoc(docRef, {
-        resolutionFeedback: {
-          rating: payload.rating,
-          comment: payload.comment,
-          submittedAt: new Date().toISOString()
-        }
-      });
-    } else {
-      const newHistory = [
-        ...grievance.statusHistory,
-        {
-          status: 'Reopened',
-          timestamp: new Date().toISOString(),
-          remarks: `Citizen unsatisfied. Reason: ${payload.comment}`,
-          updatedBy: 'Citizen',
-          role: 'CITIZEN'
-        }
-      ];
-      await updateDoc(docRef, {
-        status: 'Reopened',
-        statusHistory: newHistory,
-        updatedAt: new Date().toISOString()
-      });
-    }
-    return this.getComplaintById(id);
+  async addAuditLog(action: string, details: string, grievanceId?: string) {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) return;
+    const id = `audit-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+    await setDoc(doc(db, 'auditLogs', id), {
+      id,
+      timestamp: new Date().toISOString(),
+      userId: user.uid,
+      userName: user.email || 'Admin',
+      userRole: 'ADMIN',
+      action,
+      details: details.slice(0, 2000),
+      grievanceId,
+    });
   },
 
-  // Departments & Officers
   async getDepartments(): Promise<Department[]> {
-    const res = await fetch('/api/departments');
+    const res = await jsonFetch('/api/departments');
     if (!res.ok) throw new Error('Failed to fetch departments');
     return res.json();
   },
 
   async getOfficers(): Promise<Officer[]> {
-    const res = await fetch('/api/officers');
+    const res = await jsonFetch('/api/officers');
     if (!res.ok) throw new Error('Failed to fetch officers');
     return res.json();
   },
 
-  // Notifications
   async getNotifications(): Promise<NotificationItem[]> {
-    const res = await fetch('/api/notifications');
-    if (!res.ok) throw new Error('Failed to fetch notifications');
-    return res.json();
+    // Notifications are intentionally disabled until a persistent, access-controlled
+    // notification store is configured for production.
+    return [];
   },
 
-  async markNotificationRead(id: string): Promise<void> {
-    await fetch(`/api/notifications/${encodeURIComponent(id)}/read`, { method: 'PATCH' });
+  async markNotificationRead(_id: string) {
+    return;
   },
 
-  // Analytics & Audit
   async getAnalytics() {
-    const res = await fetch('/api/analytics');
-    if (!res.ok) throw new Error('Failed to fetch analytics');
-    return res.json();
+    if (auth.currentUser?.isAnonymous) throw new Error('Admin authentication required.');
+    const complaints = await this.getComplaints();
+    const resolved = complaints.filter((c) => c.status === 'Resolved').length;
+    const pending = complaints.length - resolved;
+    const critical = complaints.filter((c) => c.priority === 'Critical' && c.status !== 'Resolved').length;
+    const high = complaints.filter((c) => c.priority === 'High' && c.status !== 'Resolved').length;
+    const inProgress = complaints.filter((c) => c.status === 'In Progress' || c.status === 'Under Review').length;
+
+    const categoryMap: Record<string, number> = {};
+    const priorityMap: Record<string, number> = { Critical: 0, High: 0, Medium: 0, Low: 0 };
+    const districtMap: Record<string, number> = {};
+    complaints.forEach((c) => {
+      categoryMap[c.category] = (categoryMap[c.category] || 0) + 1;
+      priorityMap[c.priority] = (priorityMap[c.priority] || 0) + 1;
+      districtMap[c.location?.district || 'Unknown'] = (districtMap[c.location?.district || 'Unknown'] || 0) + 1;
+    });
+
+    const durations = complaints.filter((c) => c.resolvedAt).map((c) =>
+      new Date(c.resolvedAt!).getTime() - new Date(c.createdAt).getTime()
+    ).filter((value) => Number.isFinite(value) && value >= 0);
+    const feedback = complaints.map((c) => c.feedback).filter(Boolean) as NonNullable<Grievance['feedback']>[];
+
+    const timelineData = Array.from({ length: 7 }, (_, index) => {
+      const start = new Date(Date.now() - (6 - index) * 86400000);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start.getTime() + 86400000);
+      return {
+        day: start.toLocaleDateString('en-IN', { weekday: 'short' }),
+        submitted: complaints.filter((c) => {
+          const value = new Date(c.createdAt).getTime();
+          return value >= start.getTime() && value < end.getTime();
+        }).length,
+        resolved: complaints.filter((c) => {
+          const value = c.resolvedAt ? new Date(c.resolvedAt).getTime() : NaN;
+          return Number.isFinite(value) && value >= start.getTime() && value < end.getTime();
+        }).length,
+      };
+    });
+
+    return {
+      metrics: {
+        total: complaints.length,
+        resolved,
+        pending,
+        critical,
+        high,
+        inProgress,
+        resolutionRate: complaints.length ? Math.round((resolved / complaints.length) * 100) : 0,
+        avgResolutionHours: durations.length ? Math.round((durations.reduce((a, b) => a + b, 0) / durations.length / 3600000) * 10) / 10 : null,
+        citizenSatisfactionScore: feedback.length ? Math.round((feedback.reduce((sum, item) => sum + item.rating, 0) / feedback.length) * 10) / 10 : null,
+      },
+      categoryData: Object.entries(categoryMap).map(([name, value]) => ({ name, value })),
+      priorityData: Object.entries(priorityMap).map(([name, value]) => ({ name, value })),
+      districtData: Object.entries(districtMap).map(([district, total]) => ({ district, total })),
+      timelineData,
+    };
   },
 
   async getAuditLogs(): Promise<AuditLog[]> {
-    const res = await fetch('/api/audit-logs');
-    if (!res.ok) throw new Error('Failed to fetch audit logs');
-    return res.json();
+    if (auth.currentUser?.isAnonymous) throw new Error('Admin authentication required.');
+    const snapshot = await getDocs(collection(db, 'auditLogs'));
+    return snapshot.docs
+      .map((item) => item.data() as AuditLog)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 200);
   },
 };

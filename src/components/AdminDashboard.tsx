@@ -35,9 +35,9 @@ import {
 
 const HighlightText = ({ text, highlight }: { text: string; highlight: string }) => {
   if (!highlight.trim()) return <>{text}</>;
-  
-  const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
-  
+  const safeHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${safeHighlight})`, 'gi'));
+
   return (
     <>
       {parts.map((part, i) =>
@@ -195,24 +195,30 @@ export const AdminDashboard: React.FC = () => {
       'Assigned Officer',
     ];
 
+    const csvCell = (value: unknown) => {
+      const text = String(value ?? '');
+      const safe = /^[=+\-@]/.test(text) ? `'${text}` : text;
+      return `"${safe.replace(/"/g, '""')}"`;
+    };
+
     const rows = filtered.map((c) => [
-      c.id,
-      `"${c.citizenName}"`,
-      c.citizenPhone,
-      `"${c.category}"`,
-      `"${c.departmentName}"`,
-      c.priority,
-      c.status,
-      `"${c.location.district}"`,
-      `"${c.location.address}"`,
-      c.createdAt,
-      c.targetResolutionDate,
-      `"${c.assignedOfficerName || 'Unassigned'}"`,
+      csvCell(c.id),
+      csvCell(c.citizenName),
+      csvCell(c.citizenPhone),
+      csvCell(c.category),
+      csvCell(c.departmentName),
+      csvCell(c.priority),
+      csvCell(c.status),
+      csvCell(c.location.district),
+      csvCell(c.location.address),
+      csvCell(c.createdAt),
+      csvCell(c.targetResolutionDate),
+      csvCell(c.assignedOfficerName || 'Unassigned'),
     ]);
 
     const csvContent =
       'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+      [headers.map(csvCell).join(','), ...rows.map((e) => e.join(','))].join('\n');
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
@@ -263,6 +269,10 @@ export const AdminDashboard: React.FC = () => {
             <span>{t.btnExportReport}</span>
           </button>
         </div>
+      </div>
+
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+        <strong>Data status:</strong> Records shown here may include development seed data until the production Firestore dataset is provisioned and verified.
       </div>
 
       {/* KPI Stats Cards */}

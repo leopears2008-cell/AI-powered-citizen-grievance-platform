@@ -172,7 +172,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           <div className="bg-indigo-800/50 p-3.5 rounded-xl border border-indigo-700/50 text-center">
             <div className="flex items-center justify-center space-x-1 text-indigo-300 mb-1">
               <FileText className="w-4 h-4" />
-              <span className="text-xl sm:text-2xl font-black text-white">1,248+</span>
+              <span className="text-xl sm:text-2xl font-black text-white">—</span>
             </div>
             <p className="text-[11px] text-indigo-200 font-medium">{t.quickStatsSubmitted}</p>
           </div>
@@ -180,7 +180,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           <div className="bg-indigo-800/50 p-3.5 rounded-xl border border-indigo-700/50 text-center">
             <div className="flex items-center justify-center space-x-1 text-green-400 mb-1">
               <CheckCircle2 className="w-4 h-4" />
-              <span className="text-xl sm:text-2xl font-black text-white">1,098</span>
+              <span className="text-xl sm:text-2xl font-black text-white">Demo</span>
             </div>
             <p className="text-[11px] text-indigo-200 font-medium">{t.quickStatsResolved}</p>
           </div>
@@ -188,7 +188,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           <div className="bg-indigo-800/50 p-3.5 rounded-xl border border-indigo-700/50 text-center">
             <div className="flex items-center justify-center space-x-1 text-orange-400 mb-1">
               <Clock className="w-4 h-4" />
-              <span className="text-xl sm:text-2xl font-black text-white">28.4h</span>
+              <span className="text-xl sm:text-2xl font-black text-white">—</span>
             </div>
             <p className="text-[11px] text-indigo-200 font-medium">{t.quickStatsAvgTime}</p>
           </div>
@@ -196,7 +196,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           <div className="bg-indigo-800/50 p-3.5 rounded-xl border border-indigo-700/50 text-center">
             <div className="flex items-center justify-center space-x-1 text-green-300 mb-1">
               <ThumbsUp className="w-4 h-4" />
-              <span className="text-xl sm:text-2xl font-black text-white">96.8%</span>
+              <span className="text-xl sm:text-2xl font-black text-white">No claim</span>
             </div>
             <p className="text-[11px] text-indigo-200 font-medium">{t.quickStatsSatisfaction}</p>
           </div>

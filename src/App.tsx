@@ -7,9 +7,9 @@ import { GrievanceForm } from './components/GrievanceForm';
 import { CitizenTracker } from './components/CitizenTracker';
 import { CitizenHistory } from './components/CitizenHistory';
 import { AdminDashboard } from './components/AdminDashboard';
-import { OfficerPortal } from './components/OfficerPortal';
+import { AdminLogin } from './components/AdminLogin';
+import { LegalPage } from './components/LegalPage';
 import { AnalyticsView } from './components/AnalyticsView';
-import { MLADirectory } from './components/MLADirectory';
 import { InteractiveMap } from './components/InteractiveMap';
 import {
   Phone,
@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
-  const { language, t, activeTab, setActiveTab, toasts, removeToast } = useApp();
+  const { language, t, activeTab, setActiveTab, toasts, removeToast, isAdmin, authLoading } = useApp();
 
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [initialVoiceTranscript, setInitialVoiceTranscript] = useState('');
@@ -118,27 +118,28 @@ const MainLayout: React.FC = () => {
 
         {activeTab === 'admin' && (
           <div className="animate-in fade-in duration-300">
-            <AdminDashboard />
+            {authLoading ? (
+              <div className="py-16 text-center text-sm text-slate-500" role="status">Checking admin access…</div>
+            ) : isAdmin ? (
+              <AdminDashboard />
+            ) : (
+              <AdminLogin />
+            )}
           </div>
         )}
 
-        {activeTab === 'officer' && (
-          <div className="animate-in fade-in duration-300">
-            <OfficerPortal />
-          </div>
-        )}
 
-        {activeTab === 'analytics' && (
+
+        {activeTab === 'analytics' && isAdmin && (
           <div className="animate-in fade-in duration-300">
             <AnalyticsView />
           </div>
         )}
 
-        {activeTab === 'directory' && (
-          <div className="animate-in fade-in duration-300">
-            <MLADirectory />
-          </div>
+        {(activeTab === 'privacy' || activeTab === 'terms' || activeTab === 'cookies' || activeTab === 'refund') && (
+          <LegalPage type={activeTab} />
         )}
+
       </main>
 
       {/* Government Standard Footer */}
@@ -153,12 +154,7 @@ const MainLayout: React.FC = () => {
                 <span>NivaranAI Grievance Portal</span>
               </div>
               <p className="text-xs text-slate-500 max-w-md leading-relaxed">
-                {language === 'ta'
-                  ? 'தமிழ்நாடு அரசு மின்னாளுமை முகமை மற்றும் பொதுமக்கள் குறைதீர்ப்பு இயக்ககத்தின் AI சார்ந்த குறைதீர்ப்பு தளம்.'
-                  : 'Tamil Nadu e-Governance Agency (TNeGA) & Public Grievance Redressal Directorate AI Redressal Platform.'}
-              </p>
-              <p className="text-[11px] text-slate-500">
-                Powered by Google Gemini 3.7 Multilingual Models.
+                AI-assisted civic grievance management interface. Government identity, authority and service ownership must be configured and verified before production use.
               </p>
             </div>
 
@@ -166,20 +162,9 @@ const MainLayout: React.FC = () => {
               <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] mb-3">
                 {language === 'ta' ? 'அவசர உதவி எண்கள்' : 'Emergency Hotlines'}
               </h4>
-              <ul className="space-y-1.5 text-slate-600">
-                <li className="flex items-center space-x-2">
-                  <Phone className="w-3.5 h-3.5 text-green-500" />
-                  <span>CM Helpline: <strong>1100</strong> (Toll Free)</span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Phone className="w-3.5 h-3.5 text-indigo-500" />
-                  <span>Chennai GCC Helpline: <strong>1913</strong></span>
-                </li>
-                <li className="flex items-center space-x-2">
-                  <Phone className="w-3.5 h-3.5 text-orange-500" />
-                  <span>TNEB Electricity Minnagam: <strong>94987 94987</strong></span>
-                </li>
-              </ul>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Configure verified emergency and support contact numbers for the deploying organization before launch.
+              </p>
             </div>
 
             <div>
@@ -187,14 +172,21 @@ const MainLayout: React.FC = () => {
                 {language === 'ta' ? 'அணுகல்தன்மை & பாதுகாப்பு' : 'Accessibility & Privacy'}
               </h4>
               <p className="text-[11px] text-slate-400 leading-relaxed">
-                Designed under the Guidelines for Indian Government Websites (GIGW) & ISO/IEC 27001 Security Standards.
+                Accessibility and security controls are being implemented; no certification or compliance claim is made by this demo.
               </p>
             </div>
           </div>
 
+          <nav aria-label="Legal" className="pt-6 flex flex-wrap gap-4 text-xs text-slate-500">
+            <button onClick={() => setActiveTab('privacy')} className="hover:text-slate-900 underline underline-offset-2">Privacy Policy</button>
+            <button onClick={() => setActiveTab('terms')} className="hover:text-slate-900 underline underline-offset-2">Terms</button>
+            <button onClick={() => setActiveTab('cookies')} className="hover:text-slate-900 underline underline-offset-2">Cookie Policy</button>
+            <button onClick={() => setActiveTab('refund')} className="hover:text-slate-900 underline underline-offset-2">Refund / Cancellation</button>
+          </nav>
+
           <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center text-[10px] text-slate-400 font-medium uppercase tracking-widest gap-2">
-            <p>© 2026 Government of Tamil Nadu. All Rights Reserved.</p>
-            <p>NivaranAI Grievance Management System v2.4 (Production)</p>
+            <p>© 2026 NivaranAI demo application. Organization ownership and legal notices must be configured before production.</p>
+            <p>NivaranAI Grievance Management System — pre-production build</p>
           </div>
         </div>
       </footer>

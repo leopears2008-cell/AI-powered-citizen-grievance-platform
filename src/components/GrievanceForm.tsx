@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
 import { AIAnalysisResponse, GrievanceCategory, GrievancePriority, DuplicateMatch } from '../types';
-import { getConstituenciesForDistrict, getMLAForConstituency } from '../data/mlaProfiles';
 import {
   Mic,
   FileText,
@@ -42,7 +41,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
   initialLanguage = 'Tamil',
   onOpenVoiceModal,
 }) => {
-  const { language, t, navigateToTrack, showToast, triggerRefresh, user } = useApp();
+  const { language, t, navigateToTrack, showToast, triggerRefresh, user, setActiveTab } = useApp();
 
   // Wizard Step: 1 = Input & Evidence, 2 = AI Scanning Loader, 3 = Citizen Confirmation, 4 = Success
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -54,26 +53,18 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
   );
 
   // Citizen details
-  const [citizenName, setCitizenName] = useState('Sundararajan M.');
-  const [citizenPhone, setCitizenPhone] = useState('+91 98401 55920');
-  const [citizenEmail, setCitizenEmail] = useState('sundar.m@tncitizen.in');
+  const [citizenName, setCitizenName] = useState('');
+  const [citizenPhone, setCitizenPhone] = useState('');
+  const [citizenEmail, setCitizenEmail] = useState('');
 
   // Location details
   const [district, setDistrict] = useState('Chennai');
-  const [constituency, setConstituency] = useState('Chepauk-Thiruvallikeni');
-  const [address, setAddress] = useState('No. 42, Kamarajar Salai, Triplicane');
-  const [landmark, setLandmark] = useState('Opposite Marina Beach Light House');
-  const [wardNumber, setWardNumber] = useState('Ward 114');
-  const [pincode, setPincode] = useState('600005');
+  const [address, setAddress] = useState('');
+  const [landmark, setLandmark] = useState('');
+  const [wardNumber, setWardNumber] = useState('');
+  const [pincode, setPincode] = useState('');
   const [isLocating, setIsLocating] = useState(false);
 
-  const availableConstituencies = useMemo(() => getConstituenciesForDistrict(district), [district]);
-  
-  useEffect(() => {
-    if (!availableConstituencies.includes(constituency)) {
-      setConstituency(availableConstituencies[0]);
-    }
-  }, [district, availableConstituencies, constituency]);
 
   // Attachments
   const [attachments, setAttachments] = useState<
@@ -90,6 +81,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
   const [editedDepartment, setEditedDepartment] = useState<string>('Civic Services');
   const [editedSummary, setEditedSummary] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [privacyConfirmed, setPrivacyConfirmed] = useState(false);
 
   // Registered Grievance output
   const [registeredId, setRegisteredId] = useState('');
@@ -148,6 +140,26 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
     if (!files || files.length === 0) return;
 
     const file = files[0];
+    const maxBytes = 400 * 1024;
+    if (!file.type.startsWith('image/') || file.size > maxBytes) {
+      showToast(
+        language === 'ta'
+          ? '400KB-க்கு குறைவான படக் கோப்பை மட்டும் பதிவேற்றவும்'
+          : 'Please upload an image smaller than 400 KB.',
+        'warning'
+      );
+      e.target.value = '';
+      return;
+    }
+    if (attachments.length >= 1) {
+      showToast(
+        language === 'ta' ? 'ஒரு புகைப்பட ஆதாரம் மட்டும் பதிவேற்றலாம்' : 'Only one photo attachment is allowed in this version.',
+        'warning'
+      );
+      e.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) {
@@ -216,6 +228,13 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
   // Step 3 -> Step 4: Final Submission to Database
   const handleConfirmAndRegister = async () => {
     if (!aiResult) return;
+    if (!privacyConfirmed) {
+      showToast(
+        language === 'ta' ? 'தனியுரிமை அறிவிப்பை படித்து ஒப்புக்கொள்ளவும்' : 'Please confirm the privacy notice before submitting.',
+        'warning'
+      );
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -238,7 +257,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
           address: address || 'Main City Area',
           landmark: landmark || '',
           district: district || 'Chennai',
-          constituency: constituency || '',
+          constituency: '',
           wardNumber: wardNumber || '',
           pincode: pincode || '',
           lat: 13.0827,
@@ -362,15 +381,17 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                     <p className="text-slate-700 font-medium mt-1">{d.summary}</p>
                     <p className="text-slate-500 text-[11px] mt-0.5">{d.location}</p>
                   </div>
-                  <button
-                    onClick={() => {
-                      setShowDuplicateModal(false);
-                      navigateToTrack(d.id);
-                    }}
-                    className="shrink-0 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-md font-bold text-[11px] transition-colors"
-                  >
-                    {language === 'ta' ? 'கண்காணிக்க' : 'Track'}
-                  </button>
+                  {d.id.startsWith('GRV-') && (
+                    <button
+                      onClick={() => {
+                        setShowDuplicateModal(false);
+                        navigateToTrack(d.id);
+                      }}
+                      className="shrink-0 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-md font-bold text-[11px] transition-colors"
+                    >
+                      {language === 'ta' ? 'கண்காணிக்க' : 'Track'}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -564,64 +585,6 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                   <option value="Virudhunagar">Virudhunagar (விருதுநகர்)</option>
                 </select>
               </div>
-
-              <div className="relative">
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                  {language === 'ta' ? 'சட்டமன்ற தொகுதி' : 'Constituency (Search)'} *
-                </label>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
-                  <input
-                    list="constituencies-list"
-                    value={constituency}
-                    onChange={(e) => setConstituency(e.target.value)}
-                    placeholder={language === 'ta' ? 'தொகுதியை தேடுங்கள்...' : 'Search constituency...'}
-                    className="w-full pl-9 p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none bg-white"
-                  />
-                  <datalist id="constituencies-list">
-                    {availableConstituencies.map((c) => {
-                      const mla = getMLAForConstituency(district, c);
-                      const extraSearchTerms = [
-                        ...(mla.pincodes || []),
-                        ...(mla.locations || [])
-                      ].join(', ');
-                      
-                      return (
-                        <option key={c} value={c}>
-                          {mla.name} ({mla.party}) {extraSearchTerms ? `- ${extraSearchTerms}` : ''}
-                        </option>
-                      );
-                    })}
-                  </datalist>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-xl mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center space-x-3">
-                <img 
-                  src={getMLAForConstituency(district, constituency).avatar} 
-                  alt="MLA Avatar" 
-                  className="w-10 h-10 rounded-full border border-indigo-200 shadow-sm"
-                />
-                <div>
-                  <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider block">
-                    {language === 'ta' ? 'உங்கள் தொகுதி சட்டமன்ற உறுப்பினர்' : 'Your Constituency MLA'}
-                  </span>
-                  <p className="text-sm font-bold text-indigo-950">
-                    {getMLAForConstituency(district, constituency).name} <span className="text-xs text-indigo-700 font-medium">({getMLAForConstituency(district, constituency).party})</span>
-                  </p>
-                  <p className="text-xs text-slate-600 mt-0.5 line-clamp-1">
-                    {getMLAForConstituency(district, constituency).officeAddress}
-                  </p>
-                </div>
-              </div>
-              <div className="flex sm:flex-col gap-2 sm:gap-1 shrink-0">
-                <a href={`tel:${getMLAForConstituency(district, constituency).phone}`} className="flex items-center space-x-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-800 bg-white px-2 py-1 rounded-md border border-indigo-100 shadow-sm">
-                  <Phone className="w-3 h-3" />
-                  <span>{getMLAForConstituency(district, constituency).phone}</span>
-                </a>
-              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
@@ -732,7 +695,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
           <div>
             <h3 className="text-xl font-black text-slate-900 font-sans">{t.analyzingTitle}</h3>
             <p className="text-xs text-slate-500 mt-1">
-              Gemini 3.7 Flash Engine (NLP Multilingual Parser)
+              Gemini Flash Engine (multilingual NLP parser)
             </p>
           </div>
 
@@ -771,7 +734,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                 AI Intelligence Analysis
               </label>
               <span className="ml-auto text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">
-                Confidence: {Math.round((aiResult.confidence || 0.96) * 100)}%
+                Confidence: {typeof aiResult.confidence === 'number' ? `${Math.round(aiResult.confidence * 100)}%` : '—'}
               </span>
             </div>
 
@@ -849,6 +812,22 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
               </p>
             </div>
             
+            <div className="mt-5 flex items-start gap-3 text-xs text-indigo-100">
+              <input
+                id="privacy-confirmation"
+                type="checkbox"
+                checked={privacyConfirmed}
+                onChange={(e) => setPrivacyConfirmed(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-indigo-300"
+              />
+              <p>
+                <label htmlFor="privacy-confirmation" className="cursor-pointer">
+                  I confirm that I have reviewed the Privacy Policy and understand that the information I submit will be used to process this grievance.
+                </label>{' '}
+                <button type="button" onClick={() => setActiveTab('privacy')} className="underline font-semibold">Read policy</button>
+              </p>
+            </div>
+
             <div className="flex gap-3 mt-6">
               <button
                 type="button"

@@ -115,11 +115,11 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ onSelectGrievanc
             <span>
               {language === 'ta'
                 ? 'தமிழ்நாடு நேரலை குறைதீர்ப்பு வரைபடம்'
-                : 'Tamil Nadu Live Grievance Map'}
+                : 'Civic Service Map'}
             </span>
           </h3>
           <p className="text-xs text-slate-500">
-            Interactive GIS civic heatmap and real-time district incident logs
+            Illustrative service-area map. Production incident data is not displayed here.
           </p>
         </div>
 
@@ -165,7 +165,7 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({ onSelectGrievanc
           })}
 
           <div className="absolute bottom-3 left-3 text-[10px] text-slate-400 font-mono">
-            GIS Coordinates: 13.0827° N, 80.2707° E | Tamil Nadu Geo-grid
+            Illustrative map coordinates
           </div>
         </div>
 

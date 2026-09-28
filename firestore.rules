@@ -1,13 +1,71 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /grievances/{document=**} {
-      allow read: if true;
-      allow write: if true;
+    function signedIn() {
+      return request.auth != null;
     }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true;
+    }
+
+    match /admins/{uid} {
+      // An admin record is provisioned out-of-band by the service owner.
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update, delete: if false;
+    }
+
+    match /grievances/{grievanceId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.citizenId == request.auth.uid);
+
+      allow create: if signedIn()
+        && request.resource.data.citizenId == request.auth.uid
+        && request.resource.data.id == grievanceId
+        && request.resource.data.trackId == grievanceId
+        && request.resource.data.originalTranscript is string
+        && request.resource.data.originalTranscript.size() <= 10000
+        && request.resource.data.citizenName is string
+        && request.resource.data.citizenName.size() <= 120
+        && request.resource.data.citizenPhone is string
+        && request.resource.data.citizenPhone.size() <= 30
+        && request.resource.data.attachments.size() <= 1
+        && (request.resource.data.attachments.size() == 0 || request.resource.data.attachments[0].url.size() <= 600000);
+
+      allow update: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.citizenId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['resolutionFeedback', 'updatedAt'])
+          && request.resource.data.resolutionFeedback.comment is string
+          && request.resource.data.resolutionFeedback.comment.size() <= 1000
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    // Notifications and operational data are accessed through authenticated server APIs.
     match /notifications/{document=**} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if false;
+    }
+
+    match /departments/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    match /officers/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    match /auditLogs/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
