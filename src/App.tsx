@@ -11,6 +11,7 @@ import { AdminLogin } from './components/AdminLogin';
 import { LegalPage } from './components/LegalPage';
 import { AnalyticsView } from './components/AnalyticsView';
 import { InteractiveMap } from './components/InteractiveMap';
+import { MLADirectory } from './components/MLADirectory';
 import {
   Phone,
   ShieldCheck,
@@ -113,6 +114,12 @@ const MainLayout: React.FC = () => {
         {activeTab === 'history' && (
           <div className="animate-in fade-in duration-300">
             <CitizenHistory />
+          </div>
+        )}
+
+        {activeTab === 'directory' && (
+          <div className="animate-in fade-in duration-300">
+            <MLADirectory />
           </div>
         )}
 
