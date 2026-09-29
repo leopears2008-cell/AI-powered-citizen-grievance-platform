@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { getAvailableDistricts, getConstituenciesForDistrict, getMLAForConstituency, getAllMLAs } from '../data/mlaProfiles';
-import { Search, MapPin, Phone, Mail, Building2, User } from 'lucide-react';
+import { getAvailableDistricts, getConstituenciesForDistrict, getAllMLAs, getDataSourceInfo } from '../data/mlaProfiles';
+import { Search, MapPin, Building2, User, ShieldCheck, AlertTriangle, ExternalLink } from 'lucide-react';
 
 export const MLADirectory: React.FC = () => {
   const { language } = useApp();
@@ -9,38 +9,54 @@ export const MLADirectory: React.FC = () => {
   const [selectedDistrict, setSelectedDistrict] = useState<string>('All Districts');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const availableConstituencies = useMemo(() => getConstituenciesForDistrict(selectedDistrict), [selectedDistrict]);
   const allMLAs = useMemo(() => getAllMLAs(), []);
+  const dataSource = useMemo(() => getDataSourceInfo(), []);
 
   const displayedMLAs = useMemo(() => {
-    let filtered = selectedDistrict === 'All Districts' 
-      ? allMLAs 
-      : allMLAs.filter(m => m.district === selectedDistrict);
+    let filtered = selectedDistrict === 'All Districts'
+      ? allMLAs
+      : allMLAs.filter((m) => m.district === selectedDistrict);
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(m => 
-        m.name.toLowerCase().includes(q) || 
-        m.constituency.toLowerCase().includes(q) || 
-        m.party.toLowerCase().includes(q) ||
-        (m.pincodes && m.pincodes.some(p => p.includes(q))) ||
-        (m.locations && m.locations.some(l => l.toLowerCase().includes(q)))
+      filtered = filtered.filter(
+        (m) =>
+          m.name.toLowerCase().includes(q) ||
+          m.constituency.toLowerCase().includes(q) ||
+          m.party.toLowerCase().includes(q) ||
+          m.district.toLowerCase().includes(q)
       );
     }
-    
-    return filtered;
+
+    return filtered.sort((a, b) => a.constituencyNumber - b.constituencyNumber);
   }, [selectedDistrict, searchQuery, allMLAs]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
-        <h2 className="text-xl font-bold text-slate-900 mb-2">
-          {language === 'ta' ? 'சட்டமன்ற உறுப்பினர் கையேடு' : 'MLA Directory'}
-        </h2>
-        <p className="text-sm text-slate-500 mb-8">
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+          <h2 className="text-xl font-bold text-slate-900">
+            {language === 'ta' ? 'தமிழ்நாடு சட்டமன்ற உறுப்பினர் கையேடு 2026' : 'Tamil Nadu MLA Directory 2026'}
+          </h2>
+          <a
+            href={dataSource.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full hover:bg-emerald-100 transition-colors"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Verified {dataSource.verifiedAt}</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+        <p className="text-sm text-slate-500 mb-2">
           {language === 'ta'
             ? 'உங்கள் மாவட்டத்தையும் தொகுதியையும் தேர்ந்தெடுத்து உங்கள் சட்டமன்ற உறுப்பினரின் விவரங்களை அறியவும்.'
-            : 'Search across all constituencies or filter by district to find your representative.'}
+            : 'Search across all 234 constituencies or filter by district to find your representative. This is a neutral civic-information directory — no ratings or rankings are shown.'}
+        </p>
+        <p className="text-[11px] text-slate-400 mb-8">
+          Source: {dataSource.sourceName}. {dataSource.asOfNote}. {dataSource.vacantSeats} seats are currently vacant
+          pending by-elections and are marked below rather than assigned a name.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
@@ -63,7 +79,7 @@ export const MLADirectory: React.FC = () => {
 
           <div className="sm:col-span-2 relative">
             <label className="text-xs font-semibold text-slate-600 block mb-1.5">
-              {language === 'ta' ? 'தேடல்' : 'Search MLA, Constituency, or Pincode'}
+              {language === 'ta' ? 'தேடல்' : 'Search MLA, constituency, district...'}
             </label>
             <div className="relative">
               <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
@@ -71,54 +87,78 @@ export const MLADirectory: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={language === 'ta' ? 'தொகுதி, உறுப்பினர் பெயர், அல்லது பின்கோடு...' : 'Search by constituency, name, location, or pincode...'}
+                placeholder={language === 'ta' ? 'தொகுதி அல்லது உறுப்பினர் பெயர்...' : 'Search by MLA name, constituency, district, or party...'}
                 className="w-full pl-11 p-3 text-sm text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none bg-slate-50"
               />
             </div>
           </div>
         </div>
 
+        <div className="text-xs text-slate-500 mb-4">
+          Showing {displayedMLAs.length} of {allMLAs.length} constituencies
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {displayedMLAs.length > 0 ? (
-            displayedMLAs.map((mla, idx) => (
-              <div key={`${mla.constituency}-${idx}`} className="bg-indigo-50/40 border border-indigo-100 p-5 rounded-2xl flex flex-col h-full hover:shadow-md transition-shadow">
+            displayedMLAs.map((mla) => (
+              <div
+                key={mla.constituencyNumber}
+                className={`border p-5 rounded-2xl flex flex-col h-full transition-shadow ${
+                  mla.status === 'Vacant'
+                    ? 'bg-slate-50 border-dashed border-slate-300'
+                    : 'bg-indigo-50/40 border-indigo-100 hover:shadow-md'
+                }`}
+              >
                 <div className="flex items-start space-x-4 mb-4">
                   <img
                     src={mla.avatar}
-                    alt="MLA Avatar"
+                    alt=""
                     className="w-16 h-16 rounded-full border-2 border-indigo-200 shadow-sm shrink-0 bg-white"
                   />
-                  <div>
-                    <h3 className="text-lg font-bold text-indigo-950 leading-tight mb-1">
-                      {mla.name} <span className="text-xs text-indigo-700 font-medium bg-indigo-100 px-1.5 py-0.5 rounded">({mla.party})</span>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-indigo-950 leading-tight mb-1 flex items-center gap-1.5 flex-wrap">
+                      <span className="truncate">{mla.name}</span>
+                      {mla.status === 'Vacant' && (
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      )}
                     </h3>
+                    <span className="text-[11px] text-indigo-700 font-medium bg-indigo-100 px-1.5 py-0.5 rounded inline-block mb-1">
+                      {mla.party}
+                    </span>
                     <p className="text-xs font-semibold text-slate-700 flex items-center">
-                      <MapPin className="w-3.5 h-3.5 mr-1 text-indigo-500" />
-                      {mla.constituency}
+                      <MapPin className="w-3.5 h-3.5 mr-1 text-indigo-500 shrink-0" />
+                      #{mla.constituencyNumber} {mla.constituency}
                     </p>
-                    <p className="text-[10px] text-slate-500 mt-0.5 ml-4.5">
+                    <p className="text-[10px] text-slate-500 mt-0.5 flex items-center">
+                      <Building2 className="w-3 h-3 mr-1 shrink-0" />
                       {mla.district} District
                     </p>
                   </div>
                 </div>
-                
-                <div className="flex flex-col gap-2 mt-auto pt-4 border-t border-indigo-100/50">
-                  <div className="flex gap-2">
-                    <a
-                      href={`tel:${mla.phone}`}
-                      className="flex-1 flex items-center justify-center space-x-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded-lg shadow-sm transition-colors"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>{language === 'ta' ? 'அழைக்க' : 'Call'}</span>
-                    </a>
-                    <a
-                      href={`mailto:${mla.email}`}
-                      className="flex-1 flex items-center justify-center space-x-1.5 text-xs font-semibold text-indigo-700 bg-white hover:bg-slate-50 px-3 py-2 rounded-lg border border-indigo-200 shadow-sm transition-colors"
-                    >
-                      <Mail className="w-3.5 h-3.5" />
-                      <span>{language === 'ta' ? 'மின்னஞ்சல்' : 'Email'}</span>
-                    </a>
-                  </div>
+
+                {mla.note && (
+                  <p className="text-[11px] text-slate-500 mb-3 leading-snug">{mla.note}</p>
+                )}
+
+                <div className="flex flex-col gap-1.5 mt-auto pt-3 border-t border-indigo-100/50">
+                  <p className="text-[10px] text-slate-400 leading-snug">
+                    Individual constituency-office contact numbers are not published in a verified,
+                    uniform official directory and are intentionally not shown here.
+                  </p>
+                  <a
+                    href={mla.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-semibold text-indigo-700 hover:text-indigo-900 inline-flex items-center gap-1"
+                  >
+                    View source <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <button
+                    type="button"
+                    className="text-[11px] text-slate-400 hover:text-slate-600 text-left underline underline-offset-2"
+                  >
+                    Report incorrect information
+                  </button>
                 </div>
               </div>
             ))
