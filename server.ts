@@ -998,3 +998,62 @@ app.get('/api/analytics', requireAuthenticatedAdmin, (req, res) => {
   const resolved = complaints.filter((c) => c.status === 'Resolved').length;
   const pending = total - resolved;
   const critical = complaints.filter((c) => c.priority === 'Critical' && c.status !== 'Resolved').length;
+  const high = complaints.filter((c) => c.priority === 'High' && c.status !== 'Resolved').length;
+  const inProgress = complaints.filter((c) => c.status === 'In Progress' || c.status === 'Under Review').length;
+
+  const categoryMap: Record<string, number> = {};
+  const priorityMap: Record<string, number> = { Critical: 0, High: 0, Medium: 0, Low: 0 };
+  const districtMap: Record<string, number> = {};
+  complaints.forEach((c) => {
+    categoryMap[c.category] = (categoryMap[c.category] || 0) + 1;
+    priorityMap[c.priority] = (priorityMap[c.priority] || 0) + 1;
+    const district = c.location?.district || 'Unknown';
+    districtMap[district] = (districtMap[district] || 0) + 1;
+  });
+
+  const durations = complaints
+    .filter((c) => c.resolvedAt)
+    .map((c) => new Date(c.resolvedAt!).getTime() - new Date(c.createdAt).getTime())
+    .filter((value) => Number.isFinite(value) && value >= 0);
+  const feedback = complaints.map((c) => c.feedback).filter(Boolean) as NonNullable<Grievance['feedback']>[];
+
+  const timelineData = Array.from({ length: 7 }, (_, index) => {
+    const start = new Date(Date.now() - (6 - index) * 86400000);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start.getTime() + 86400000);
+    return {
+      day: start.toLocaleDateString('en-IN', { weekday: 'short' }),
+      submitted: complaints.filter((c) => {
+        const value = new Date(c.createdAt).getTime();
+        return value >= start.getTime() && value < end.getTime();
+      }).length,
+      resolved: complaints.filter((c) => {
+        const value = c.resolvedAt ? new Date(c.resolvedAt).getTime() : NaN;
+        return Number.isFinite(value) && value >= start.getTime() && value < end.getTime();
+      }).length,
+    };
+  });
+
+  res.json({
+    metrics: {
+      total,
+      resolved,
+      pending,
+      critical,
+      high,
+      inProgress,
+      resolutionRate: total ? Math.round((resolved / total) * 100) : 0,
+      avgResolutionHours: durations.length
+        ? Math.round((durations.reduce((a, b) => a + b, 0) / durations.length / 3600000) * 10) / 10
+        : null,
+      citizenSatisfactionScore: feedback.length
+        ? Math.round((feedback.reduce((sum, item) => sum + item.rating, 0) / feedback.length) * 10) / 10
+        : null,
+    },
+    categoryData: Object.entries(categoryMap).map(([name, value]) => ({ name, value })),
+    priorityData: Object.entries(priorityMap).map(([name, value]) => ({ name, value })),
+    districtData: Object.entries(districtMap).map(([district, total]) => ({ district, total })),
+    timelineData,
+  });
+});
+
