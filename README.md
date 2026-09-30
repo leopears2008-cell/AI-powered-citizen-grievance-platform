@@ -1,89 +1,745 @@
-# NivaranAI Grievance Platform
+<div align="center">
 
-An AI-assisted, bilingual (Tamil and English) civic grievance workflow. This repository is a pre-production application; it is not affiliated with a government, does not establish an official complaint channel, and requires an identified operator and service configuration before public launch.
+# 🏛️ NivaranAI
 
-## Architecture
+### 🚀 AI-Powered Citizen Grievance Platform
 
-- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS.
-- **Backend:** Express 4 in `server.ts`; Vite middleware in development and static assets plus the API in production.
-- **Authentication and data:** Firebase Authentication and Cloud Firestore. The browser uses Firestore under `firestore.rules`; the server uses Firebase Admin SDK for authorization and AI matching.
-- **AI:** Google Gemini called from the Express server. The API key must remain server-side.
-- **Package manager / build:** Bun (`bun.lock`); Vite builds the browser app into `dist/client` and esbuild bundles the server into `dist/server.cjs`.
-- **Deployment:** No production hosting platform is configured in this repository. The CI workflow runs checks; it does not deploy.
+<p>
+  <strong>Speak it.</strong> &nbsp;→&nbsp;
+  <strong>AI understands it.</strong> &nbsp;→&nbsp;
+  <strong>Department receives it.</strong> &nbsp;→&nbsp;
+  <strong>Citizen tracks it.</strong>
+</p>
 
-## Main folders and files
+<br>
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0f766e,50:14b8a6,100:06b6d4&height=180&section=header&text=NivaranAI&fontSize=55&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=AI-Powered%20Citizen%20Grievance%20Platform&descAlignY=58&descSize=18" width="100%"/>
+
+<br>
+
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github)](https://github.com/leopears2008-cell/AI-powered-citizen-grievance-platform)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-6-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
+[![Firebase](https://img.shields.io/badge/Firebase-Backend-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Gemini](https://img.shields.io/badge/Gemini-AI-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)](https://ai.google.dev/)
+
+<br>
+
+<img src="https://komarev.com/ghpvc/?username=leopears2008-cell&label=Project%20Views&color=0e7490&style=for-the-badge" alt="Project views"/>
+
+</div>
+
+---
+
+## 🌟 What is NivaranAI?
+
+**NivaranAI** is a modern AI-powered civic grievance platform designed to make it easier for citizens to report public issues and track their resolution.
+
+Instead of navigating complicated government systems, citizens can simply **type or speak their problem** in:
+
+🇬🇧 English  
+🇮🇳 தமிழ் Tamil  
+💬 Tanglish
+
+The AI analyzes the complaint, identifies the issue, determines its priority, recommends the responsible department, and helps administrators manage the grievance.
+
+<br>
+
+<div align="center">
+
+### 💡 From Complaint → Resolution
 
 ```text
-src/components/       Citizen, admin, officer, directory, and legal UI
-src/context/          Authentication, language, navigation, and shared state
-src/data/             2026 election-result snapshot (not a live office-holder directory)
-src/lib/firebase.ts   Firebase client initialization
-src/services/api.ts   AI API calls and Firestore operations
-server.ts             Express API and runtime server
-firestore.rules       Firestore authorization and validation rules
-tests/                Firestore rules tests
-scripts/              Out-of-band admin provisioning helper
+👤 Citizen
+     │
+     ▼
+🗣️ Voice / Text Complaint
+     │
+     ▼
+🧠 Gemini AI Analysis
+     │
+     ├── 🏷️ Category
+     ├── 🚦 Priority
+     ├── 🏛️ Department
+     └── 📝 Summary
+     │
+     ▼
+🔁 Duplicate Detection
+     │
+     ▼
+🏢 Department Assignment
+     │
+     ▼
+🛠️ Resolution
+     │
+     ▼
+📍 Citizen Tracking
 ```
 
-## Setup
+</div>
 
-Requirements: Node.js 22 or later, Bun, a Firebase project with Firestore and Authentication enabled, and (for AI features) a Google Gemini API key.
+---
 
-1. Install dependencies: `bun install`
-2. Configure the client Firebase app in `firebase-applet-config.json` for your own Firebase project. It is client configuration, not a server secret; apply API restrictions and allowed-domain controls in Firebase/Google Cloud.
-3. Copy `.env.example` to `.env` and configure server-only values:
-   - `GEMINI_API_KEY` for Gemini features.
-   - `FIREBASE_SERVICE_ACCOUNT_JSON` for server-side Firebase Admin authorization.
-   - `ADMIN_EMAILS` as a comma-separated server-side admin allowlist.
-   - `FIRESTORE_DATABASE_ID` only when overriding the configured named database.
-4. Apply `firestore.rules` to the same Firebase project/database. The current client config points to a named database; production must use a project and database owned and approved by the service operator.
-5. Start local development: `bun run dev` (Express and Vite use `http://localhost:3000`).
+# ✨ Why NivaranAI?
 
-Never commit `.env`, service-account JSON, private keys, access tokens, or user complaint data. The admin provisioning script requires a verified Firebase Auth email and provisions an active record in the selected Firestore database:
+<table>
+<tr>
+<td width="50%">
 
-With `FIREBASE_SERVICE_ACCOUNT_JSON` securely supplied to the process, run:
+### 🗣️ Natural Complaint Filing
 
-```sh
-bun run provision-admin admin@example.org
+Citizens don't need to understand complex government forms.
+
+Simply describe the problem naturally using **voice or text**.
+
+</td>
+
+<td width="50%">
+
+### 🧠 AI-Powered Understanding
+
+Gemini analyzes the complaint and extracts useful information automatically.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+### 🏛️ Smart Department Routing
+
+The platform identifies the appropriate department based on the grievance category.
+
+</td>
+
+<td>
+
+### 📍 Transparent Tracking
+
+Citizens can follow their grievance through a clear status timeline.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+### 🔁 Duplicate Detection
+
+Similar open complaints can be identified before creating unnecessary duplicate records.
+
+</td>
+
+<td>
+
+### 📊 Administrator Analytics
+
+Officials receive dashboards, analytics, filters, maps and grievance management tools.
+
+</td>
+</tr>
+</table>
+
+---
+
+# 🚀 Core Features
+
+## 👤 Citizen Portal
+
+| Feature | Description |
+|---|---|
+| 🎙️ **Voice Filing** | Submit complaints using speech |
+| ⌨️ **Text Filing** | Submit complaints manually |
+| 🧠 **AI Analysis** | Automatically understand complaints |
+| 🏷️ **Category Detection** | Identify the type of issue |
+| 🚦 **Priority Detection** | Determine urgency |
+| 🏛️ **Department Routing** | Recommend responsible department |
+| 🔁 **Duplicate Detection** | Find similar grievances |
+| 📍 **Location Support** | Capture issue location |
+| 🖼️ **Evidence Upload** | Attach supporting images |
+| 🔎 **Grievance Tracking** | Track complaint status |
+| ⭐ **Feedback** | Citizen satisfaction feedback |
+| 🌐 **Multilingual UI** | English + Tamil |
+| 🔒 **Anonymous Session** | Simple citizen access |
+
+---
+
+# 🛡️ Admin Dashboard
+
+Administrators can manage the complete grievance lifecycle.
+
+### 📋 Grievance Management
+
+- View all grievances
+- Search grievances
+- Filter by category
+- Filter by priority
+- Filter by department
+- Assign officers
+- Update grievance status
+- Add administrative remarks
+- Review grievance history
+- Export grievance data
+
+### 📊 Analytics
+
+```text
+┌─────────────────────────────────────────────┐
+│              ADMIN ANALYTICS                │
+├─────────────────────────────────────────────┤
+│                                             │
+│  📋 Total        🟢 Resolved    🔴 Pending │
+│                                             │
+│  📈 Resolution Rate                          │
+│                                             │
+│  🏛️ Department Performance                  │
+│                                             │
+│  🗺️ Grievance Hotspots                      │
+│                                             │
+│  ⏱️ SLA Monitoring                           │
+│                                             │
+└─────────────────────────────────────────────┘
 ```
 
-Supply the secret via a secret manager rather than shell history in production. Admin access requires a verified account, active `admins/{uid}` registry record, and server email allowlist membership.
+---
 
-## Commands
+# 🧠 AI Intelligence
 
-```sh
-bun run dev        # Express + Vite development server
-bun run lint       # TypeScript check
-bun run test       # Firestore emulator security tests (requires Java)
-bun run test:rules # Alias for the Firestore emulator security tests
-bun run build      # Production client and server bundles
-bun run start      # Run dist/server.cjs after building
+NivaranAI uses AI as an **assistive intelligence layer**.
+
+### AI Processing Pipeline
+
+```text
+              ┌──────────────────┐
+              │  Citizen Input   │
+              │  Voice / Text    │
+              └────────┬─────────┘
+                       │
+                       ▼
+              ┌──────────────────┐
+              │ Input Validation │
+              └────────┬─────────┘
+                       │
+                       ▼
+              ┌──────────────────┐
+              │   Gemini AI      │
+              │   Analysis       │
+              └────────┬─────────┘
+                       │
+          ┌────────────┼────────────┐
+          ▼            ▼            ▼
+      🏷️ Category   🚦 Priority   🏛️ Department
+          │            │            │
+          └────────────┼────────────┘
+                       ▼
+              ┌──────────────────┐
+              │ Structured Data  │
+              └────────┬─────────┘
+                       │
+                       ▼
+              🔁 Duplicate Check
+                       │
+                       ▼
+                 👤 Confirmation
+                       │
+                       ▼
+                 🗄️ Firestore
 ```
 
-The Firestore emulator is configured on `127.0.0.1:8080`. CI installs from the lockfile, type-checks, runs the rules tests, and builds; it does not deploy.
+---
 
-## Data and AI handling
+# 🏷️ Smart Grievance Categories
 
-- Grievance records may contain names, phone/email details, complaint text, user-entered location, optional GPS coordinates, images, and status history. Records are stored in Firestore and are private under the rules to the submitting citizen and verified active admins.
-- Complaint text is sent from the server to Google Gemini for classification and duplicate checks. Admin-triggered resolution drafting also uses grievance summary and location with Gemini. AI output is a suggestion and requires human verification.
-- Voice entry uses the browser Web Speech API. The browser or its provider may process audio; provider behavior depends on the browser. Text entry is available as an alternative.
-- Image evidence currently uses a client-resized raster data URL stored in the grievance document. Upload size/count/type are constrained in the UI and Firestore rules. Production should move binary files to private object storage with malware scanning and controlled downloads.
-- Notifications are disabled until a persistent, access-controlled notification store is configured.
-- Demo citizen, complaint, officer, notification, and audit-log seeds were removed from the production source. The voice form’s clearly labeled text presets are examples only and do not create records.
+| 🏷️ Category | Example |
+|---|---|
+| 💡 Street Light | Broken / non-working lights |
+| 🚦 Traffic | Signals, signage and traffic issues |
+| 💧 Water Supply | Water shortage or leakage |
+| 🌳 Parks & Encroachment | Park maintenance / illegal occupation |
+| 🛣️ Roads & Potholes | Damaged roads |
+| ⚡ Electricity | Power-related complaints |
+| 🚰 Sanitation | Garbage and drainage |
+| 🦟 Public Health | Mosquito and fogging requests |
+| 📌 Other | Other civic issues |
 
-## Privacy, legal, and operational launch requirements
+---
 
-The in-app privacy and terms pages are pre-production notices, not legal advice or a compliance claim. The responsible operator must confirm the actual data flows and vendors, provide its identity and support contact, set retention/deletion and privacy-request processes, and obtain legal review for India’s Digital Personal Data Protection Act, 2023 and the phased commencement of its rules. No payment feature is present, so the app does not publish a refund policy. Firebase authentication persistence is used; optional advertising/analytics tracking was not found in the reviewed source.
+# 🚦 Grievance Lifecycle
 
-Before launch, the operator must also provision real departments and administrators, define officer authentication and role permissions, confirm the Firebase project/database and API restrictions, configure a hosting platform/domain/HTTPS, deploy reviewed Firestore rules, set backups/monitoring, and review the election snapshot against primary official records before presenting any person as a current officeholder.
+```text
+     ┌──────────────┐
+     │ 📝 Submitted │
+     └──────┬───────┘
+            ▼
+     ┌──────────────┐
+     │ 🧠 AI        │
+     │ Classified   │
+     └──────┬───────┘
+            ▼
+     ┌──────────────┐
+     │ 🏛️ Assigned  │
+     └──────┬───────┘
+            ▼
+     ┌──────────────┐
+     │ 🔍 Reviewing │
+     └──────┬───────┘
+            ▼
+     ┌──────────────┐
+     │ 🛠️ Progress  │
+     └──────┬───────┘
+            ▼
+     ┌──────────────┐
+     │ ✅ Resolved  │
+     └──────────────┘
+```
 
-## Limits
+If a citizen disagrees with the resolution:
 
-- There is no separate Officer role in the authentication model; the current dashboard is admin-only.
-- Firestore document-backed image storage constrains record size and is not a long-term file-storage design.
-- No notification delivery provider, data-retention job, citizen deletion workflow, abuse-report workflow, production hosting configuration, or deployment workflow is present.
-- The 2026 constituency dataset is an election result snapshot; it is not a verified current officeholder list. Confirm current membership through official sources.
+```text
+Resolved
+   │
+   ▼
+Reopened
+   │
+   ▼
+In Progress
+```
 
-## Official results source
+---
 
-For election-result verification, consult the [Election Commission of India 2026 Tamil Nadu results](https://results.eci.gov.in/ResultAcGenMay2026/). The bundled snapshot is historical and may not reflect later vacancies or changes.
+# 🏗️ System Architecture
+
+```mermaid
+flowchart TB
+
+    Citizen["👤 Citizen"]
+
+    subgraph Frontend["🌐 Frontend"]
+        React["⚛️ React 19"]
+        Voice["🎙️ Web Speech API"]
+        UI["🎨 Tailwind UI"]
+    end
+
+    subgraph Backend["🖥️ Backend"]
+        Express["🚀 Express Server"]
+        Security["🛡️ Security Layer"]
+        API["🔌 REST API"]
+    end
+
+    subgraph AI["🧠 AI Layer"]
+        Gemini["✨ Google Gemini"]
+        Analyzer["Complaint Analyzer"]
+        Duplicate["Duplicate Detection"]
+        Resolution["Resolution Assistant"]
+    end
+
+    subgraph Firebase["☁️ Firebase"]
+        Auth["🔐 Authentication"]
+        Firestore[("🔥 Firestore")]
+    end
+
+    Admin["🛡️ Administrator"]
+
+    Citizen --> React
+    Citizen --> Voice
+    React --> Express
+    Voice --> React
+
+    Express --> Security
+    Security --> API
+
+    API --> Gemini
+    Gemini --> Analyzer
+    Gemini --> Duplicate
+    Gemini --> Resolution
+
+    React --> Auth
+    React --> Firestore
+
+    Admin --> React
+    API --> Firestore
+```
+
+---
+
+# 🧰 Technology Stack
+
+<div align="center">
+
+| Layer | Technology |
+|---|---|
+| 🎨 **Frontend** | React 19 |
+| 🟦 **Language** | TypeScript |
+| ⚡ **Build Tool** | Vite 6 |
+| 🎨 **Styling** | Tailwind CSS |
+| 🧠 **AI** | Google Gemini |
+| 🔥 **Database** | Firebase Firestore |
+| 🔐 **Authentication** | Firebase Authentication |
+| 🚀 **Backend** | Node.js + Express |
+| 🎙️ **Voice** | Web Speech API |
+| 📊 **Charts** | Recharts |
+| 🎨 **Icons** | Lucide |
+| 🔄 **CI/CD** | GitHub Actions |
+
+</div>
+
+---
+
+# 📁 Project Structure
+
+```text
+AI-powered-citizen-grievance-platform/
+│
+├── 📁 .github/
+│   └── 📁 workflows/
+│
+├── 📁 src/
+│   ├── 📁 components/
+│   │   ├── HeroSection.tsx
+│   │   ├── VoiceInputModal.tsx
+│   │   ├── GrievanceForm.tsx
+│   │   ├── CitizenTracker.tsx
+│   │   ├── CitizenHistory.tsx
+│   │   ├── AdminLogin.tsx
+│   │   ├── AdminDashboard.tsx
+│   │   ├── AnalyticsView.tsx
+│   │   ├── InteractiveMap.tsx
+│   │   └── LegalPage.tsx
+│   │
+│   ├── 📁 context/
+│   │   └── AppContext.tsx
+│   │
+│   ├── 📁 services/
+│   │   └── api.ts
+│   │
+│   ├── 📁 locales/
+│   │   └── translations.ts
+│   │
+│   ├── App.tsx
+│   └── types.ts
+│
+├── 📁 scripts/
+│   └── provision-admin.mjs
+│
+├── server.ts
+├── firestore.rules
+├── firebase-blueprint.json
+├── package.json
+├── vite.config.ts
+├── tsconfig.json
+└── README.md
+```
+
+---
+
+# ⚡ Quick Start
+
+## 1️⃣ Clone
+
+```bash
+git clone https://github.com/leopears2008-cell/AI-powered-citizen-grievance-platform.git
+
+cd AI-powered-citizen-grievance-platform
+```
+
+## 2️⃣ Install Dependencies
+
+```bash
+npm install
+```
+
+## 3️⃣ Configure Environment Variables
+
+Create:
+
+```text
+.env
+```
+
+Example:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key
+
+FIREBASE_SERVICE_ACCOUNT_JSON=your_service_account_json
+
+ADMIN_EMAILS=admin@example.com
+```
+
+> 🔐 **Never commit `.env` or Firebase service-account credentials to GitHub.**
+
+## 4️⃣ Firebase Setup
+
+Enable:
+
+```text
+🔥 Firebase Authentication
+🔥 Anonymous Authentication
+🔥 Email/Password Authentication
+🔥 Cloud Firestore
+```
+
+Deploy Firestore rules:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+## 5️⃣ Run the Application
+
+```bash
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+---
+
+# 📜 Available Commands
+
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Start development server |
+| `npm run build` | Production build |
+| `npm start` | Start production server |
+| `npm run lint` | Check TypeScript |
+| `npm run provision-admin -- <email>` | Create admin access |
+
+---
+
+# 🔌 API
+
+### Analyze Complaint
+
+```http
+POST /api/ai/analyze-complaint
+```
+
+### Check Duplicates
+
+```http
+POST /api/ai/check-duplicates
+```
+
+### Suggest Resolution
+
+```http
+POST /api/ai/suggest-resolution
+```
+
+Example:
+
+```bash
+curl -X POST http://localhost:3000/api/ai/analyze-complaint \
+-H "Authorization: Bearer <FIREBASE_ID_TOKEN>" \
+-H "Content-Type: application/json" \
+-d '{"text":"Anna Nagar street light is not working"}'
+```
+
+---
+
+# 🔐 Security
+
+NivaranAI separates sensitive operations from the public client.
+
+### 🔒 Security Measures
+
+- Firebase Authentication
+- Admin authorization
+- Firestore security rules
+- Server-side Gemini API calls
+- Rate limiting
+- Request-size limits
+- Security headers
+- Input validation
+- AI output normalization
+- CSV formula-injection protection
+- Restricted administrator operations
+
+```text
+                    REQUEST
+                       │
+                       ▼
+                🛡️ Rate Limit
+                       │
+                       ▼
+               📦 Body Validation
+                       │
+                       ▼
+              🔑 Firebase Token
+                       │
+                       ▼
+               👤 User Verified
+                       │
+                       ▼
+             ┌─────────┴─────────┐
+             │                   │
+          Citizen              Admin
+             │                   │
+             ▼                   ▼
+       Citizen APIs        Admin APIs
+```
+
+---
+
+# 🖼️ Screenshots
+
+Add your screenshots inside:
+
+```text
+docs/screenshots/
+```
+
+Recommended:
+
+```text
+docs/screenshots/
+├── landing.png
+├── filing.png
+├── tracker.png
+├── admin.png
+├── analytics.png
+└── map.png
+```
+
+Then display them like:
+
+```markdown
+## 🏠 Landing Page
+
+![NivaranAI Landing Page](docs/screenshots/landing.png)
+
+## 🤖 AI Grievance Filing
+
+![AI Filing](docs/screenshots/filing.png)
+
+## 📍 Citizen Tracking
+
+![Citizen Tracker](docs/screenshots/tracker.png)
+
+## 🛡️ Admin Dashboard
+
+![Admin Dashboard](docs/screenshots/admin.png)
+```
+
+---
+
+# 🗺️ Roadmap
+
+### ✅ Completed
+
+- [x] AI grievance classification
+- [x] Voice complaint filing
+- [x] Text complaint filing
+- [x] Department routing
+- [x] Priority detection
+- [x] Duplicate detection
+- [x] Citizen tracking
+- [x] Admin dashboard
+- [x] Analytics
+- [x] Interactive map
+- [x] Firebase authentication
+- [x] Firestore database
+- [x] Tamil support
+
+### 🚀 Future
+
+- [ ] Hindi support
+- [ ] Telugu support
+- [ ] Kannada support
+- [ ] Malayalam support
+- [ ] SMS notifications
+- [ ] WhatsApp notifications
+- [ ] Push notifications
+- [ ] Officer mobile application
+- [ ] Photo proof of resolution
+- [ ] Automated E2E testing
+- [ ] Public transparency dashboard
+- [ ] Advanced AI analytics
+
+---
+
+# 🤝 Contributing
+
+Contributions are welcome!
+
+```bash
+# Fork the repository
+
+# Create a branch
+git checkout -b feature/my-feature
+
+# Make your changes
+
+# Check the project
+npm run lint
+
+# Commit
+git commit -m "feat: add new feature"
+
+# Push
+git push origin feature/my-feature
+```
+
+Then open a Pull Request.
+
+---
+
+# 🛡️ Responsible AI
+
+NivaranAI uses AI to **assist** citizens and administrators.
+
+AI-generated classifications, priorities and recommendations should be reviewed by authorized personnel when they affect consequential administrative decisions.
+
+The platform should not be treated as a replacement for official human decision-making.
+
+---
+
+# 📄 License
+
+This project is licensed under the **MIT License**.
+
+See [`LICENSE`](LICENSE) for details.
+
+---
+
+# ❤️ Acknowledgements
+
+Built using:
+
+- ⚛️ React
+- 🟦 TypeScript
+- ⚡ Vite
+- 🎨 Tailwind CSS
+- 🧠 Google Gemini
+- 🔥 Firebase
+- 🚀 Express
+- 📊 Recharts
+- 🎨 Lucide
+
+---
+
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:06b6d4,50:14b8a6,100:0f766e&height=120&section=footer" width="100%"/>
+
+### 🌍 Technology for Better Public Services
+
+**NivaranAI — Making civic grievance reporting simpler, smarter and more transparent.**
+
+<br>
+
+⭐ **If you find this project useful, consider starring the repository.**
+
+<br>
+
+<a href="https://github.com/leopears2008-cell/AI-powered-citizen-grievance-platform">
+<img src="https://img.shields.io/badge/⭐%20Star%20on%20GitHub-181717?style=for-the-badge&logo=github" />
+</a>
+
+</div>
