@@ -124,7 +124,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               onClick={onOpenVoiceModal}
               className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-indigo-900 font-bold text-sm sm:text-base shadow-lg shadow-indigo-900/30 flex items-center justify-center space-x-2.5 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
-              <Mic className="w-5 h-5 text-indigo-600 animate-bounce" />
+              <Mic className="w-5 h-5 text-indigo-600 animate-pulse" />
               <span>{t.btnSpeakComplaint}</span>
             </button>
 
@@ -294,3 +294,4 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     </div>
   );
 };
+

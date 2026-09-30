@@ -4,6 +4,9 @@ import { Header } from './components/Header';
 import { HeroSection } from './components/HeroSection';
 import { LegalPage } from './components/LegalPage';
 import { InteractiveMap } from './components/InteractiveMap';
+import { FAQSection } from './components/FAQSection';
+import { AIDemoCard } from './components/AIDemoCard';
+import { PageSkeleton } from './components/Skeleton';
 const VoiceInputModal = lazy(() => import('./components/VoiceInputModal').then((module) => ({ default: module.VoiceInputModal })));
 const GrievanceForm = lazy(() => import('./components/GrievanceForm').then((module) => ({ default: module.GrievanceForm })));
 const CitizenVerification = lazy(() => import('./components/CitizenVerification').then((module) => ({ default: module.CitizenVerification })));
@@ -87,7 +90,7 @@ const MainLayout: React.FC = () => {
 
       {/* Main Dynamic View Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 flex flex-col space-y-8 overflow-y-auto">
-        <Suspense fallback={<div role="status" className="py-12 text-center text-sm text-slate-600">{language === 'ta' ? 'பக்கத்தை ஏற்றுகிறது…' : 'Loading page…'}</div>}>
+        <Suspense fallback={<PageSkeleton label={language === 'ta' ? 'பக்கத்தை ஏற்றுகிறது…' : 'Loading page…'} />}>
         {activeTab === 'home' && (
           <div className="space-y-12 animate-in fade-in duration-300">
             <HeroSection
@@ -97,7 +100,9 @@ const MainLayout: React.FC = () => {
                 setActiveTab('file');
               }}
             />
+            <AIDemoCard />
             <InteractiveMap />
+            <FAQSection />
           </div>
         )}
 
@@ -183,7 +188,10 @@ const MainLayout: React.FC = () => {
                 {language === 'ta' ? 'அவசர உதவி எண்கள்' : 'Emergency Hotlines'}
               </h4>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Configure verified emergency and support contact numbers for the deploying organization before launch.
+                <span className="block font-mono text-slate-700">112 · Emergency</span>
+                <span className="block font-mono text-slate-700">108 · Ambulance</span>
+                <span className="block font-mono text-slate-700">181 · Women Helpline</span>
+                <span className="block font-mono text-slate-700">1098 · Child Helpline</span>
               </p>
             </div>
 
@@ -220,3 +228,4 @@ export default function App() {
     </AppProvider>
   );
 }
+
