@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
+import { after, before, beforeEach, describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   initializeTestEnvironment,
@@ -46,7 +47,7 @@ async function provisionAdmin(uid: string) {
   });
 }
 
-beforeAll(async () => {
+before(async () => {
   testEnv = await initializeTestEnvironment({
     projectId,
     firestore: {
@@ -58,28 +59,28 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => testEnv.clearFirestore());
-afterAll(async () => testEnv.cleanup());
+after(async () => testEnv.cleanup());
 
 describe('Firestore grievance and admin rules', () => {
   it('denies unauthenticated reads and writes', async () => {
     const db = testEnv.unauthenticatedContext().firestore();
-    await expect(getDoc(doc(db, 'grievances', 'GRV-2026-ABCDEF12'))).rejects.toThrow();
-    await expect(setDoc(doc(db, 'grievances', 'GRV-2026-ABCDEF12'), grievance('citizen-a'))).rejects.toThrow();
-  }, 30000);
+    await assert.rejects(getDoc(doc(db, 'grievances', 'GRV-2026-ABCDEF12')));
+    await assert.rejects(setDoc(doc(db, 'grievances', 'GRV-2026-ABCDEF12'), grievance('citizen-a')));
+  });
 
   it('allows a citizen to create and read their own grievance only', async () => {
     const citizenDb = testEnv.authenticatedContext('citizen-a', { firebase: { sign_in_provider: 'anonymous' } }).firestore();
     await setDoc(doc(citizenDb, 'grievances', 'GRV-2026-ABCDEF12'), grievance('citizen-a'));
 
     const otherCitizenDb = testEnv.authenticatedContext('citizen-b', { firebase: { sign_in_provider: 'anonymous' } }).firestore();
-    await expect(getDoc(doc(otherCitizenDb, 'grievances', 'GRV-2026-ABCDEF12'))).rejects.toThrow();
-    await expect(updateDoc(doc(citizenDb, 'grievances', 'GRV-2026-ABCDEF12'), { status: 'Resolved' })).rejects.toThrow();
+    await assert.rejects(getDoc(doc(otherCitizenDb, 'grievances', 'GRV-2026-ABCDEF12')));
+    await assert.rejects(updateDoc(doc(citizenDb, 'grievances', 'GRV-2026-ABCDEF12'), { status: 'Resolved' }));
 
     await updateDoc(doc(citizenDb, 'grievances', 'GRV-2026-ABCDEF12'), {
       feedback: { rating: 5, comment: 'Thank you', isResolvedSatisfied: true, submittedAt: '2026-09-30T01:00:00.000Z' },
       updatedAt: '2026-09-30T01:00:00.000Z',
     });
-  }, 30000);
+  });
 
   it('requires a verified, active admin record and makes audit logs immutable', async () => {
     await provisionAdmin('admin-a');
@@ -94,11 +95,11 @@ describe('Firestore grievance and admin rules', () => {
       userName: 'admin@example.test', userRole: 'ADMIN', action: 'STATUS_UPDATE',
       details: 'Changed grievance status', grievanceId: 'GRV-2026-ABCDEF12',
     });
-    await expect(updateDoc(audit, { details: 'tampered' })).rejects.toThrow();
+    await assert.rejects(updateDoc(audit, { details: 'tampered' }));
 
     const unverifiedDb = testEnv.authenticatedContext('admin-a', { email: 'admin@example.test', email_verified: false }).firestore();
-    await expect(getDoc(doc(unverifiedDb, 'grievances', 'GRV-2026-ABCDEF12'))).rejects.toThrow();
+    await assert.rejects(getDoc(doc(unverifiedDb, 'grievances', 'GRV-2026-ABCDEF12')));
     const unprovisionedDb = testEnv.authenticatedContext('admin-b', { email: 'other@example.test', email_verified: true }).firestore();
-    await expect(getDoc(doc(unprovisionedDb, 'grievances', 'GRV-2026-ABCDEF12'))).rejects.toThrow();
-  }, 30000);
+    await assert.rejects(getDoc(doc(unprovisionedDb, 'grievances', 'GRV-2026-ABCDEF12')));
+  });
 });
