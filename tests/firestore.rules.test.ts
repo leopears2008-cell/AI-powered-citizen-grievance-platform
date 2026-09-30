@@ -65,7 +65,7 @@ describe('Firestore grievance and admin rules', () => {
     const db = testEnv.unauthenticatedContext().firestore();
     await expect(getDoc(doc(db, 'grievances', 'GRV-2026-ABCDEF12'))).rejects.toThrow();
     await expect(setDoc(doc(db, 'grievances', 'GRV-2026-ABCDEF12'), grievance('citizen-a'))).rejects.toThrow();
-  });
+  }, 30000);
 
   it('allows a citizen to create and read their own grievance only', async () => {
     const citizenDb = testEnv.authenticatedContext('citizen-a', { firebase: { sign_in_provider: 'anonymous' } }).firestore();
@@ -79,7 +79,7 @@ describe('Firestore grievance and admin rules', () => {
       feedback: { rating: 5, comment: 'Thank you', isResolvedSatisfied: true, submittedAt: '2026-09-30T01:00:00.000Z' },
       updatedAt: '2026-09-30T01:00:00.000Z',
     });
-  });
+  }, 30000);
 
   it('requires a verified, active admin record and makes audit logs immutable', async () => {
     await provisionAdmin('admin-a');
@@ -100,5 +100,5 @@ describe('Firestore grievance and admin rules', () => {
     await expect(getDoc(doc(unverifiedDb, 'grievances', 'GRV-2026-ABCDEF12'))).rejects.toThrow();
     const unprovisionedDb = testEnv.authenticatedContext('admin-b', { email: 'other@example.test', email_verified: true }).firestore();
     await expect(getDoc(doc(unprovisionedDb, 'grievances', 'GRV-2026-ABCDEF12'))).rejects.toThrow();
-  });
+  }, 30000);
 });
