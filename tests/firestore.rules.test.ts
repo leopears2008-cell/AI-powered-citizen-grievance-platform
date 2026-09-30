@@ -16,6 +16,7 @@ const grievance = (citizenId: string) => {
     id: 'GRV-2026-ABCDEF12',
     trackId: 'GRV-2026-ABCDEF12',
     citizenId,
+    verificationMethod: 'phone',
     citizenName: 'Test Citizen',
     citizenPhone: '+919999999999',
     citizenEmail: '',
@@ -69,10 +70,13 @@ describe('Firestore grievance and admin rules', () => {
   });
 
   it('allows a citizen to create and read their own grievance only', async () => {
-    const citizenDb = testEnv.authenticatedContext('citizen-a', { firebase: { sign_in_provider: 'anonymous' } }).firestore();
+    const anonymousDb = testEnv.authenticatedContext('anonymous-citizen', { firebase: { sign_in_provider: 'anonymous' } }).firestore();
+    await assert.rejects(setDoc(doc(anonymousDb, 'grievances', 'GRV-2026-ABCDEF12'), grievance('anonymous-citizen')));
+
+    const citizenDb = testEnv.authenticatedContext('citizen-a', { phone_number: '+919999999999' }).firestore();
     await setDoc(doc(citizenDb, 'grievances', 'GRV-2026-ABCDEF12'), grievance('citizen-a'));
 
-    const otherCitizenDb = testEnv.authenticatedContext('citizen-b', { firebase: { sign_in_provider: 'anonymous' } }).firestore();
+    const otherCitizenDb = testEnv.authenticatedContext('citizen-b', { phone_number: '+918888888888' }).firestore();
     await assert.rejects(getDoc(doc(otherCitizenDb, 'grievances', 'GRV-2026-ABCDEF12')));
     await assert.rejects(updateDoc(doc(citizenDb, 'grievances', 'GRV-2026-ABCDEF12'), { status: 'Resolved' }));
 
@@ -80,13 +84,23 @@ describe('Firestore grievance and admin rules', () => {
       feedback: { rating: 5, comment: 'Thank you', isResolvedSatisfied: true, submittedAt: '2026-09-30T01:00:00.000Z' },
       updatedAt: '2026-09-30T01:00:00.000Z',
     });
+
+    const emailGrievance = {
+      ...grievance('email-citizen'),
+      id: 'GRV-2026-1234ABCD',
+      trackId: 'GRV-2026-1234ABCD',
+      verificationMethod: 'email',
+      citizenEmail: 'verified@example.test',
+    };
+    const emailDb = testEnv.authenticatedContext('email-citizen', { email: 'verified@example.test', email_verified: true }).firestore();
+    await setDoc(doc(emailDb, 'grievances', emailGrievance.id), emailGrievance);
   });
 
   it('requires a verified, active admin record and makes audit logs immutable', async () => {
     await provisionAdmin('admin-a');
     const adminDb = testEnv.authenticatedContext('admin-a', { email: 'admin@example.test', email_verified: true }).firestore();
     const complaintRef = doc(adminDb, 'grievances', 'GRV-2026-ABCDEF12');
-    await setDoc(doc(testEnv.authenticatedContext('citizen-a').firestore(), 'grievances', 'GRV-2026-ABCDEF12'), grievance('citizen-a'));
+    await setDoc(doc(testEnv.authenticatedContext('citizen-a', { phone_number: '+919999999999' }).firestore(), 'grievances', 'GRV-2026-ABCDEF12'), grievance('citizen-a'));
     await updateDoc(complaintRef, { status: 'Under Review', updatedAt: '2026-09-30T01:00:00.000Z' });
 
     const audit = doc(adminDb, 'auditLogs', 'audit-1');

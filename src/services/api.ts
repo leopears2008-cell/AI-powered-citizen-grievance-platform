@@ -19,6 +19,13 @@ import {
   query,
   where,
 } from 'firebase/firestore';
+import type { User } from 'firebase/auth';
+
+async function isActiveAdmin(user: User | null): Promise<boolean> {
+  if (!user || user.isAnonymous || !user.emailVerified) return false;
+  const record = await getDoc(doc(db, 'admins', user.uid));
+  return record.exists() && record.data()?.active === true;
+}
 
 async function authHeaders() {
   const user = auth.currentUser;
@@ -78,9 +85,9 @@ export const api = {
     const user = auth.currentUser;
     if (!user) return [];
     const base = collection(db, 'grievances');
-    const q = user.isAnonymous
-      ? query(base, where('citizenId', '==', user.uid))
-      : query(base);
+    const q = await isActiveAdmin(user)
+      ? query(base)
+      : query(base, where('citizenId', '==', user.uid));
     const snapshot = await getDocs(q);
     let results = snapshot.docs.map((d) => d.data() as Grievance);
 
@@ -94,7 +101,7 @@ export const api = {
         const search = params.search.toLowerCase();
         results = results.filter(r =>
           r.trackId?.toLowerCase().includes(search) ||
-          (user.isAnonymous ? false : r.citizenName?.toLowerCase().includes(search)) ||
+          r.citizenName?.toLowerCase().includes(search) ||
           r.summaryEn?.toLowerCase().includes(search)
         );
       }
@@ -121,6 +128,9 @@ export const api = {
   async createComplaint(data: Partial<Grievance>): Promise<Grievance> {
     const user = auth.currentUser;
     if (!user) throw new Error('Authentication session is not ready.');
+    if (user.isAnonymous || (!user.phoneNumber && !user.emailVerified)) {
+      throw new Error('Verify your phone number or email before submitting a grievance.');
+    }
 
     const trackId = `GRV-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     const now = new Date().toISOString();
@@ -132,6 +142,9 @@ export const api = {
       id: trackId,
       trackId,
       citizenId: user.uid,
+      verificationMethod: user.phoneNumber ? 'phone' : 'email',
+      ...(user.phoneNumber ? { citizenPhone: user.phoneNumber } : {}),
+      ...(user.emailVerified && user.email ? { citizenEmail: user.email } : {}),
       status: 'Submitted' as GrievanceStatus,
       createdAt: now,
       updatedAt: now,
@@ -152,7 +165,7 @@ export const api = {
     status: GrievanceStatus; remarks: string; updatedBy: string;
     role: 'CITIZEN' | 'OFFICER' | 'ADMIN'; evidenceUrl?: string;
   }): Promise<Grievance> {
-    if (auth.currentUser?.isAnonymous) throw new Error('Only authorized staff can change grievance status.');
+    if (!(await isActiveAdmin(auth.currentUser))) throw new Error('Only authorized staff can change grievance status.');
     const grievance = await this.getComplaintById(id);
     const updatedHistory = [...grievance.statusHistory, {
       status: payload.status, timestamp: new Date().toISOString(),
@@ -174,7 +187,7 @@ export const api = {
   },
 
   async assignOfficer(id: string, officerId: string, adminName?: string): Promise<Grievance> {
-    if (auth.currentUser?.isAnonymous) throw new Error('Admin authentication required.');
+    if (!(await isActiveAdmin(auth.currentUser))) throw new Error('Admin authentication required.');
     const officerSnap = await getDoc(doc(db, 'officers', officerId));
     if (!officerSnap.exists()) throw new Error('Officer record not found.');
     const officer = officerSnap.data() as Officer;
@@ -255,7 +268,7 @@ export const api = {
   },
 
   async getAnalytics() {
-    if (auth.currentUser?.isAnonymous) throw new Error('Admin authentication required.');
+    if (!(await isActiveAdmin(auth.currentUser))) throw new Error('Admin authentication required.');
     const complaints = await this.getComplaints();
     const resolved = complaints.filter((c) => c.status === 'Resolved').length;
     const pending = complaints.length - resolved;
@@ -314,7 +327,7 @@ export const api = {
   },
 
   async getAuditLogs(): Promise<AuditLog[]> {
-    if (auth.currentUser?.isAnonymous) throw new Error('Admin authentication required.');
+    if (!(await isActiveAdmin(auth.currentUser))) throw new Error('Admin authentication required.');
     const snapshot = await getDocs(collection(db, 'auditLogs'));
     return snapshot.docs
       .map((item) => item.data() as AuditLog)

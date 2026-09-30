@@ -9,6 +9,7 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   signOut,
+  reload,
   User,
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -44,6 +45,8 @@ interface AppContextType {
   user: User | null;
   isAdmin: boolean;
   authLoading: boolean;
+  isCitizenVerified: boolean;
+  refreshAuthenticatedUser: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   resetAdminPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -117,6 +120,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const t = translations[language] || translations.en;
   const role: UserRole = isAdmin ? 'ADMIN' : 'CITIZEN';
+  const isCitizenVerified = Boolean(user && !user.isAnonymous && (user.emailVerified || user.phoneNumber));
+  const refreshAuthenticatedUser = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    await reload(currentUser);
+    await currentUser.getIdToken(true);
+    setUser(auth.currentUser);
+  };
   const triggerRefresh = () => setRefreshKey((prev) => prev + 1);
 
   const showToast = (message: string, type: ToastInfo['type'] = 'success') => {
@@ -152,7 +163,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       language, setLanguage, t, role, activeTab, setActiveTab,
       trackId, setTrackId, navigateToTrack, notifications, unreadCount,
       markAsRead, refreshKey, triggerRefresh, toasts, showToast, removeToast,
-      user, isAdmin, authLoading, login, resetAdminPassword, logout,
+      user, isAdmin, authLoading, isCitizenVerified, refreshAuthenticatedUser, login, resetAdminPassword, logout,
     }}>
       {children}
     </AppContext.Provider>

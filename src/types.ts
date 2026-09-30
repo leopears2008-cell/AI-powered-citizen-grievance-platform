@@ -66,6 +66,7 @@ export interface Grievance {
   id: string; // Document ID
   trackId: string; // GRV-2026-XXXXX
   citizenId?: string; // Firebase Auth UID
+  verificationMethod?: 'phone' | 'email';
   citizenName: string;
   citizenPhone: string;
   citizenEmail?: string;

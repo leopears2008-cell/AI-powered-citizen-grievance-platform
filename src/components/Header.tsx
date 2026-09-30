@@ -45,7 +45,7 @@ export const Header: React.FC = () => {
       <div className="bg-slate-950 text-slate-300 text-xs py-1.5 px-4 sm:px-8 flex justify-between items-center border-b border-slate-800">
         <div className="flex items-center space-x-3">
           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-            Gov of Tamil Nadu
+            Citizen Grievance Portal
           </span>
           <span className="hidden sm:inline">{t.portalTagline}</span>
         </div>

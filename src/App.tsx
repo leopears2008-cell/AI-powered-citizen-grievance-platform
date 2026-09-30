@@ -6,6 +6,7 @@ import { LegalPage } from './components/LegalPage';
 import { InteractiveMap } from './components/InteractiveMap';
 const VoiceInputModal = lazy(() => import('./components/VoiceInputModal').then((module) => ({ default: module.VoiceInputModal })));
 const GrievanceForm = lazy(() => import('./components/GrievanceForm').then((module) => ({ default: module.GrievanceForm })));
+const CitizenVerification = lazy(() => import('./components/CitizenVerification').then((module) => ({ default: module.CitizenVerification })));
 const CitizenTracker = lazy(() => import('./components/CitizenTracker').then((module) => ({ default: module.CitizenTracker })));
 const CitizenHistory = lazy(() => import('./components/CitizenHistory').then((module) => ({ default: module.CitizenHistory })));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
@@ -25,7 +26,7 @@ import {
 } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
-  const { language, t, activeTab, setActiveTab, toasts, removeToast, isAdmin, authLoading } = useApp();
+  const { language, t, activeTab, setActiveTab, toasts, removeToast, isAdmin, authLoading, isCitizenVerified } = useApp();
 
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [initialVoiceTranscript, setInitialVoiceTranscript] = useState('');
@@ -102,11 +103,17 @@ const MainLayout: React.FC = () => {
 
         {activeTab === 'file' && (
           <div className="animate-in fade-in duration-300">
-            <GrievanceForm
-              initialTranscript={initialVoiceTranscript}
-              initialLanguage={initialVoiceLang}
-              onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
-            />
+            {authLoading ? (
+              <div role="status" className="py-16 text-center text-sm text-slate-600">{language === 'ta' ? 'அங்கீகாரத்தைச் சரிபார்க்கிறது…' : 'Checking your account…'}</div>
+            ) : isCitizenVerified ? (
+              <GrievanceForm
+                initialTranscript={initialVoiceTranscript}
+                initialLanguage={initialVoiceLang}
+                onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
+              />
+            ) : (
+              <CitizenVerification />
+            )}
           </div>
         )}
 

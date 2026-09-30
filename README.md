@@ -26,9 +26,11 @@
 
 <br>
 
-<img src="https://komarev.com/ghpvc/?username=leopears2008-cell&label=Project%20Views&color=0e7490&style=for-the-badge" alt="Project views"/>
+
 
 </div>
+
+> **Pre-production project:** This repository is not affiliated with a government and does not establish an official complaint channel. The deploying organization must configure its identity, support contact, Firebase project, and operational processes before public use.
 
 ---
 
@@ -135,7 +137,7 @@ Similar open complaints can be identified before creating unnecessary duplicate 
 
 ### 📊 Administrator Analytics
 
-Officials receive dashboards, analytics, filters, maps and grievance management tools.
+Authorized administrators use dashboards, analytics, filters, and grievance management tools; a separate officer identity/permission model is not configured.
 
 </td>
 </tr>
@@ -161,7 +163,7 @@ Officials receive dashboards, analytics, filters, maps and grievance management 
 | 🔎 **Grievance Tracking** | Track complaint status |
 | ⭐ **Feedback** | Citizen satisfaction feedback |
 | 🌐 **Multilingual UI** | English + Tamil |
-| 🔒 **Anonymous Session** | Simple citizen access |
+| 🔒 **Anonymous browsing** | Browsing is anonymous; a verified phone or email is required before submitting a grievance |
 
 ---
 
@@ -475,7 +477,8 @@ Enable:
 
 ```text
 🔥 Firebase Authentication
-🔥 Anonymous Authentication
+🔥 Anonymous Authentication (browsing only)
+🔥 Phone Authentication (OTP)
 🔥 Email/Password Authentication
 🔥 Cloud Firestore
 ```
@@ -574,7 +577,8 @@ NivaranAI separates sensitive operations from the public client.
               🔑 Firebase Token
                        │
                        ▼
-               👤 User Verified
+        👤 Verified Citizen Claim
+  📱 Phone OTP or 📧 verified email
                        │
                        ▼
              ┌─────────┴─────────┐
@@ -584,6 +588,16 @@ NivaranAI separates sensitive operations from the public client.
              ▼                   ▼
        Citizen APIs        Admin APIs
 ```
+
+---
+
+## 🔐 Citizen verification and complaint submission
+
+Filing a complaint requires Firebase Authentication verification by mobile OTP or verified email. Phone sign-in uses Firebase Phone Authentication with reCAPTCHA; this app does not generate or store OTP codes. Ten-digit phone entries default to India (+91); other countries use E.164 phone format. Email registration/sign-in uses Firebase Email/Password Authentication and requires Firebase to report `emailVerified` after refreshing the user.
+
+The browser and `api.createComplaint` block unverified submissions, and `firestore.rules` also validates the matching phone-number or verified-email claim in the Firebase ID token. Anonymous sessions are limited to browsing. Contact fields are sourced from Firebase Authentication where verified; this feature does not duplicate them into a Firestore `users` collection.
+
+In Firebase Console, enable **Phone** and **Email/Password** providers, add localhost and approved production hosts to Authorized domains, review SMS regions/quotas, and configure verification email templates/action URLs. SMS/email delivery must be tested using the service operator's own Firebase project. Only client-safe Firebase web configuration belongs in `VITE_FIREBASE_*` settings; Firebase Admin credentials stay server-side.
 
 ---
 

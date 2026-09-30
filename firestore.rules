@@ -57,11 +57,21 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly([
           'id', 'trackId', 'citizenId', 'citizenName', 'citizenPhone', 'citizenEmail', 'language',
+          'verificationMethod',
           'originalTranscript', 'summaryEn', 'summaryTa', 'category', 'departmentId', 'departmentName',
           'priority', 'priorityReason', 'confidenceScore', 'location', 'attachments', 'entities',
           'estimatedDays', 'targetResolutionDate', 'status', 'statusHistory', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.citizenId == request.auth.uid
+        && (
+          (request.resource.data.verificationMethod == 'phone'
+            && request.auth.token.get('phone_number', '') is string
+            && request.resource.data.citizenPhone == request.auth.token.get('phone_number', ''))
+          ||
+          (request.resource.data.verificationMethod == 'email'
+            && request.auth.token.get('email_verified', false) == true
+            && request.resource.data.citizenEmail == request.auth.token.get('email', ''))
+        )
         && request.resource.data.id == grievanceId
         && request.resource.data.trackId == grievanceId
         && grievanceId.matches('^GRV-[0-9]{4}-[A-F0-9]{8}$')

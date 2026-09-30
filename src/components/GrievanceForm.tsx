@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
 import { AIAnalysisResponse, GrievanceCategory, GrievancePriority, DuplicateMatch } from '../types';
@@ -41,7 +41,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
   initialLanguage = 'Tamil',
   onOpenVoiceModal,
 }) => {
-  const { language, t, navigateToTrack, showToast, triggerRefresh, user, setActiveTab } = useApp();
+  const { language, t, navigateToTrack, showToast, triggerRefresh, user, isCitizenVerified, setActiveTab } = useApp();
 
   // Wizard Step: 1 = Input & Evidence, 2 = AI Scanning Loader, 3 = Citizen Confirmation, 4 = Success
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -82,6 +82,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
   const [editedDepartment, setEditedDepartment] = useState<string>('Civic Services');
   const [editedSummary, setEditedSummary] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionLock = useRef(false);
   const [privacyConfirmed, setPrivacyConfirmed] = useState(false);
 
   // Registered Grievance output
@@ -97,6 +98,12 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
       setComplaintText(initialTranscript);
     }
   }, [initialTranscript]);
+
+  React.useEffect(() => {
+    if (user?.displayName) setCitizenName(user.displayName.slice(0, 120));
+    if (user?.phoneNumber) setCitizenPhone(user.phoneNumber);
+    if (user?.emailVerified && user.email) setCitizenEmail(user.email);
+  }, [user]);
 
   // GPS Location Locator
   const handleDetectGPS = () => {
@@ -276,7 +283,13 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
 
   // Step 3 -> Step 4: Final Submission to Database
   const handleConfirmAndRegister = async () => {
+    if (submissionLock.current) return;
     if (!aiResult) return;
+    if (!isCitizenVerified || !user || user.isAnonymous) {
+      showToast(language === 'ta' ? 'முதலில் தொலைபேசி அல்லது மின்னஞ்சலைச் சரிபார்க்கவும்.' : 'Verify your phone number or email before submitting.', 'warning');
+      setActiveTab('file');
+      return;
+    }
     if (!privacyConfirmed) {
       showToast(
         language === 'ta' ? 'தனியுரிமை அறிவிப்பை படித்து ஒப்புக்கொள்ளவும்' : 'Please confirm the privacy notice before submitting.',
@@ -301,11 +314,21 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
       showToast(language === 'ta' ? 'சரியான தொலைபேசி எண்ணையும் மின்னஞ்சல் முகவரியையும் உள்ளிடவும்.' : 'Enter a valid phone number and email address.', 'warning');
       return;
     }
+    if (user.phoneNumber && citizenPhone.trim() !== user.phoneNumber) {
+      showToast(language === 'ta' ? 'சரிபார்க்கப்பட்ட தொலைபேசி எண்ணைப் பயன்படுத்தவும்.' : 'Use the phone number verified by Firebase.', 'warning');
+      return;
+    }
+    if (user.emailVerified && citizenEmail.trim().toLowerCase() !== user.email?.toLowerCase()) {
+      showToast(language === 'ta' ? 'சரிபார்க்கப்பட்ட மின்னஞ்சலைப் பயன்படுத்தவும்.' : 'Use the email address verified by Firebase.', 'warning');
+      return;
+    }
+    submissionLock.current = true;
     setIsSubmitting(true);
 
     try {
       const payload = {
-        citizenId: user?.uid || 'anonymous',
+        citizenId: user.uid,
+        verificationMethod: user.phoneNumber ? 'phone' as const : 'email' as const,
         citizenName: citizenName.trim(),
         citizenPhone: citizenPhone.trim(),
         citizenEmail: citizenEmail.trim(),
@@ -337,6 +360,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
 
       const created = await api.createComplaint(payload);
       setRegisteredId(created.id);
+      submissionLock.current = false;
       setIsSubmitting(false);
       setStep(4);
       triggerRefresh();
@@ -359,6 +383,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
         'success'
       );
     } catch (err: any) {
+      submissionLock.current = false;
       setIsSubmitting(false);
       showToast(err.message || 'Failed to submit grievance', 'error');
     }
@@ -579,9 +604,10 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                   aria-describedby="citizen-phone-help"
                   value={citizenPhone}
                   onChange={(e) => setCitizenPhone(e.target.value)}
+                  readOnly={Boolean(user?.phoneNumber)}
                   className="w-full p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-none font-mono"
                 />
-                <p id="citizen-phone-help" className="sr-only">Digits, spaces, parentheses, hyphens, and an optional leading plus sign.</p>
+                <p id="citizen-phone-help" className="sr-only">{user?.phoneNumber ? 'This phone number was verified by Firebase.' : 'Enter a contact number with digits, spaces, parentheses, hyphens, or an optional leading plus sign.'}</p>
               </div>
 
               <div>
@@ -593,6 +619,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                   maxLength={254}
                   value={citizenEmail}
                   onChange={(e) => setCitizenEmail(e.target.value)}
+                  readOnly={Boolean(user?.emailVerified)}
                   className="w-full p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-none"
                 />
               </div>

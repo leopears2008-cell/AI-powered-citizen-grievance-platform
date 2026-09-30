@@ -9,7 +9,7 @@ Audit scope: static review of the repository source, configuration, rules, build
 | Frontend | React 19, TypeScript, Vite, Tailwind 4; `src/App.tsx` mounts the views; `src/context/AppContext.tsx` owns language, navigation, toast, Firebase session, and derived citizen/admin role. |
 | Backend | Express 4 in `server.ts`; JSON API for AI analysis, duplicate matching, and admin resolution drafting. Vite middleware serves development; `dist/client` is served in production. |
 | Database | Cloud Firestore; browser operations use Firebase Web SDK from `src/services/api.ts`; authorization is defined in `firestore.rules`. Firebase Admin is used for privileged server lookups. |
-| Authentication | Firebase Authentication: anonymous citizen sessions; email/password admin sign-in; verified email, `admins/{uid}` active record, and server `ADMIN_EMAILS` allowlist. No distinct officer identity/role flow is implemented. |
+| Authentication | Firebase Authentication: anonymous browsing; citizen phone OTP or verified-email sign-in required for complaint creation; email/password admin sign-in requires verified email, active `admins/{uid}` record, and server `ADMIN_EMAILS` allowlist. No distinct officer identity/role flow is implemented. |
 | AI/external services | Server-side Google Gemini calls; browser Web Speech API for voice transcription. No configured outbound notification provider. |
 | State and routing | React context and component state; single-page conditional view switching in `src/App.tsx`. No separate router library. |
 | Package/build | Bun lockfile and scripts; Vite client build; TypeScript server compilation; TypeScript `--noEmit` check; Bun tests and Firebase Rules Unit Testing emulator tests. |
@@ -148,7 +148,7 @@ Audit scope: static review of the repository source, configuration, rules, build
 - `bun run lint` — passed (`tsc --noEmit`, exit code 0).
 - `bun run build` — passed (exit code 0); Vite emitted a 961 KB main JavaScript chunk and its non-fatal >500 KB advisory. Route-level code splitting reduced initially-loaded page code; further splitting should be based on production performance measurements.
 - `node scripts/start-server.mjs` followed by `GET /healthz` — passed (`{"status":"ok"}`). No Firebase Admin secret was present, so protected server endpoints correctly remain unavailable in this environment.
-- `bun run test:rules` — not executed successfully locally because Java is not installed/on PATH; Firebase Emulator requires Java. GitHub CI installs Java 21 and runs this suite. No claim of a passing rules test is made until that workflow completes.
+- Firestore emulator rules tests passed in GitHub Actions on commit `4b280e5`. Local emulator runs require Java, which is not installed/on PATH here. Phone/email claim cases are part of the current feature change and must pass the new CI run before merge/deployment.
 - Browser console, visual mobile/tablet/desktop, screen-reader, end-to-end login/IDOR, live Firebase rules/data, dependency vulnerability scan, backup restore, and production deployment checks were not performed in this repository-only review.
 
 ## Launch checklist — operator decisions and verification
@@ -156,6 +156,7 @@ Audit scope: static review of the repository source, configuration, rules, build
 - [ ] Confirm service owner, lawful purpose, public authority (if any), support contact and emergency/support numbers.
 - [ ] Obtain counsel review for DPDP Act, 2023 and current rules/guidance, notices, consent/legal basis, transfers, user requests, and retention/deletion.
 - [ ] Confirm Firebase project, named database, region, access, backups, recovery, API key restrictions, Auth domains, Firestore rules deployment and live rules tests.
+- [ ] Enable Firebase Phone and Email/Password providers, configure authorized domains, SMS regions/quotas, reCAPTCHA and email verification templates/action URLs; test real delivery from the approved project.
 - [ ] Set verified admin allowlist; provision only verified accounts; test revocation. Define distinct officer identity/department permissions before enabling officers.
 - [ ] Remove any existing demo data from production only after the operator identifies it and approves a safe, backed-up cleanup plan. This audit did not read or change cloud data.
 - [ ] Provision and verify actual department/officer records. Confirm live list sources; do not deploy an unverified current MLA directory.
