@@ -1,4 +1,3 @@
- 
 import express from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
@@ -6,23 +5,26 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { createServer as createViteServer } from 'vite';
 import { getApps, initializeApp, cert, getApp } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
+// NOTE: INITIAL_DEPARTMENTS / INITIAL_OFFICERS remain temporary in-memory demo
+// data (see the "IN-MEMORY DEMO DATA" section below) until departments/officers
+// are migrated to Firestore collections managed by an admin CRUD surface.
+// The complaint/notification/audit-log in-memory arrays that used to live here
+// were removed: the frontend has never read or written through them (all real
+// grievance data goes directly to Firestore via src/services/api.ts), so they
+// were dead, unreachable, seed-data-only state that duplicated the real
+// architecture and could not have been kept in sync with it.
 import {
-  INITIAL_COMPLAINTS,
   INITIAL_DEPARTMENTS,
   INITIAL_OFFICERS,
-  INITIAL_NOTIFICATIONS,
-  INITIAL_AUDIT_LOGS,
 } from './src/data/seedData';
 
 import {
   Grievance,
   Department,
   Officer,
-  NotificationItem,
-  AuditLog,
   AIAnalysisResponse,
-  GrievanceStatus,
 } from './src/types';
 
 dotenv.config();
@@ -32,6 +34,7 @@ dotenv.config();
 ========================================================= */
 
 let firebaseAdminAuth: ReturnType<typeof getAdminAuth> | null = null;
+let firestoreAdmin: Firestore | null = null;
 
 function initializeFirebaseAdmin() {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
@@ -54,6 +57,7 @@ function initializeFirebaseAdmin() {
           });
 
     firebaseAdminAuth = getAdminAuth(app);
+    firestoreAdmin = getFirestore(app);
 
     console.log('Firebase Admin initialized successfully.');
   } catch (error) {
@@ -159,12 +163,14 @@ function requireAuthenticatedAdmin(
 }
 
 /* =========================================================
-   IN-MEMORY DATA
+   IN-MEMORY DEMO DATA
+   TEMPORARY: departments/officers are still served from static seed
+   data (scripts/seed equivalent) rather than Firestore. This is
+   read-only reference data (no citizen PII, no grievance content),
+   so it is lower-risk than the removed complaint/notification/audit
+   arrays, but it should still move to a `departments` / `officers`
+   Firestore collection with real admin CRUD before production launch.
 ========================================================= */
-
-let complaints: Grievance[] = JSON.parse(
-  JSON.stringify(INITIAL_COMPLAINTS)
-);
 
 let departments: Department[] = JSON.parse(
   JSON.stringify(INITIAL_DEPARTMENTS)
@@ -173,16 +179,6 @@ let departments: Department[] = JSON.parse(
 let officers: Officer[] = JSON.parse(
   JSON.stringify(INITIAL_OFFICERS)
 );
-
-let notifications: NotificationItem[] = JSON.parse(
-  JSON.stringify(INITIAL_NOTIFICATIONS)
-);
-
-let auditLogs: AuditLog[] = JSON.parse(
-  JSON.stringify(INITIAL_AUDIT_LOGS)
-);
-
-let complaintCounter = 128;
 
 /* =========================================================
    GEMINI
@@ -447,91 +443,12 @@ app.use(
 );
 
 /* =========================================================
-   AUDIT LOG HELPER
-========================================================= */
-
-function addAuditLog(
-  userId: string,
-  userName: string,
-  userRole: 'CITIZEN' | 'OFFICER' | 'ADMIN',
-  action: string,
-  details: string,
-  grievanceId?: string
-) {
-  const newLog: AuditLog = {
-    id: `audit-${Date.now()}-${Math.floor(
-      Math.random() * 1000
-    )}`,
-
-    timestamp: new Date().toISOString(),
-
-    userId,
-
-    userName,
-
-    userRole,
-
-    action,
-
-    details,
-
-    grievanceId,
-  };
-
-  auditLogs.unshift(newLog);
-
-  if (auditLogs.length > 100) {
-    auditLogs.pop();
-  }
-}
-
-/* =========================================================
-   NOTIFICATION HELPER
-========================================================= */
-
-function addNotification(
-  grievanceId: string,
-  title: string,
-  titleTa: string,
-  message: string,
-  messageTa: string,
-  type:
-    | 'status_update'
-    | 'assignment'
-    | 'resolution'
-    | 'info_requested'
-) {
-  const notif: NotificationItem = {
-    id: `notif-${Date.now()}-${Math.floor(
-      Math.random() * 1000
-    )}`,
-
-    grievanceId,
-
-    title,
-
-    titleTa,
-
-    message,
-
-    messageTa,
-
-    type,
-
-    read: false,
-
-    createdAt: new Date().toISOString(),
-  };
-
-  notifications.unshift(notif);
-}
-
-/* =========================================================
    1. AI COMPLAINT ANALYSIS
 ========================================================= */
 
 app.post(
   '/api/ai/analyze-complaint',
+  authenticate,
   async (req, res) => {
     try {
       const { text } = req.body;
@@ -971,6 +888,7 @@ If the language is Tamil, provide both English and Tamil summaries.
 
 app.post(
   '/api/ai/check-duplicates',
+  authenticate,
   async (req, res) => {
     try {
       const {
@@ -991,20 +909,48 @@ app.post(
 
       const ai = getGeminiClient();
 
-      const candidates =
-        complaints.filter(
-          (c) =>
-            c.status !== 'Resolved' &&
-            (
-              c.category === category ||
-              (
-                district &&
-                c.location.district
-                  .toLowerCase() ===
-                  district.toLowerCase()
-              )
-            )
-        );
+      // Duplicate candidates are read from Firestore -- the single source of
+      // truth for real grievances -- instead of the removed in-memory seed
+      // array, which never contained anything a citizen actually submitted.
+      // This is a bounded recent-history scan (most-recent 200 grievances,
+      // most relevant for catching near-duplicate reports filed close
+      // together) rather than a full collection scan. A composite Firestore
+      // index on (category, createdAt) or (location.district, createdAt)
+      // would allow a tighter server-side filter and should be added if this
+      // endpoint sees meaningful traffic -- see firestore.indexes.json.
+      let candidates: Grievance[] = [];
+
+      if (firestoreAdmin) {
+        try {
+          const snapshot = await firestoreAdmin
+            .collection('grievances')
+            .orderBy('createdAt', 'desc')
+            .limit(200)
+            .get();
+
+          candidates = snapshot.docs
+            .map((docSnap) => docSnap.data() as Grievance)
+            .filter(
+              (c) =>
+                c.status !== 'Resolved' &&
+                (
+                  c.category === category ||
+                  (
+                    district &&
+                    typeof c.location?.district === 'string' &&
+                    c.location.district.toLowerCase() ===
+                      String(district).toLowerCase()
+                  )
+                )
+            );
+        } catch (lookupError) {
+          console.error(
+            'Firestore duplicate-candidate lookup failed:',
+            lookupError instanceof Error ? lookupError.message : 'unknown'
+          );
+          candidates = [];
+        }
+      }
 
       if (candidates.length === 0) {
         return res.json({
@@ -1226,10 +1172,32 @@ app.post(
         });
       }
 
-      const grievance =
-        complaints.find(
-          (c) => c.id === grievanceId
+      if (!firestoreAdmin) {
+        return res.status(503).json({
+          error: 'Grievance data store is not configured.',
+        });
+      }
+
+      let grievance: Grievance | null = null;
+
+      try {
+        const docSnap = await firestoreAdmin
+          .collection('grievances')
+          .doc(grievanceId)
+          .get();
+
+        grievance = docSnap.exists
+          ? (docSnap.data() as Grievance)
+          : null;
+      } catch (lookupError) {
+        console.error(
+          'Firestore grievance lookup failed:',
+          lookupError instanceof Error ? lookupError.message : 'unknown'
         );
+        return res.status(500).json({
+          error: 'Unable to look up grievance.',
+        });
+      }
 
       if (!grievance) {
         return res.status(404).json({
@@ -1354,813 +1322,23 @@ preventiveAction
 );
 
 /* =========================================================
-   4. COMPLAINT APIs
+   NOTE ON REMOVED "COMPLAINT APIs" SECTION
+   ---------------------------------------------------------
+   This server previously exposed a full in-memory
+   /api/complaints* REST surface (list/get/create/status/assign/
+   feedback), all reading and writing a `complaints` array seeded
+   once from static demo data and reset on every server restart.
+   The current frontend (src/services/api.ts) does not call any of
+   these routes -- grievance create/read/status/assignment/feedback
+   all go directly to Firestore via the Firebase client SDK, guarded
+   by firestore.rules. Keeping this parallel, non-persistent,
+   never-synced complaint store around was itself the "in-memory
+   database" anti-pattern the architecture must avoid, so it has
+   been removed rather than patched. If a server-side complaint API
+   is needed in the future (e.g. for a non-browser integration), it
+   should be added as a thin Firestore-backed repository/service,
+   not a revived in-memory array.
 ========================================================= */
-
-/* GET complaints */
-
-app.get(
-  '/api/complaints',
-  requireAuthenticatedAdmin,
-  (req, res) => {
-    const {
-      search,
-      category,
-      status,
-      priority,
-      departmentId,
-      officerId,
-    } = req.query;
-
-    let filtered = [...complaints];
-
-    if (
-      category &&
-      category !== 'All'
-    ) {
-      filtered =
-        filtered.filter(
-          (c) => c.category === category
-        );
-    }
-
-    if (
-      status &&
-      status !== 'All'
-    ) {
-      filtered =
-        filtered.filter(
-          (c) => c.status === status
-        );
-    }
-
-    if (
-      priority &&
-      priority !== 'All'
-    ) {
-      filtered =
-        filtered.filter(
-          (c) => c.priority === priority
-        );
-    }
-
-    if (
-      departmentId &&
-      departmentId !== 'All'
-    ) {
-      filtered =
-        filtered.filter(
-          (c) =>
-            c.departmentId ===
-            departmentId
-        );
-    }
-
-    if (officerId) {
-      filtered =
-        filtered.filter(
-          (c) =>
-            c.assignedOfficerId ===
-            officerId
-        );
-    }
-
-    if (
-      search &&
-      typeof search === 'string' &&
-      search.trim() !== ''
-    ) {
-      const q =
-        search.toLowerCase();
-
-      filtered =
-        filtered.filter(
-          (c) =>
-            c.id
-              .toLowerCase()
-              .includes(q) ||
-            c.citizenName
-              .toLowerCase()
-              .includes(q) ||
-            c.summaryEn
-              .toLowerCase()
-              .includes(q) ||
-            c.summaryTa
-              .toLowerCase()
-              .includes(q) ||
-            c.location.address
-              .toLowerCase()
-              .includes(q) ||
-            c.location.district
-              .toLowerCase()
-              .includes(q)
-        );
-    }
-
-    filtered.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() -
-        new Date(a.createdAt).getTime()
-    );
-
-    res.json(filtered);
-  }
-);
-
-/* GET single complaint */
-
-app.get(
-  '/api/complaints/:id',
-  requireAuthenticatedAdmin,
-  (req, res) => {
-    const item =
-      complaints.find(
-        (c) =>
-          c.id.toUpperCase() ===
-          req.params.id.toUpperCase()
-      );
-
-    if (!item) {
-      return res.status(404).json({
-        error: 'Grievance not found.',
-      });
-    }
-
-    res.json(item);
-  }
-);
-
-/* CREATE complaint */
-
-app.post(
-  '/api/complaints',
-  authenticate,
-  (req, res) => {
-    try {
-      const data = req.body;
-
-      complaintCounter += 1;
-
-      const newId =
-        `GRV-2026-${String(
-          complaintCounter
-        ).padStart(5, '0')}`;
-
-      const now =
-        new Date().toISOString();
-
-      const estimatedDays =
-        Number(data.estimatedDays) || 3;
-
-      const targetDate =
-        new Date(
-          Date.now() +
-            estimatedDays *
-              86400000
-        ).toISOString();
-
-      const newGrievance:
-        Grievance = {
-          id: newId,
-
-          trackId: newId,
-
-          citizenName:
-            data.citizenName ||
-            'Concerned Citizen',
-
-          citizenPhone:
-            data.citizenPhone ||
-            '+91 98000 00000',
-
-          citizenEmail:
-            data.citizenEmail || '',
-
-          citizenId:
-            (
-              req as AuthenticatedRequest
-            ).user?.uid,
-
-          language:
-            data.language || 'Tamil',
-
-          originalTranscript:
-            data.originalTranscript || '',
-
-          summaryEn:
-            data.summaryEn ||
-            data.summary ||
-            '',
-
-          summaryTa:
-            data.summaryTa ||
-            data.summaryTamil ||
-            '',
-
-          category:
-            data.category || 'Other',
-
-          departmentId:
-            data.departmentId ||
-            'dept-sanitation',
-
-          departmentName:
-            data.departmentName ||
-            'Public Services',
-
-          priority:
-            data.priority ||
-            'Medium',
-
-          priorityReason:
-            data.priorityReason ||
-            'Assigned based on civic impact model.',
-
-          confidenceScore:
-            Number(
-              data.confidenceScore
-            ) || 0.95,
-
-          location: {
-            address:
-              data.location?.address ||
-              'City Ward Area',
-
-            landmark:
-              data.location?.landmark ||
-              '',
-
-            district:
-              data.location?.district ||
-              'Chennai',
-
-            wardNumber:
-              data.location?.wardNumber ||
-              '',
-
-            pincode:
-              data.location?.pincode ||
-              '',
-
-            lat:
-              data.location?.lat ||
-              13.0827,
-
-            lng:
-              data.location?.lng ||
-              80.2707,
-          },
-
-          attachments:
-            data.attachments || [],
-
-          status: 'Submitted',
-
-          targetResolutionDate:
-            targetDate,
-
-          entities:
-            data.entities || {},
-
-          statusHistory: [
-            {
-              status: 'Submitted',
-
-              timestamp: now,
-
-              updatedBy:
-                `${data.citizenName || 'Citizen'} (${
-                  data.language === 'Tamil'
-                    ? 'Tamil Voice/Text'
-                    : 'English'
-                })`,
-
-              role: 'CITIZEN',
-
-              remarks:
-                'Complaint registered into NivaranAI Portal.',
-            },
-
-            {
-              status: 'AI Classified',
-
-              timestamp:
-                new Date(
-                  Date.now() + 1000
-                ).toISOString(),
-
-              updatedBy:
-                'NivaranAI Intelligence Engine',
-
-              role: 'ADMIN',
-
-              remarks:
-                `Categorized into ${data.category || 'Other'} (${data.priority || 'Medium'} Priority, Confidence ${Math.round(
-                  (
-                    Number(
-                      data.confidenceScore
-                    ) || 0.95
-                  ) * 100
-                )}%).`,
-            },
-          ],
-
-          createdAt: now,
-
-          updatedAt: now,
-        };
-
-      /* Auto assign Critical complaints */
-
-      if (
-        newGrievance.priority ===
-        'Critical'
-      ) {
-        const matchOfficer =
-          officers.find(
-            (o) =>
-              o.departmentId ===
-              newGrievance.departmentId
-          );
-
-        if (matchOfficer) {
-          newGrievance.assignedOfficerId =
-            matchOfficer.id;
-
-          newGrievance.assignedOfficerName =
-            `${matchOfficer.name} (${matchOfficer.designation})`;
-
-          newGrievance.assignedOfficerPhone =
-            matchOfficer.phone;
-
-          newGrievance.assignedAt =
-            now;
-
-          newGrievance.status =
-            'Assigned';
-
-          matchOfficer.activeCount += 1;
-
-          newGrievance.statusHistory.push(
-            {
-              status: 'Assigned',
-
-              timestamp:
-                new Date(
-                  Date.now() + 2000
-                ).toISOString(),
-
-              updatedBy:
-                'Automated Critical Dispatch Rule',
-
-              role: 'ADMIN',
-
-              remarks:
-                `Instant priority auto-dispatch to Officer ${matchOfficer.name}.`,
-            }
-          );
-        }
-      }
-
-      complaints.unshift(
-        newGrievance
-      );
-
-      /* Department statistics */
-
-      const dept =
-        departments.find(
-          (d) =>
-            d.id ===
-            newGrievance.departmentId
-        );
-
-      if (dept) {
-        dept.totalGrievances += 1;
-        dept.pendingCount += 1;
-      }
-
-      /* Audit */
-
-      addAuditLog(
-        (
-          req as AuthenticatedRequest
-        ).user?.uid || 'cit-user',
-
-        newGrievance.citizenName,
-
-        'CITIZEN',
-
-        'CREATE_GRIEVANCE',
-
-        `Created ${newId}`,
-
-        newId
-      );
-
-      /* Notification */
-
-      addNotification(
-        newId,
-
-        'Grievance Registered Successfully',
-
-        'புகார் வெற்றிகரமாகப் பதிவு செய்யப்பட்டது',
-
-        `Your grievance ${newId} has been registered and routed to ${newGrievance.departmentName}.`,
-
-        `உங்கள் புகார் ${newId} பதிவு செய்யப்பட்டு ${newGrievance.departmentName} துறைக்கு அனுப்பப்பட்டுள்ளது.`,
-
-        'status_update'
-      );
-
-      return res.status(201).json(
-        newGrievance
-      );
-    } catch (error) {
-      console.error(
-        'Error creating grievance:',
-        error
-      );
-
-      return res.status(500).json({
-        error:
-          'Unable to create grievance.',
-      });
-    }
-  }
-);
-
-/* UPDATE STATUS */
-
-app.patch(
-  '/api/complaints/:id/status',
-  requireAuthenticatedAdmin,
-  (req, res) => {
-    const {
-      status,
-      remarks,
-      evidenceUrl,
-    } = req.body;
-
-    const grievance =
-      complaints.find(
-        (c) =>
-          c.id === req.params.id
-      );
-
-    if (!grievance) {
-      return res.status(404).json({
-        error: 'Grievance not found.',
-      });
-    }
-
-    const authReq =
-      req as AuthenticatedRequest;
-
-    const authenticatedUser =
-      authReq.user;
-
-    const updatedBy =
-      authenticatedUser?.email ||
-      authenticatedUser?.uid ||
-      'Authenticated Administrator';
-
-    const role:
-      | 'ADMIN'
-      | 'OFFICER' = 'ADMIN';
-
-    const validStatuses = [
-      'Submitted',
-      'AI Classified',
-      'Assigned',
-      'Under Review',
-      'In Progress',
-      'Resolved',
-      'Reopened',
-    ];
-
-    if (
-      typeof status !== 'string' ||
-      !validStatuses.includes(status)
-    ) {
-      return res.status(400).json({
-        error:
-          'Invalid grievance status.',
-      });
-    }
-
-    const now =
-      new Date().toISOString();
-
-    grievance.status =
-      status as GrievanceStatus;
-
-    grievance.updatedAt = now;
-
-    if (status === 'Resolved') {
-      grievance.resolvedAt =
-        now;
-
-      grievance.resolutionRemarks =
-        remarks ||
-        'Resolved by field department.';
-
-      if (evidenceUrl) {
-        grievance.resolutionEvidenceUrl =
-          evidenceUrl;
-      }
-
-      const dept =
-        departments.find(
-          (d) =>
-            d.id ===
-            grievance.departmentId
-        );
-
-      if (
-        dept &&
-        dept.pendingCount > 0
-      ) {
-        dept.pendingCount -= 1;
-        dept.resolvedCount += 1;
-      }
-
-      if (
-        grievance.assignedOfficerId
-      ) {
-        const officer =
-          officers.find(
-            (o) =>
-              o.id ===
-              grievance.assignedOfficerId
-          );
-
-        if (
-          officer &&
-          officer.activeCount > 0
-        ) {
-          officer.activeCount -= 1;
-          officer.resolvedCount += 1;
-        }
-      }
-    }
-
-    grievance.statusHistory.push({
-      status:
-        status as GrievanceStatus,
-
-      timestamp: now,
-
-      updatedBy,
-
-      role,
-
-      remarks:
-        remarks ||
-        `Status updated to ${status}`,
-
-      evidenceUrl,
-    });
-
-    addAuditLog(
-      authenticatedUser?.uid ||
-        'authenticated-user',
-
-      updatedBy,
-
-      role,
-
-      'STATUS_UPDATE',
-
-      `Updated ${grievance.id} to ${status}: ${
-        remarks || ''
-      }`,
-
-      grievance.id
-    );
-
-    addNotification(
-      grievance.id,
-
-      `Grievance Status: ${status}`,
-
-      `புகார் நிலை: ${status}`,
-
-      `Your grievance ${grievance.id} is now ${status}. Remarks: ${
-        remarks || 'In progress'
-      }`,
-
-      `உங்கள் புகார் ${grievance.id} தற்போது ${status} நிலையில் உள்ளது.`,
-
-      status === 'Resolved'
-        ? 'resolution'
-        : 'status_update'
-    );
-
-    return res.json(
-      grievance
-    );
-  }
-);
-
-/* ASSIGN OFFICER */
-
-app.patch(
-  '/api/complaints/:id/assign',
-  requireAuthenticatedAdmin,
-  (req, res) => {
-    const {
-      officerId,
-    } = req.body;
-
-    const authReq =
-      req as AuthenticatedRequest;
-
-    const grievance =
-      complaints.find(
-        (c) =>
-          c.id === req.params.id
-      );
-
-    const officer =
-      officers.find(
-        (o) =>
-          o.id === officerId
-      );
-
-    if (!grievance || !officer) {
-      return res.status(404).json({
-        error:
-          'Grievance or Officer not found.',
-      });
-    }
-
-    const now =
-      new Date().toISOString();
-
-    const adminName =
-      authReq.user?.email ||
-      authReq.user?.uid ||
-      'Administrator';
-
-    grievance.assignedOfficerId =
-      officer.id;
-
-    grievance.assignedOfficerName =
-      `${officer.name} (${officer.designation})`;
-
-    grievance.assignedOfficerPhone =
-      officer.phone;
-
-    grievance.assignedAt =
-      now;
-
-    grievance.status =
-      'Assigned';
-
-    grievance.updatedAt =
-      now;
-
-    officer.activeCount += 1;
-
-    grievance.statusHistory.push({
-      status: 'Assigned',
-
-      timestamp: now,
-
-      updatedBy: adminName,
-
-      role: 'ADMIN',
-
-      remarks:
-        `Assigned to ${officer.name} (${officer.designation}) for site inspection.`,
-    });
-
-    addAuditLog(
-      authReq.user?.uid ||
-        'admin',
-
-      adminName,
-
-      'ADMIN',
-
-      'OFFICER_ASSIGNMENT',
-
-      `Assigned ${grievance.id} to ${officer.name}`,
-
-      grievance.id
-    );
-
-    addNotification(
-      grievance.id,
-
-      'Officer Assigned',
-
-      'கள அதிகாரி நியமிக்கப்பட்டார்',
-
-      `Field Officer ${officer.name} has been assigned to investigate ${grievance.id}.`,
-
-      `கள அதிகாரி ${officer.name} உங்கள் புகாரை ஆய்வு செய்ய நியமிக்கப்பட்டுள்ளார்.`,
-
-      'assignment'
-    );
-
-    return res.json(
-      grievance
-    );
-  }
-);
-
-/* FEEDBACK */
-
-app.patch(
-  '/api/complaints/:id/feedback',
-  authenticate,
-  (req, res) => {
-    const {
-      rating,
-      comment,
-      isResolvedSatisfied,
-    } = req.body;
-
-    const grievance =
-      complaints.find(
-        (c) =>
-          c.id === req.params.id
-      );
-
-    if (!grievance) {
-      return res.status(404).json({
-        error: 'Grievance not found.',
-      });
-    }
-
-    const now =
-      new Date().toISOString();
-
-    grievance.feedback = {
-      rating:
-        Number(rating) || 5,
-
-      comment:
-        typeof comment === 'string'
-          ? comment
-          : '',
-
-      isResolvedSatisfied:
-        Boolean(
-          isResolvedSatisfied
-        ),
-
-      submittedAt: now,
-    };
-
-    if (
-      !isResolvedSatisfied
-    ) {
-      grievance.status =
-        'Reopened';
-
-      grievance.statusHistory.push(
-        {
-          status: 'Reopened',
-
-          timestamp: now,
-
-          updatedBy:
-            grievance.citizenName,
-
-          role: 'CITIZEN',
-
-          remarks:
-            `Citizen marked issue as unsatisfied: "${comment || ''}". Reopening case for escalation.`,
-        }
-      );
-
-      addAuditLog(
-        (
-          req as AuthenticatedRequest
-        ).user?.uid ||
-          'cit-user',
-
-        grievance.citizenName,
-
-        'CITIZEN',
-
-        'REOPEN_GRIEVANCE',
-
-        `Reopened ${grievance.id}`,
-
-        grievance.id
-      );
-    }
-
-    return res.json(
-      grievance
-    );
-  }
-);
 
 /* =========================================================
    5. DEPARTMENTS
@@ -2191,364 +1369,17 @@ app.get(
 );
 
 /* =========================================================
-   7. NOTIFICATIONS
+   NOTE ON REMOVED NOTIFICATIONS / AUDIT-LOGS / ANALYTICS ROUTES
+   ---------------------------------------------------------
+   These previously read from the same dead in-memory seed arrays.
+   The frontend does not call them: src/services/api.ts computes
+   analytics and reads audit logs directly from the Firestore
+   `grievances`/`auditLogs` collections (see api.getAnalytics() and
+   api.getAuditLogs()), and getNotifications()/markNotificationRead()
+   are intentionally stubbed client-side until a real, persistent,
+   access-controlled notification store is built. Removed rather
+   than left as unreachable, unauthenticated-looking dead code.
 ========================================================= */
-
-app.get(
-  '/api/notifications',
-  requireAuthenticatedAdmin,
-  (_req, res) => {
-    res.json(
-      notifications
-    );
-  }
-);
-
-app.patch(
-  '/api/notifications/:id/read',
-  requireAuthenticatedAdmin,
-  (req, res) => {
-    const notification =
-      notifications.find(
-        (n) =>
-          n.id === req.params.id
-      );
-
-    if (notification) {
-      notification.read = true;
-    }
-
-    return res.json({
-      success: true,
-    });
-  }
-);
-
-/* =========================================================
-   8. AUDIT LOGS
-========================================================= */
-
-app.get(
-  '/api/audit-logs',
-  requireAuthenticatedAdmin,
-  (_req, res) => {
-    res.json(
-      auditLogs
-    );
-  }
-);
-
-/* =========================================================
-   9. ANALYTICS
-========================================================= */
-
-app.get(
-  '/api/analytics',
-  requireAuthenticatedAdmin,
-  (_req, res) => {
-    const total =
-      complaints.length;
-
-    const resolved =
-      complaints.filter(
-        (c) =>
-          c.status ===
-          'Resolved'
-      ).length;
-
-    const pending =
-      total - resolved;
-
-    const critical =
-      complaints.filter(
-        (c) =>
-          c.priority ===
-            'Critical' &&
-          c.status !==
-            'Resolved'
-      ).length;
-
-    const high =
-      complaints.filter(
-        (c) =>
-          c.priority ===
-            'High' &&
-          c.status !==
-            'Resolved'
-      ).length;
-
-    const inProgress =
-      complaints.filter(
-        (c) =>
-          c.status ===
-            'In Progress' ||
-          c.status ===
-            'Under Review'
-      ).length;
-
-    const categoryMap:
-      Record<string, number> =
-      {};
-
-    const priorityMap:
-      Record<string, number> = {
-        Critical: 0,
-        High: 0,
-        Medium: 0,
-        Low: 0,
-      };
-
-    const districtMap:
-      Record<string, number> =
-      {};
-
-    complaints.forEach(
-      (complaint) => {
-        categoryMap[
-          complaint.category
-        ] =
-          (
-            categoryMap[
-              complaint.category
-            ] || 0
-          ) + 1;
-
-        priorityMap[
-          complaint.priority
-        ] =
-          (
-            priorityMap[
-              complaint.priority
-            ] || 0
-          ) + 1;
-
-        const district =
-          complaint.location
-            ?.district ||
-          'Unknown';
-
-        districtMap[district] =
-          (
-            districtMap[
-              district
-            ] || 0
-          ) + 1;
-      }
-    );
-
-    const durations =
-      complaints
-        .filter(
-          (c) =>
-            Boolean(
-              c.resolvedAt
-            )
-        )
-        .map(
-          (c) =>
-            new Date(
-              c.resolvedAt!
-            ).getTime() -
-            new Date(
-              c.createdAt
-            ).getTime()
-        )
-        .filter(
-          (value) =>
-            Number.isFinite(
-              value
-            ) &&
-            value >= 0
-        );
-
-    const feedback =
-      complaints
-        .map(
-          (c) =>
-            c.feedback
-        )
-        .filter(
-          Boolean
-        ) as NonNullable<
-        Grievance['feedback']
-      >[];
-
-    const timelineData =
-      Array.from(
-        { length: 7 },
-        (_, index) => {
-          const start =
-            new Date(
-              Date.now() -
-                (6 - index) *
-                  86400000
-            );
-
-          start.setHours(
-            0,
-            0,
-            0,
-            0
-          );
-
-          const end =
-            new Date(
-              start.getTime() +
-                86400000
-            );
-
-          const submitted =
-            complaints.filter(
-              (c) => {
-                const value =
-                  new Date(
-                    c.createdAt
-                  ).getTime();
-
-                return (
-                  value >=
-                    start.getTime() &&
-                  value <
-                    end.getTime()
-                );
-              }
-            ).length;
-
-          const resolvedToday =
-            complaints.filter(
-              (c) => {
-                const value =
-                  c.resolvedAt
-                    ? new Date(
-                        c.resolvedAt
-                      ).getTime()
-                    : NaN;
-
-                return (
-                  Number.isFinite(
-                    value
-                  ) &&
-                  value >=
-                    start.getTime() &&
-                  value <
-                    end.getTime()
-                );
-              }
-            ).length;
-
-          return {
-            day: start.toLocaleDateString(
-              'en-IN',
-              {
-                weekday:
-                  'short',
-              }
-            ),
-
-            submitted,
-
-            resolved:
-              resolvedToday,
-          };
-        }
-      );
-
-    return res.json({
-      metrics: {
-        total,
-
-        resolved,
-
-        pending,
-
-        critical,
-
-        high,
-
-        inProgress,
-
-        resolutionRate:
-          total
-            ? Math.round(
-                (resolved /
-                  total) *
-                  100
-              )
-            : 0,
-
-        avgResolutionHours:
-          durations.length
-            ? Math.round(
-                (
-                  durations.reduce(
-                    (
-                      a,
-                      b
-                    ) =>
-                      a + b,
-                    0
-                  ) /
-                  durations.length /
-                  3600000
-                ) *
-                  10
-              ) / 10
-            : null,
-
-        citizenSatisfactionScore:
-          feedback.length
-            ? Math.round(
-                (
-                  feedback.reduce(
-                    (
-                      sum,
-                      item
-                    ) =>
-                      sum +
-                      item.rating,
-                    0
-                  ) /
-                  feedback.length
-                ) *
-                  10
-              ) / 10
-            : null,
-      },
-
-      categoryData:
-        Object.entries(
-          categoryMap
-        ).map(
-          ([name, value]) => ({
-            name,
-            value,
-          })
-        ),
-
-      priorityData:
-        Object.entries(
-          priorityMap
-        ).map(
-          ([name, value]) => ({
-            name,
-            value,
-          })
-        ),
-
-      districtData:
-        Object.entries(
-          districtMap
-        ).map(
-          ([district, total]) => ({
-            district,
-            total,
-          })
-        ),
-
-      timelineData,
-    });
-  }
-);
 
 /* =========================================================
    10. HEALTH CHECK
@@ -2715,4 +1546,3 @@ startServer().catch(
     process.exit(1);
   }
 );
-                    // GET /api/complaints/:id
