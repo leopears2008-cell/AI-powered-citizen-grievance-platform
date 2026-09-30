@@ -116,4 +116,23 @@ describe('Firestore grievance and admin rules', () => {
     const unprovisionedDb = testEnv.authenticatedContext('admin-b', { email: 'other@example.test', email_verified: true }).firestore();
     await assert.rejects(getDoc(doc(unprovisionedDb, 'grievances', 'GRV-2026-ABCDEF12')));
   });
+
+  it('keeps server-written citizen profiles and verification audit events closed to clients', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users', 'citizen-a'), { uid: 'citizen-a', phoneVerified: true });
+      await setDoc(doc(context.firestore(), 'auditLogs', 'auth-PHONE_VERIFIED-citizen-a'), {
+        id: 'auth-PHONE_VERIFIED-citizen-a', timestamp: '2026-09-30T01:00:00.000Z', userId: 'citizen-a',
+        userName: 'Citizen', userRole: 'CITIZEN', action: 'PHONE_VERIFIED', details: 'Verified via Firebase Authentication (phone).',
+      });
+    });
+
+    const citizenDb = testEnv.authenticatedContext('citizen-a', { phone_number: '+919999999999' }).firestore();
+    await assert.rejects(getDoc(doc(citizenDb, 'users', 'citizen-a')));
+    await assert.rejects(setDoc(doc(citizenDb, 'users', 'citizen-a'), { uid: 'citizen-a', phoneVerified: true }));
+    await assert.rejects(getDoc(doc(citizenDb, 'auditLogs', 'auth-PHONE_VERIFIED-citizen-a')));
+    await assert.rejects(setDoc(doc(citizenDb, 'auditLogs', 'auth-EMAIL_VERIFIED-citizen-a'), {
+      id: 'auth-EMAIL_VERIFIED-citizen-a', timestamp: '2026-09-30T01:00:00.000Z', userId: 'citizen-a',
+      userName: 'Citizen', userRole: 'CITIZEN', action: 'EMAIL_VERIFIED', details: 'forged',
+    }));
+  });
 });

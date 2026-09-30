@@ -39,6 +39,26 @@ async function jsonFetch(input: RequestInfo | URL, init: RequestInit = {}) {
   return fetch(input, { ...init, headers });
 }
 
+/** Best-effort authenticated POST used for non-critical bookkeeping (never throws). */
+async function postBestEffort(path: string, body: unknown): Promise<void> {
+  try {
+    await jsonFetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    // Bookkeeping must never block a citizen; the server re-derives everything from the ID token.
+  }
+}
+
+// Duplicate-submission protection for createComplaint.
+// - inFlightCreate: a double click/tap while a write is pending joins the same request.
+// - pendingTrackId: if a write fails (for example a dropped connection), retrying the same
+//   content reuses the same tracking ID so a retry can never create a second grievance.
+let inFlightCreate: { key: string; promise: Promise<Grievance> } | null = null;
+let pendingTrackId: { key: string; id: string } | null = null;
+
 export const api = {
   async analyzeComplaint(text: string, languageHint?: string): Promise<AIAnalysisResponse> {
     const res = await jsonFetch('/api/ai/analyze-complaint', {
@@ -76,6 +96,16 @@ export const api = {
     });
     if (!res.ok) throw new Error('Failed to generate resolution');
     return res.json();
+  },
+
+  /** Ask the server to record the verified citizen profile and verification audit events. */
+  async syncSession(preferredLanguage?: 'en' | 'ta'): Promise<void> {
+    await postBestEffort('/api/auth/session-sync', { preferredLanguage });
+  },
+
+  /** Ask the server to audit a grievance it can verify belongs to the signed-in citizen. */
+  async recordGrievanceCreated(grievanceId: string): Promise<void> {
+    await postBestEffort('/api/audit/grievance-created', { grievanceId });
   },
 
   async getComplaints(params?: {
@@ -132,33 +162,76 @@ export const api = {
       throw new Error('Verify your phone number or email before submitting a grievance.');
     }
 
-    const trackId = `GRV-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-    const now = new Date().toISOString();
-    const estimatedDays = Number.isFinite(Number(data.estimatedDays))
-      ? Math.max(0, Math.min(365, Number(data.estimatedDays)))
-      : 3;
-    const newGrievance = {
-      ...data,
-      id: trackId,
-      trackId,
-      citizenId: user.uid,
-      verificationMethod: user.phoneNumber ? 'phone' : 'email',
-      ...(user.phoneNumber ? { citizenPhone: user.phoneNumber } : {}),
-      ...(user.emailVerified && user.email ? { citizenEmail: user.email } : {}),
-      status: 'Submitted' as GrievanceStatus,
-      createdAt: now,
-      updatedAt: now,
-      targetResolutionDate: new Date(Date.now() + estimatedDays * 86400000).toISOString(),
-      statusHistory: [{
-        status: 'Submitted',
-        timestamp: now,
-        remarks: 'Complaint registered successfully by Citizen',
-        updatedBy: 'Citizen',
-        role: 'CITIZEN',
-      }],
-    };
-    await setDoc(doc(db, 'grievances', trackId), newGrievance);
-    return newGrievance as Grievance;
+    const key = JSON.stringify({ uid: user.uid, data });
+    if (inFlightCreate) {
+      if (inFlightCreate.key === key) return inFlightCreate.promise;
+      throw new Error('Another submission is still in progress. Please wait a moment.');
+    }
+
+    const run = (async (): Promise<Grievance> => {
+      const trackId = pendingTrackId?.key === key
+        ? pendingTrackId.id
+        : `GRV-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+      pendingTrackId = { key, id: trackId };
+
+      const now = new Date().toISOString();
+      const estimatedDays = Number.isFinite(Number(data.estimatedDays))
+        ? Math.max(0, Math.min(365, Number(data.estimatedDays)))
+        : 3;
+      const newGrievance = {
+        ...data,
+        id: trackId,
+        trackId,
+        citizenId: user.uid,
+        verificationMethod: user.phoneNumber ? 'phone' : 'email',
+        ...(user.phoneNumber ? { citizenPhone: user.phoneNumber } : {}),
+        ...(user.emailVerified && user.email ? { citizenEmail: user.email } : {}),
+        status: 'Submitted' as GrievanceStatus,
+        createdAt: now,
+        updatedAt: now,
+        targetResolutionDate: new Date(Date.now() + estimatedDays * 86400000).toISOString(),
+        statusHistory: [{
+          status: 'Submitted',
+          timestamp: now,
+          remarks: 'Complaint registered successfully by Citizen',
+          updatedBy: 'Citizen',
+          role: 'CITIZEN',
+        }],
+      };
+
+      try {
+        await setDoc(doc(db, 'grievances', trackId), newGrievance);
+      } catch (error) {
+        const code = typeof error === 'object' && error !== null && 'code' in error
+          ? String((error as { code: unknown }).code)
+          : '';
+        // A retry of a write that actually landed is an update, which the rules deny.
+        // If the document already exists and is ours, the earlier attempt succeeded.
+        if (code === 'permission-denied') {
+          try {
+            const existing = await getDoc(doc(db, 'grievances', trackId));
+            if (existing.exists() && existing.data()?.citizenId === user.uid) {
+              pendingTrackId = null;
+              return existing.data() as Grievance;
+            }
+          } catch {
+            // Not readable, so the earlier attempt did not land; surface the original error.
+          }
+        }
+        throw error;
+      }
+
+      pendingTrackId = null;
+      void postBestEffort('/api/audit/grievance-created', { grievanceId: trackId });
+      return newGrievance as Grievance;
+    })();
+
+    inFlightCreate = { key, promise: run };
+    try {
+      return await run;
+    } finally {
+      if (inFlightCreate?.promise === run) inFlightCreate = null;
+    }
   },
 
   async updateComplaintStatus(id: string, payload: {

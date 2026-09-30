@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { UserRole, NotificationItem } from '../types';
 import { translations } from '../locales/translations';
 import { api } from '../services/api';
@@ -64,6 +64,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const syncedSessions = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
@@ -129,6 +130,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUser(auth.currentUser);
   };
   const triggerRefresh = () => setRefreshKey((prev) => prev + 1);
+
+  // Record the verified citizen profile and verification audit events once per
+  // uid/language. The server derives everything from the verified ID token, so
+  // nothing here can be used to claim a verification the user does not have.
+  useEffect(() => {
+    if (!user || !isCitizenVerified) return;
+    const key = `${user.uid}:${language}`;
+    if (syncedSessions.current.has(key)) return;
+    syncedSessions.current.add(key);
+    void api.syncSession(language);
+  }, [user, isCitizenVerified, language]);
 
   const showToast = (message: string, type: ToastInfo['type'] = 'success') => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
