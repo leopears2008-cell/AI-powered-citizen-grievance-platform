@@ -40,7 +40,14 @@ function getAdminDatabase() {
 }
 
 type AuthenticatedRequest = express.Request & {
-  user?: { uid: string; email?: string; email_verified?: boolean };
+  user?: {
+    uid: string;
+    email?: string;
+    email_verified?: boolean;
+    phone_number?: string;
+    name?: string;
+    isAnonymous: boolean;
+  };
 };
 
 async function authenticate(req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) {
@@ -51,7 +58,14 @@ async function authenticate(req: AuthenticatedRequest, res: express.Response, ne
   }
   try {
     const decoded = await firebaseAdminAuth.verifyIdToken(token);
-    req.user = { uid: decoded.uid, email: decoded.email, email_verified: decoded.email_verified };
+    req.user = {
+      uid: decoded.uid,
+      email: decoded.email,
+      email_verified: decoded.email_verified,
+      phone_number: decoded.phone_number,
+      name: typeof decoded.name === 'string' ? decoded.name : undefined,
+      isAnonymous: decoded.firebase?.sign_in_provider === 'anonymous',
+    };
     next();
   } catch {
     return res.status(401).json({ error: 'Invalid or expired authentication token.' });
@@ -135,7 +149,7 @@ function sanitizeAIResult(value: any): AIAnalysisResponse {
 }
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.disable('x-powered-by');
 app.use((req, res, next) => {
@@ -626,6 +640,121 @@ Generate:
   } catch (error: any) {
     console.error('Error suggesting resolution:', error instanceof Error ? error.name : 'unknown');
     return res.status(500).json({ error: 'Unable to create grievance.' });
+  }
+});
+
+// ==========================================
+// 4. Citizen verification bookkeeping
+// ==========================================
+// Firestore error code 6 (gRPC ALREADY_EXISTS) means the deterministic audit record is already written.
+function isAlreadyExists(error: unknown): boolean {
+  const code = typeof error === 'object' && error !== null && 'code' in error ? (error as { code: unknown }).code : undefined;
+  return code === 6 || code === 'already-exists';
+}
+
+async function writeAuditOnce(
+  db: NonNullable<ReturnType<typeof getAdminDatabase>>,
+  id: string,
+  entry: { userId: string; action: string; details: string; grievanceId?: string },
+) {
+  try {
+    await db.collection('auditLogs').doc(id).create({
+      id,
+      timestamp: new Date().toISOString(),
+      userId: entry.userId,
+      userName: 'Citizen',
+      userRole: 'CITIZEN',
+      action: entry.action,
+      details: entry.details,
+      ...(entry.grievanceId ? { grievanceId: entry.grievanceId } : {}),
+    });
+  } catch (error) {
+    if (!isAlreadyExists(error)) throw error;
+  }
+}
+
+// Records the verified citizen profile and verification audit events. Every value is
+// derived from the verified Firebase ID token; the request body only carries a language
+// preference, so a client cannot claim a verification it does not hold. No phone number,
+// email address, OTP or token is written to the profile or the audit log.
+app.post('/api/auth/session-sync', authenticate, async (req: AuthenticatedRequest, res: express.Response) => {
+  const user = req.user;
+  if (!user) return res.status(401).json({ error: 'Authentication required.' });
+  if (user.isAnonymous) return res.json({ verified: false });
+
+  const phoneVerified = Boolean(user.phone_number);
+  const emailVerified = user.email_verified === true && Boolean(user.email);
+  if (!phoneVerified && !emailVerified) return res.json({ verified: false });
+
+  const db = getAdminDatabase();
+  if (!db) return res.status(503).json({ error: 'Profile service is not configured.' });
+
+  try {
+    const requestedLanguage = req.body?.preferredLanguage;
+    const preferredLanguage = requestedLanguage === 'ta' || requestedLanguage === 'en' ? requestedLanguage : undefined;
+    const now = new Date().toISOString();
+    const profileRef = db.collection('users').doc(user.uid);
+    const existing = await profileRef.get();
+
+    const profile: Record<string, unknown> = {
+      uid: user.uid,
+      displayName: (user.name || '').slice(0, 120),
+      phoneVerified,
+      emailVerified,
+      verificationMethod: phoneVerified ? 'phone' : 'email',
+      updatedAt: now,
+    };
+    if (preferredLanguage) profile.preferredLanguage = preferredLanguage;
+    if (!existing.exists) profile.createdAt = now;
+    await profileRef.set(profile, { merge: true });
+
+    const actions: string[] = [];
+    if (!existing.exists) actions.push('USER_REGISTERED');
+    if (phoneVerified) actions.push('PHONE_VERIFIED');
+    if (emailVerified) actions.push('EMAIL_VERIFIED');
+    for (const action of actions) {
+      await writeAuditOnce(db, `auth-${action}-${user.uid}`, {
+        userId: user.uid,
+        action,
+        details: action === 'USER_REGISTERED'
+          ? 'Verified citizen account created.'
+          : `Verified via Firebase Authentication (${action === 'PHONE_VERIFIED' ? 'phone' : 'email'}).`,
+      });
+    }
+
+    return res.json({ verified: true, phoneVerified, emailVerified });
+  } catch (error) {
+    console.error('Session sync failed:', error instanceof Error ? error.name : 'unknown');
+    return res.status(503).json({ error: 'Profile service is temporarily unavailable.' });
+  }
+});
+
+// Audits GRIEVANCE_CREATED only after confirming the grievance exists and belongs to the caller.
+app.post('/api/audit/grievance-created', authenticate, async (req: AuthenticatedRequest, res: express.Response) => {
+  const user = req.user;
+  if (!user || user.isAnonymous) return res.status(401).json({ error: 'Authentication required.' });
+  const grievanceId = req.body?.grievanceId;
+  if (typeof grievanceId !== 'string' || !/^GRV-[0-9]{4}-[A-F0-9]{8}$/.test(grievanceId)) {
+    return res.status(400).json({ error: 'Invalid grievance reference.' });
+  }
+  const db = getAdminDatabase();
+  if (!db) return res.status(503).json({ error: 'Audit service is not configured.' });
+
+  try {
+    const snapshot = await db.collection('grievances').doc(grievanceId).get();
+    if (!snapshot.exists || snapshot.data()?.citizenId !== user.uid) {
+      return res.status(404).json({ error: 'Grievance not found.' });
+    }
+    await writeAuditOnce(db, `audit-GRIEVANCE_CREATED-${grievanceId}`, {
+      userId: user.uid,
+      action: 'GRIEVANCE_CREATED',
+      details: `Grievance ${grievanceId} registered by a verified citizen.`,
+      grievanceId,
+    });
+    return res.json({ recorded: true });
+  } catch (error) {
+    console.error('Grievance audit failed:', error instanceof Error ? error.name : 'unknown');
+    return res.status(503).json({ error: 'Audit service is temporarily unavailable.' });
   }
 });
 
