@@ -61,6 +61,13 @@ export const api = {
     }
   },
 
+  // NOTE: there used to be a second function here, draftResolution(category,
+  // summary, actionTaken), calling this same endpoint with a different request
+  // shape than the backend expects (it expects { grievanceId, actionTaken } --
+  // see server.ts). It was unused by any component and would have 404'd every
+  // time it was actually wired up, so rather than leave two competing
+  // contracts for the same operation, it has been removed. suggestResolution
+  // below is the one canonical way to call this endpoint.
   async suggestResolution(grievanceId: string, actionTaken?: string) {
     const res = await jsonFetch('/api/ai/suggest-resolution', {
       method: 'POST',
@@ -69,23 +76,6 @@ export const api = {
     });
     if (!res.ok) throw new Error('Failed to generate resolution');
     return res.json();
-  },
-
-  async draftResolution(category: string, summary: string, actionTaken?: string) {
-    try {
-      const res = await jsonFetch('/api/ai/suggest-resolution', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category, summary, actionTaken }),
-      });
-      if (!res.ok) throw new Error('Failed to draft');
-      return res.json();
-    } catch {
-      return {
-        resolutionEn: 'AI draft unavailable. Review the case and write verified remarks manually.',
-        resolutionTa: 'AI வரைவு கிடைக்கவில்லை. வழக்கை சரிபார்த்து அதிகாரப்பூர்வ குறிப்பை கைமுறையாக எழுதவும்.',
-      };
-    }
   },
 
   async getComplaints(params?: {
