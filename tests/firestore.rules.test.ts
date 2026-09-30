@@ -34,7 +34,7 @@ const grievance = (citizenId: string) => {
     estimatedDays: 3,
     targetResolutionDate: now,
     status: 'Submitted',
-    statusHistory: [{ status: 'Submitted', timestamp: now, updatedBy: 'Citizen', role: 'CITIZEN' }],
+    statusHistory: [{ status: 'Submitted', timestamp: now, updatedBy: 'Citizen', role: 'CITIZEN', remarks: 'Submitted by citizen.' }],
     createdAt: now,
     updatedAt: now,
   };
@@ -83,7 +83,7 @@ describe('Firestore grievance and admin rules', () => {
 
   it('requires a verified, active admin record and makes audit logs immutable', async () => {
     await provisionAdmin('admin-a');
-    const adminDb = testEnv.authenticatedContext('admin-a', { email_verified: true }).firestore();
+    const adminDb = testEnv.authenticatedContext('admin-a', { email: 'admin@example.test', email_verified: true }).firestore();
     const complaintRef = doc(adminDb, 'grievances', 'GRV-2026-ABCDEF12');
     await setDoc(doc(testEnv.authenticatedContext('citizen-a').firestore(), 'grievances', 'GRV-2026-ABCDEF12'), grievance('citizen-a'));
     await updateDoc(complaintRef, { status: 'Under Review', updatedAt: '2026-09-30T01:00:00.000Z' });
@@ -96,9 +96,9 @@ describe('Firestore grievance and admin rules', () => {
     });
     await expect(updateDoc(audit, { details: 'tampered' })).rejects.toThrow();
 
-    const unverifiedDb = testEnv.authenticatedContext('admin-a', { email_verified: false }).firestore();
+    const unverifiedDb = testEnv.authenticatedContext('admin-a', { email: 'admin@example.test', email_verified: false }).firestore();
     await expect(getDoc(doc(unverifiedDb, 'grievances', 'GRV-2026-ABCDEF12'))).rejects.toThrow();
-    const unprovisionedDb = testEnv.authenticatedContext('admin-b', { email_verified: true }).firestore();
+    const unprovisionedDb = testEnv.authenticatedContext('admin-b', { email: 'other@example.test', email_verified: true }).firestore();
     await expect(getDoc(doc(unprovisionedDb, 'grievances', 'GRV-2026-ABCDEF12'))).rejects.toThrow();
   });
 });
