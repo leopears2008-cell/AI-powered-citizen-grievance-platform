@@ -16,7 +16,7 @@ export const AnalyticsView: React.FC = () => {
   }, []);
 
   if (!stats) {
-    return <div className="py-16 text-center text-sm text-slate-500" role="status">Loading verified dashboard data…</div>;
+    return <div className="py-16 text-center text-sm text-slate-500" role="status">Loading dashboard data…</div>;
   }
 
   const metric = stats.metrics;

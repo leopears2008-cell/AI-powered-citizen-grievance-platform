@@ -102,6 +102,7 @@ export interface Grievance {
   assignedOfficerPhone?: string;
   assignedAt?: string;
   targetResolutionDate: string;
+  estimatedDays?: number;
   resolvedAt?: string;
   resolutionRemarks?: string;
   resolutionEvidenceUrl?: string;

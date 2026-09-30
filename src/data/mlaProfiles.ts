@@ -2,8 +2,8 @@ import { TN_ASSEMBLY_2026, DATA_SOURCE, type SeatRecord } from './tnAssembly2026
 
 /**
  * MLAProfile is the shape consumed by the UI (MLADirectory, and any future
- * consumer). It is now derived entirely from TN_ASSEMBLY_2026 — the verified
- * 2026 Tamil Nadu Assembly roster — instead of a hand-maintained fake map.
+ * consumer). It is derived from an election-result snapshot, not a live
+ * membership register. Verify current office-holder claims with official sources.
  *
  * IMPORTANT: we do NOT fabricate personal phone numbers or email addresses
  * for MLAs; no authoritative source publishes a uniform, verified directory
@@ -17,7 +17,7 @@ export interface MLAProfile {
   district: string;
   party: string;
   avatar: string;
-  status: 'Current' | 'Vacant';
+  status: 'Elected' | 'Vacant';
   constituencyNumber: number;
   note?: string;
   /** Present only for vacant seats — never an invented name. */
@@ -29,13 +29,8 @@ export interface MLAProfile {
   locations?: string[];
   sourceName: string;
   sourceUrl: string;
-  verifiedAt: string;
+  snapshotCompiledAt: string;
 }
-
-const avatarFor = (label: string, seed: string) =>
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(label)}&background=${
-    seed === 'vacant' ? 'f1f5f9' : 'e0e7ff'
-  }&color=${seed === 'vacant' ? '64748b' : '3730a3'}&bold=true`;
 
 const toProfile = (seat: SeatRecord): MLAProfile => {
   const isVacant = seat.status === 'Vacant';
@@ -46,15 +41,14 @@ const toProfile = (seat: SeatRecord): MLAProfile => {
     constituency: seat.constituency,
     district: seat.district,
     party: isVacant ? `${seat.party ?? 'Unknown'} (last held)` : (seat.party ?? 'Unknown'),
-    avatar: avatarFor(displayName, isVacant ? 'vacant' : seat.constituency),
+    avatar: '/avatar-placeholder.svg',
     status: seat.status,
     constituencyNumber: seat.no,
     note: seat.note,
     vacancyNote: isVacant ? seat.note : undefined,
-    officeAddress: `Assembly Constituency Office, ${seat.constituency}, ${seat.district} District, Tamil Nadu`,
     sourceName: DATA_SOURCE.sourceName,
     sourceUrl: DATA_SOURCE.sourceUrl,
-    verifiedAt: DATA_SOURCE.verifiedAt,
+    snapshotCompiledAt: DATA_SOURCE.snapshotCompiledAt,
   };
 };
 

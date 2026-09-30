@@ -29,9 +29,11 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
   const [transcript, setTranscript] = useState('');
   const [selectedSpeechLang, setSelectedSpeechLang] = useState<'ta-IN' | 'en-IN'>('ta-IN');
   const [isSupported, setIsSupported] = useState(true);
-  const [audioLevel, setAudioLevel] = useState<number[]>([20, 45, 70, 30, 85, 40, 60, 25]);
-
   const recognitionRef = useRef<any>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
     // Check Web Speech API support
@@ -42,27 +44,30 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
     }
   }, []);
 
-  // Animate audio waveform when recording
   useEffect(() => {
-    let interval: any;
-    if (isRecording) {
-      interval = setInterval(() => {
-        setAudioLevel([
-          Math.floor(Math.random() * 80) + 20,
-          Math.floor(Math.random() * 95) + 15,
-          Math.floor(Math.random() * 90) + 30,
-          Math.floor(Math.random() * 85) + 25,
-          Math.floor(Math.random() * 100) + 10,
-          Math.floor(Math.random() * 75) + 20,
-          Math.floor(Math.random() * 90) + 15,
-          Math.floor(Math.random() * 60) + 20,
-        ]);
-      }, 120);
-    } else {
-      setAudioLevel([15, 25, 20, 30, 25, 20, 15, 10]);
-    }
-    return () => clearInterval(interval);
-  }, [isRecording]);
+    if (!isOpen) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        recognitionRef.current?.stop();
+        setIsRecording(false);
+        onCloseRef.current();
+      }
+      if (event.key === 'Tab' && dialogRef.current) {
+        const items = dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href]');
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialogRef.current)) { event.preventDefault(); first?.focus(); }
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [isOpen]);
 
   const startListening = () => {
     const SpeechRecognition =
@@ -159,7 +164,7 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="voice-dialog-title" tabIndex={-1} className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="px-6 py-4 bg-linear-to-r from-slate-900 to-indigo-950 text-white flex justify-between items-center">
           <div className="flex items-center space-x-2.5">
@@ -167,16 +172,18 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
               <Mic className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-base">{t.voiceModalTitle}</h3>
+              <h3 id="voice-dialog-title" className="font-bold text-base">{t.voiceModalTitle}</h3>
               <p className="text-xs text-indigo-200">{t.voiceModalSubtitle}</p>
             </div>
           </div>
           <button
+            type="button"
             onClick={() => {
               stopListening();
               onClose();
             }}
             className="p-1 rounded-lg text-indigo-200 hover:text-white hover:bg-indigo-800 transition-colors"
+            aria-label={language === 'ta' ? 'குரல் உரையாடலை மூடு' : 'Close voice input'}
           >
             <X className="w-5 h-5" />
           </button>
@@ -220,23 +227,17 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
 
           {/* Central Microphone Recording Action */}
           <div className="flex flex-col items-center justify-center py-5 bg-linear-to-b from-indigo-50/50 to-transparent rounded-2xl border border-dashed border-indigo-200">
-            {/* Waveform Bars */}
-            <div className="flex items-center justify-center space-x-1.5 h-12 mb-4">
-              {audioLevel.map((height, idx) => (
-                <div
-                  key={idx}
-                  style={{ height: `${height}%` }}
-                  className={`w-1.5 rounded-full transition-all duration-100 ${
-                    isRecording ? 'bg-red-500 shadow-sm' : 'bg-indigo-200'
-                  }`}
-                />
-              ))}
-            </div>
+            <p role="status" aria-live="polite" className="h-12 mb-4 flex items-center text-sm text-slate-700">
+              {isRecording
+                ? (language === 'ta' ? 'குரல் பதிவு செயலில் உள்ளது' : 'Microphone is active')
+                : (language === 'ta' ? 'குரல் உள்ளீடு விருப்பமானது' : 'Voice input is optional')}
+            </p>
 
             {/* Mic Pulse Button */}
             <button
               type="button"
               onClick={isRecording ? stopListening : startListening}
+              aria-label={isRecording ? (language === 'ta' ? 'குரல் பதிவை நிறுத்து' : 'Stop voice input') : (language === 'ta' ? 'குரல் உள்ளீட்டைத் தொடங்கு' : 'Start voice input')}
               className={`w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-xl relative ${
                 isRecording
                   ? 'bg-red-600 hover:bg-red-700 text-white ring-8 ring-red-100 animate-pulse'
@@ -251,6 +252,11 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
             </p>
             <p className="text-xs text-slate-500">
               {isRecording ? t.voiceClickToStop : (language === 'ta' ? 'தெளிவாக பேசவும்' : 'Speak naturally in Tamil or English')}
+            </p>
+            <p className="mt-2 max-w-md text-center text-xs text-slate-600">
+              {language === 'ta'
+                ? 'உங்கள் உலாவி அல்லது அதன் சேவை வழங்குநர் குரல் ஒலியைச் செயலாக்கலாம். கீழே உள்ள உரையைத் திருத்தலாம் அல்லது தட்டச்சு செய்யலாம்.'
+                : 'Your browser or its provider may process voice audio. You can edit the transcript below or type instead.'}
             </p>
           </div>
 

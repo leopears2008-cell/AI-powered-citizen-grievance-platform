@@ -61,13 +61,6 @@ export const api = {
     }
   },
 
-  // NOTE: there used to be a second function here, draftResolution(category,
-  // summary, actionTaken), calling this same endpoint with a different request
-  // shape than the backend expects (it expects { grievanceId, actionTaken } --
-  // see server.ts). It was unused by any component and would have 404'd every
-  // time it was actually wired up, so rather than leave two competing
-  // contracts for the same operation, it has been removed. suggestResolution
-  // below is the one canonical way to call this endpoint.
   async suggestResolution(grievanceId: string, actionTaken?: string) {
     const res = await jsonFetch('/api/ai/suggest-resolution', {
       method: 'POST',
@@ -131,6 +124,9 @@ export const api = {
 
     const trackId = `GRV-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     const now = new Date().toISOString();
+    const estimatedDays = Number.isFinite(Number(data.estimatedDays))
+      ? Math.max(0, Math.min(365, Number(data.estimatedDays)))
+      : 3;
     const newGrievance = {
       ...data,
       id: trackId,
@@ -139,6 +135,7 @@ export const api = {
       status: 'Submitted' as GrievanceStatus,
       createdAt: now,
       updatedAt: now,
+      targetResolutionDate: new Date(Date.now() + estimatedDays * 86400000).toISOString(),
       statusHistory: [{
         status: 'Submitted',
         timestamp: now,
@@ -178,11 +175,16 @@ export const api = {
 
   async assignOfficer(id: string, officerId: string, adminName?: string): Promise<Grievance> {
     if (auth.currentUser?.isAnonymous) throw new Error('Admin authentication required.');
+    const officerSnap = await getDoc(doc(db, 'officers', officerId));
+    if (!officerSnap.exists()) throw new Error('Officer record not found.');
+    const officer = officerSnap.data() as Officer;
     const grievance = await this.getComplaintById(id);
     const now = new Date().toISOString();
     await updateDoc(doc(db, 'grievances', id), {
       status: 'Assigned',
       assignedOfficerId: officerId,
+      assignedOfficerName: `${officer.name} (${officer.designation})`,
+      assignedOfficerPhone: officer.phone,
       assignedAt: now,
       statusHistory: [...grievance.statusHistory, {
         status: 'Assigned',
@@ -201,7 +203,7 @@ export const api = {
     const grievance = await this.getComplaintById(id);
     if (grievance.citizenId !== auth.currentUser?.uid) throw new Error('You can only provide feedback for your own grievance.');
     await updateDoc(doc(db, 'grievances', id), {
-      resolutionFeedback: {
+      feedback: {
         rating: Math.max(1, Math.min(5, Number(payload.rating) || 1)),
         comment: String(payload.comment || '').slice(0, 1000),
         isResolvedSatisfied: Boolean(payload.isResolvedSatisfied),
@@ -229,15 +231,17 @@ export const api = {
   },
 
   async getDepartments(): Promise<Department[]> {
-    const res = await jsonFetch('/api/departments');
-    if (!res.ok) throw new Error('Failed to fetch departments');
-    return res.json();
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous || !user.emailVerified) throw new Error('Admin authentication required.');
+    const snapshot = await getDocs(collection(db, 'departments'));
+    return snapshot.docs.map((item) => item.data() as Department);
   },
 
   async getOfficers(): Promise<Officer[]> {
-    const res = await jsonFetch('/api/officers');
-    if (!res.ok) throw new Error('Failed to fetch officers');
-    return res.json();
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous || !user.emailVerified) throw new Error('Admin authentication required.');
+    const snapshot = await getDocs(collection(db, 'officers'));
+    return snapshot.docs.map((item) => item.data() as Officer);
   },
 
   async getNotifications(): Promise<NotificationItem[]> {

@@ -18,8 +18,8 @@ export const AdminLogin: React.FC = () => {
     try {
       await login(email, password);
       showToast('Admin authentication successful.', 'success');
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Admin login failed.', 'error');
+    } catch {
+      showToast('Unable to sign in with those credentials or this account is not authorized.', 'error');
     } finally {
       setBusy(false);
     }

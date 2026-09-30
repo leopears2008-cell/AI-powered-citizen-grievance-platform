@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { getAvailableDistricts, getConstituenciesForDistrict, getAllMLAs, getDataSourceInfo } from '../data/mlaProfiles';
-import { Search, MapPin, Building2, User, ShieldCheck, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Search, MapPin, Building2, User, AlertTriangle, ExternalLink } from 'lucide-react';
 
 export const MLADirectory: React.FC = () => {
   const { language } = useApp();
@@ -36,7 +36,7 @@ export const MLADirectory: React.FC = () => {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
           <h2 className="text-xl font-bold text-slate-900">
-            {language === 'ta' ? 'தமிழ்நாடு சட்டமன்ற உறுப்பினர் கையேடு 2026' : 'Tamil Nadu MLA Directory 2026'}
+            {language === 'ta' ? 'தமிழ்நாடு 2026 சட்டமன்றத் தேர்தல் முடிவுகள்' : 'Tamil Nadu 2026 Assembly election results'}
           </h2>
           <a
             href={dataSource.sourceUrl}
@@ -44,28 +44,29 @@ export const MLADirectory: React.FC = () => {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full hover:bg-emerald-100 transition-colors"
           >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Verified {dataSource.verifiedAt}</span>
+            <span>Snapshot compiled · {dataSource.snapshotCompiledAt}</span>
             <ExternalLink className="w-3 h-3" />
           </a>
         </div>
         <p className="text-sm text-slate-500 mb-2">
           {language === 'ta'
-            ? 'உங்கள் மாவட்டத்தையும் தொகுதியையும் தேர்ந்தெடுத்து உங்கள் சட்டமன்ற உறுப்பினரின் விவரங்களை அறியவும்.'
-            : 'Search across all 234 constituencies or filter by district to find your representative. This is a neutral civic-information directory — no ratings or rankings are shown.'}
+            ? 'இது 2026 தேர்தல் முடிவுகளின் வரலாற்றுப் பதிவு; தற்போதைய உறுப்பினர் பட்டியல் அல்ல. நடப்பு விவரங்களை அதிகாரப்பூர்வ பதிவுகளில் சரிபார்க்கவும்.'
+            : 'Search the 2026 election result records or filter by district. This is a historical election snapshot, not a live or verified list of current officeholders.'}
         </p>
         <p className="text-[11px] text-slate-400 mb-8">
-          Source: {dataSource.sourceName}. {dataSource.asOfNote}. {dataSource.vacantSeats} seats are currently vacant
-          pending by-elections and are marked below rather than assigned a name.
+          Snapshot source: {dataSource.sourceName}. {dataSource.asOfNote}. Vacancy notes reflect the source snapshot and may have changed. Check the{' '}
+          <a className="underline focus-visible:outline focus-visible:outline-2" href="https://results.eci.gov.in/ResultAcGenMay2026/" target="_blank" rel="noopener noreferrer">Election Commission of India 2026 results</a>{' '}
+          and current Assembly records before relying on any entry.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
           <div>
             <label className="text-xs font-semibold text-slate-600 block mb-1.5">
-              {language === 'ta' ? 'மாவட்டம்' : 'Filter by District'}
+              <span id="district-filter-label">{language === 'ta' ? 'மாவட்டம்' : 'Filter by District'}</span>
             </label>
             <select
               value={selectedDistrict}
+              aria-labelledby="district-filter-label"
               onChange={(e) => setSelectedDistrict(e.target.value)}
               className="w-full p-3 text-sm text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none bg-slate-50 font-medium"
             >
@@ -123,7 +124,9 @@ export const MLADirectory: React.FC = () => {
                       )}
                     </h3>
                     <span className="text-[11px] text-indigo-700 font-medium bg-indigo-100 px-1.5 py-0.5 rounded inline-block mb-1">
-                      {mla.party}
+              {mla.party} · {mla.status === 'Vacant'
+                ? (language === 'ta' ? 'மூலப் பதிவில் காலியிடம்' : 'Vacant in source snapshot')
+                : (language === 'ta' ? '2026-இல் தேர்ந்தெடுக்கப்பட்டவர்' : 'Elected in 2026')}
                     </span>
                     <p className="text-xs font-semibold text-slate-700 flex items-center">
                       <MapPin className="w-3.5 h-3.5 mr-1 text-indigo-500 shrink-0" />

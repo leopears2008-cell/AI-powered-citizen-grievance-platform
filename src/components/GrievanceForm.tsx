@@ -58,12 +58,13 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
   const [citizenEmail, setCitizenEmail] = useState('');
 
   // Location details
-  const [district, setDistrict] = useState('Chennai');
+  const [district, setDistrict] = useState('');
   const [address, setAddress] = useState('');
   const [landmark, setLandmark] = useState('');
   const [wardNumber, setWardNumber] = useState('');
   const [pincode, setPincode] = useState('');
   const [isLocating, setIsLocating] = useState(false);
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
 
 
   // Attachments
@@ -113,11 +114,11 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setIsLocating(false);
-        setDistrict('Chennai');
-        setAddress(`Lat: ${pos.coords.latitude.toFixed(4)}, Lng: ${pos.coords.longitude.toFixed(4)}, Anna Nagar Sector 2`);
-        setLandmark('GPS Pinpoint Location');
+        setCoordinates({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         showToast(
-          language === 'ta' ? 'GPS இருப்பிடம் வெற்றிகரமாக பெறப்பட்டது' : 'GPS location pinned successfully',
+          language === 'ta'
+            ? 'GPS இருப்பிடம் பதிவு செய்யப்பட்டது. முகவரியையும் மாவட்டத்தையும் சரிபார்த்து உள்ளிடவும்.'
+            : 'GPS coordinates captured. Enter and verify the street address and district.',
           'success'
         );
       },
@@ -136,19 +137,21 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
 
   // Image Upload Handler
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+    const input = e.currentTarget;
+    const files = input.files;
     if (!files || files.length === 0) return;
 
     const file = files[0];
     const maxBytes = 400 * 1024;
-    if (!file.type.startsWith('image/') || file.size > maxBytes) {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type) || file.size > maxBytes) {
       showToast(
         language === 'ta'
-          ? '400KB-க்கு குறைவான படக் கோப்பை மட்டும் பதிவேற்றவும்'
-          : 'Please upload an image smaller than 400 KB.',
+          ? '400KB-க்கு குறைவான JPEG, PNG அல்லது WebP படத்தை மட்டும் பதிவேற்றவும்'
+          : 'Please upload a JPEG, PNG, or WebP image smaller than 400 KB.',
         'warning'
       );
-      e.target.value = '';
+      input.value = '';
       return;
     }
     if (attachments.length >= 1) {
@@ -156,28 +159,65 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
         language === 'ta' ? 'ஒரு புகைப்பட ஆதாரம் மட்டும் பதிவேற்றலாம்' : 'Only one photo attachment is allowed in this version.',
         'warning'
       );
-      e.target.value = '';
+      input.value = '';
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        const newAttachment = {
-          id: `att-${Date.now()}`,
-          url: event.target.result as string,
-          name: file.name,
-          type: 'image' as const,
-          uploadedAt: new Date().toISOString(),
-        };
-        setAttachments((prev) => [...prev, newAttachment]);
-        showToast(
-          language === 'ta' ? 'புகைப்பட ஆதாரம் இணைக்கப்பட்டது' : 'Photo evidence uploaded',
-          'success'
-        );
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      if (image.naturalWidth * image.naturalHeight > 12_000_000) {
+        showToast(language === 'ta' ? 'படத்தின் தீர்மானம் அதிகமாக உள்ளது.' : 'The image resolution is too large.', 'warning');
+        input.value = '';
+        return;
       }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      const context = canvas.getContext('2d');
+      if (!context) {
+        showToast(language === 'ta' ? 'படத்தை செயலாக்க முடியவில்லை.' : 'The image could not be processed.', 'error');
+        input.value = '';
+        return;
+      }
+      if (file.type !== 'image/png') {
+        context.fillStyle = '#fff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      context.drawImage(image, 0, 0);
+      canvas.toBlob((blob) => {
+        if (!blob || blob.size > maxBytes) {
+          showToast(language === 'ta' ? '400KB-க்கு குறைவான படத்தைத் தேர்ந்தெடுக்கவும்.' : 'The processed image must be smaller than 400 KB.', 'warning');
+          input.value = '';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (typeof event.target?.result !== 'string') return;
+          const newAttachment = {
+            id: `att-${Date.now()}`,
+            url: event.target.result,
+            name: file.name.replace(/[\\/\u0000-\u001f]/g, '_').slice(0, 120),
+            type: 'image' as const,
+            uploadedAt: new Date().toISOString(),
+          };
+          setAttachments((prev) => [...prev, newAttachment]);
+          showToast(
+            language === 'ta' ? 'புகைப்பட ஆதாரம் இணைக்கப்பட்டது' : 'Photo evidence uploaded',
+            'success'
+          );
+        };
+        reader.readAsDataURL(blob);
+      }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.85);
     };
-    reader.readAsDataURL(file);
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      showToast(language === 'ta' ? 'சரியான படக் கோப்பைத் தேர்ந்தெடுக்கவும்.' : 'Choose a valid image file.', 'warning');
+      input.value = '';
+    };
+    image.src = objectUrl;
   };
 
   // Step 1 -> Step 2: Trigger AI Analysis
@@ -187,6 +227,15 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
         language === 'ta'
           ? 'தயவுசெய்து புகாரின் விவரத்தை குரல் அல்லது எழுத்து மூலம் பதிவு செய்யவும்'
           : 'Please enter or speak your complaint description first',
+        'warning'
+      );
+      return;
+    }
+    if (!privacyConfirmed) {
+      showToast(
+        language === 'ta'
+          ? 'AI செயலாக்கம் மற்றும் தரவு பயன்பாட்டிற்கான ஒப்புதலை வழங்கவும்.'
+          : 'Please review and accept the AI processing and data-use notice before analysis.',
         'warning'
       );
       return;
@@ -235,33 +284,51 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
       );
       return;
     }
+    if (!citizenName.trim() || !citizenPhone.trim() || !district || !address.trim()) {
+      showToast(
+        language === 'ta'
+          ? 'பெயர், தொலைபேசி எண், மாவட்டம் மற்றும் முகவரியை நிரப்பவும்.'
+          : 'Enter your name, phone number, district, and incident address.',
+        'warning'
+      );
+      return;
+    }
+    if (citizenName.trim().length > 120 || citizenPhone.trim().length > 30 || citizenEmail.trim().length > 254 || address.trim().length > 500) {
+      showToast(language === 'ta' ? 'சில புலங்கள் அனுமதிக்கப்பட்ட நீளத்தை மீறுகின்றன.' : 'One or more fields exceed the allowed length.', 'warning');
+      return;
+    }
+    if (!/^[+]?[0-9 ()-]{7,30}$/.test(citizenPhone.trim()) || (citizenEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(citizenEmail.trim()))) {
+      showToast(language === 'ta' ? 'சரியான தொலைபேசி எண்ணையும் மின்னஞ்சல் முகவரியையும் உள்ளிடவும்.' : 'Enter a valid phone number and email address.', 'warning');
+      return;
+    }
     setIsSubmitting(true);
 
     try {
       const payload = {
         citizenId: user?.uid || 'anonymous',
-        citizenName,
-        citizenPhone,
-        citizenEmail,
+        citizenName: citizenName.trim(),
+        citizenPhone: citizenPhone.trim(),
+        citizenEmail: citizenEmail.trim(),
         language: aiResult.language,
         originalTranscript: complaintText,
         summaryEn: aiResult.summary,
         summaryTa: aiResult.summaryTamil || editedSummary,
         category: editedCategory,
-        departmentId: editedDepartment.toLowerCase().replace(/\s+/g, '-'),
+        departmentId: editedDepartment === aiResult.department
+          ? aiResult.departmentId
+          : editedDepartment.toLowerCase().replace(/\s+/g, '-'),
         departmentName: editedDepartment,
         priority: editedPriority,
         priorityReason: aiResult.priorityReason,
         confidenceScore: aiResult.confidence,
         location: {
-          address: address || 'Main City Area',
+          address: address.trim(),
           landmark: landmark || '',
-          district: district || 'Chennai',
+          district,
           constituency: '',
           wardNumber: wardNumber || '',
           pincode: pincode || '',
-          lat: 13.0827,
-          lng: 80.2707,
+          ...(coordinates ? { lat: coordinates.lat, lng: coordinates.lng } : {}),
         },
         attachments,
         entities: aiResult.entities || {},
@@ -449,13 +516,15 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
 
           {/* Grievance Description Field */}
           <div className="flex flex-col h-full">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
+            <label htmlFor="grievance-description" className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
               {language === 'ta' ? 'புகாரின் முழு விவரம் *' : 'Grievance Input'}
             </label>
 
             <div className="relative flex-1 bg-slate-50 rounded-xl p-4 border-2 border-dashed border-slate-200 flex flex-col">
               <textarea
+                id="grievance-description"
                 rows={4}
+                maxLength={10000}
                 value={complaintText}
                 onChange={(e) => setComplaintText(e.target.value)}
                 placeholder={
@@ -489,9 +558,11 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">{t.fullName} *</label>
+                <label htmlFor="citizen-name" className="text-[11px] font-semibold text-slate-600 block mb-1">{t.fullName} *</label>
                 <input
+                  id="citizen-name"
                   type="text"
+                  maxLength={120}
                   value={citizenName}
                   onChange={(e) => setCitizenName(e.target.value)}
                   className="w-full p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-none"
@@ -499,19 +570,27 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">{t.mobileNumber} *</label>
+                <label htmlFor="citizen-phone" className="text-[11px] font-semibold text-slate-600 block mb-1">{t.mobileNumber} *</label>
                 <input
-                  type="text"
+                  id="citizen-phone"
+                  type="tel"
+                  autoComplete="tel"
+                  maxLength={30}
+                  aria-describedby="citizen-phone-help"
                   value={citizenPhone}
                   onChange={(e) => setCitizenPhone(e.target.value)}
                   className="w-full p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-none font-mono"
                 />
+                <p id="citizen-phone-help" className="sr-only">Digits, spaces, parentheses, hyphens, and an optional leading plus sign.</p>
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">{t.emailAddress}</label>
+                <label htmlFor="citizen-email" className="text-[11px] font-semibold text-slate-600 block mb-1">{t.emailAddress}</label>
                 <input
+                  id="citizen-email"
                   type="email"
+                  autoComplete="email"
+                  maxLength={254}
                   value={citizenEmail}
                   onChange={(e) => setCitizenEmail(e.target.value)}
                   className="w-full p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-none"
@@ -539,12 +618,14 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">{t.districtLabel} *</label>
+                <label htmlFor="complaint-district" className="text-[11px] font-semibold text-slate-600 block mb-1">{t.districtLabel} *</label>
                 <select
+                  id="complaint-district"
                   value={district}
-                  onChange={(e) => setDistrict(e.target.value)}
+                  onChange={(e) => { setDistrict(e.target.value); setCoordinates(null); }}
                   className="w-full p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none bg-white"
                 >
+                  <option value="">{language === 'ta' ? 'மாவட்டத்தைத் தேர்ந்தெடுக்கவும்' : 'Select a district'}</option>
                   <option value="Ariyalur">Ariyalur (அரியலூர்)</option>
                   <option value="Chengalpattu">Chengalpattu (செங்கல்பட்டு)</option>
                   <option value="Chennai">Chennai (சென்னை)</option>
@@ -589,8 +670,10 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">{t.wardLabel}</label>
+                <label htmlFor="complaint-ward" className="text-[11px] font-semibold text-slate-600 block mb-1">{t.wardLabel}</label>
                 <input
+                  id="complaint-ward"
+                  maxLength={50}
                   type="text"
                   value={wardNumber}
                   onChange={(e) => setWardNumber(e.target.value)}
@@ -600,8 +683,10 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Pincode</label>
+                <label htmlFor="complaint-pincode" className="text-[11px] font-semibold text-slate-600 block mb-1">Pincode</label>
                 <input
+                  id="complaint-pincode"
+                  maxLength={12}
                   type="text"
                   value={pincode}
                   onChange={(e) => setPincode(e.target.value)}
@@ -613,18 +698,22 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">{t.locationLabel} *</label>
+                <label htmlFor="complaint-address" className="text-[11px] font-semibold text-slate-600 block mb-1">{t.locationLabel} *</label>
                 <input
+                  id="complaint-address"
+                  maxLength={500}
                   type="text"
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  onChange={(e) => { setAddress(e.target.value); setCoordinates(null); }}
                   placeholder="Street name, door number, area"
                   className="w-full p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">{t.landmarkLabel}</label>
+                <label htmlFor="complaint-landmark" className="text-[11px] font-semibold text-slate-600 block mb-1">{t.landmarkLabel}</label>
                 <input
+                  id="complaint-landmark"
+                  maxLength={200}
                   type="text"
                   value={landmark}
                   onChange={(e) => setLandmark(e.target.value)}
@@ -651,22 +740,45 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                   </p>
                   <p className="text-[10px] text-slate-500">{t.evidenceHelper}</p>
                 </div>
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageUpload} className="sr-only" />
               </label>
 
               {/* Uploaded Thumbnails */}
               {attachments.map((att) => (
                 <div key={att.id} className="relative w-16 h-16 rounded-xl border border-slate-300 overflow-hidden group">
-                  <img src={att.url} alt="evidence" className="w-full h-full object-cover" />
+                  <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => setAttachments((prev) => prev.filter((a) => a.id !== att.id))}
                     className="absolute top-1 right-1 p-0.5 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label={language === 'ta' ? 'இணைக்கப்பட்ட படத்தை அகற்று' : 'Remove attached image'}
                   >
                     <X className="w-3 h-3" />
                   </button>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+            <div className="flex items-start gap-2">
+              <input
+                id="privacy-confirmation"
+                type="checkbox"
+                checked={privacyConfirmed}
+                onChange={(e) => setPrivacyConfirmed(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-400"
+              />
+              <p>
+                <label htmlFor="privacy-confirmation" className="cursor-pointer">
+                  {language === 'ta'
+                    ? 'வகைப்படுத்தல் மற்றும் இதேபோன்ற புகார் சரிபார்ப்பிற்காக எனது புகார் உரை Google Gemini-க்கு அனுப்பப்படுவதையும், சமர்ப்பிக்கும் விவரங்களும் படமும் புகார் தரவுத்தளத்தில் சேமிக்கப்படுவதையும் புரிந்து ஒப்புக்கொள்கிறேன். குரல் உள்ளீட்டைப் பயன்படுத்தினால், உலாவியின் குரல் அறிதல் வழங்குநர் ஒலியை செயலாக்கலாம்.'
+                    : 'I understand that my complaint text is sent to Google Gemini for classification and duplicate checks, and that submitted details and images are stored in the grievance database. If I use voice input, my browser’s speech-recognition provider may process the audio.'}
+                </label>{' '}
+                <button type="button" onClick={() => setActiveTab('privacy')} className="underline font-semibold">
+                  {language === 'ta' ? 'தனியுரிமை அறிவிப்பு' : 'Read the privacy notice'}
+                </button>
+              </p>
             </div>
           </div>
 
@@ -812,22 +924,6 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
               </p>
             </div>
             
-            <div className="mt-5 flex items-start gap-3 text-xs text-indigo-100">
-              <input
-                id="privacy-confirmation"
-                type="checkbox"
-                checked={privacyConfirmed}
-                onChange={(e) => setPrivacyConfirmed(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-indigo-300"
-              />
-              <p>
-                <label htmlFor="privacy-confirmation" className="cursor-pointer">
-                  I confirm that I have reviewed the Privacy Policy and understand that the information I submit will be used to process this grievance.
-                </label>{' '}
-                <button type="button" onClick={() => setActiveTab('privacy')} className="underline font-semibold">Read policy</button>
-              </p>
-            </div>
-
             <div className="flex gap-3 mt-6">
               <button
                 type="button"

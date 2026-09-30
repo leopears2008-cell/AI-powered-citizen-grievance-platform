@@ -15,7 +15,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 export type AppLanguage = 'en' | 'ta';
-export type AppTab = 'home' | 'file' | 'track' | 'history' | 'admin' | 'analytics' | 'directory' | 'privacy' | 'terms' | 'cookies' | 'refund';
+export type AppTab = 'home' | 'file' | 'track' | 'history' | 'admin' | 'analytics' | 'directory' | 'privacy' | 'terms' | 'cookies';
 
 interface ToastInfo {
   id: string;
@@ -28,7 +28,6 @@ interface AppContextType {
   setLanguage: (lang: AppLanguage) => void;
   t: typeof translations.en;
   role: UserRole;
-  setRole: (role: UserRole) => void;
   activeTab: AppTab;
   setActiveTab: (tab: AppTab) => void;
   trackId: string;
@@ -54,7 +53,6 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<AppLanguage>('en');
-  const [role, setRole] = useState<UserRole>('CITIZEN');
   const [activeTab, setActiveTab] = useState<AppTab>('home');
   const [trackId, setTrackId] = useState('');
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -74,7 +72,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           await signInAnonymously(auth);
         } catch (error) {
-          console.error('Anonymous citizen session could not be created', error);
+          console.error('Anonymous citizen session could not be created:', error instanceof Error ? error.name : 'unknown');
         } finally {
           setAuthLoading(false);
         }
@@ -83,11 +81,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       try {
         const adminSnap = await getDoc(doc(db, 'admins', nextUser.uid));
-        const admin = adminSnap.exists() && adminSnap.data()?.active === true;
+        const admin = nextUser.emailVerified && adminSnap.exists() && adminSnap.data()?.active === true;
         setIsAdmin(admin);
-        setRole(admin ? 'ADMIN' : 'CITIZEN');
       } catch (error) {
-        console.error('Unable to verify admin role', error);
+        console.error('Unable to verify admin role:', error instanceof Error ? error.name : 'unknown');
       } finally {
         setAuthLoading(false);
       }
@@ -104,14 +101,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('This account is not verified or is not authorized for the admin dashboard.');
     }
     setIsAdmin(true);
-    setRole('ADMIN');
     setActiveTab('admin');
   };
 
   const logout = async () => {
     await signOut(auth);
     setIsAdmin(false);
-    setRole('CITIZEN');
     setActiveTab('home');
   };
 
@@ -121,6 +116,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const t = translations[language] || translations.en;
+  const role: UserRole = isAdmin ? 'ADMIN' : 'CITIZEN';
   const triggerRefresh = () => setRefreshKey((prev) => prev + 1);
 
   const showToast = (message: string, type: ToastInfo['type'] = 'success') => {
@@ -153,7 +149,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      language, setLanguage, t, role, setRole, activeTab, setActiveTab,
+      language, setLanguage, t, role, activeTab, setActiveTab,
       trackId, setTrackId, navigateToTrack, notifications, unreadCount,
       markAsRead, refreshKey, triggerRefresh, toasts, showToast, removeToast,
       user, isAdmin, authLoading, login, resetAdminPassword, logout,

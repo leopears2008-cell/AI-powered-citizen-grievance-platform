@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { HeroSection } from './components/HeroSection';
-import { VoiceInputModal } from './components/VoiceInputModal';
-import { GrievanceForm } from './components/GrievanceForm';
-import { CitizenTracker } from './components/CitizenTracker';
-import { CitizenHistory } from './components/CitizenHistory';
-import { AdminDashboard } from './components/AdminDashboard';
-import { AdminLogin } from './components/AdminLogin';
 import { LegalPage } from './components/LegalPage';
-import { AnalyticsView } from './components/AnalyticsView';
 import { InteractiveMap } from './components/InteractiveMap';
-import { MLADirectory } from './components/MLADirectory';
+const VoiceInputModal = lazy(() => import('./components/VoiceInputModal').then((module) => ({ default: module.VoiceInputModal })));
+const GrievanceForm = lazy(() => import('./components/GrievanceForm').then((module) => ({ default: module.GrievanceForm })));
+const CitizenTracker = lazy(() => import('./components/CitizenTracker').then((module) => ({ default: module.CitizenTracker })));
+const CitizenHistory = lazy(() => import('./components/CitizenHistory').then((module) => ({ default: module.CitizenHistory })));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
+const AdminLogin = lazy(() => import('./components/AdminLogin').then((module) => ({ default: module.AdminLogin })));
+const AnalyticsView = lazy(() => import('./components/AnalyticsView').then((module) => ({ default: module.AnalyticsView })));
+const MLADirectory = lazy(() => import('./components/MLADirectory').then((module) => ({ default: module.MLADirectory })));
 import {
   Phone,
   ShieldCheck,
@@ -40,7 +40,7 @@ const MainLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-900 flex flex-col justify-between selection:bg-indigo-600 selection:text-white overflow-hidden">
       {/* Toast Notification Container */}
-      <div className="fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full">
+      <div aria-live="polite" aria-relevant="additions text" className="fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full">
         {toasts.map((toast) => (
           <div
             key={toast.id}
@@ -61,8 +61,10 @@ const MainLayout: React.FC = () => {
             )}
             <p className="text-xs font-medium leading-snug flex-1">{toast.message}</p>
             <button
+              type="button"
               onClick={() => removeToast(toast.id)}
               className="text-slate-400 hover:text-white p-0.5"
+              aria-label={language === 'ta' ? 'அறிவிப்பை மூடு' : 'Dismiss notification'}
             >
               <X className="w-4 h-4" />
             </button>
@@ -71,17 +73,20 @@ const MainLayout: React.FC = () => {
       </div>
 
       {/* Voice Recognition Modal */}
-      <VoiceInputModal
-        isOpen={isVoiceModalOpen}
-        onClose={() => setIsVoiceModalOpen(false)}
-        onTranscriptConfirmed={handleVoiceTranscriptConfirmed}
-      />
+      {isVoiceModalOpen && (
+        <VoiceInputModal
+          isOpen={isVoiceModalOpen}
+          onClose={() => setIsVoiceModalOpen(false)}
+          onTranscriptConfirmed={handleVoiceTranscriptConfirmed}
+        />
+      )}
 
       {/* Global State Header */}
       <Header />
 
       {/* Main Dynamic View Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 flex flex-col space-y-8 overflow-y-auto">
+        <Suspense fallback={<div role="status" className="py-12 text-center text-sm text-slate-600">{language === 'ta' ? 'பக்கத்தை ஏற்றுகிறது…' : 'Loading page…'}</div>}>
         {activeTab === 'home' && (
           <div className="space-y-12 animate-in fade-in duration-300">
             <HeroSection
@@ -143,14 +148,15 @@ const MainLayout: React.FC = () => {
           </div>
         )}
 
-        {(activeTab === 'privacy' || activeTab === 'terms' || activeTab === 'cookies' || activeTab === 'refund') && (
+        {(activeTab === 'privacy' || activeTab === 'terms' || activeTab === 'cookies') && (
           <LegalPage type={activeTab} />
         )}
 
+        </Suspense>
       </main>
 
-      {/* Government Standard Footer */}
-      <footer className="bg-white text-slate-400 text-xs border-t border-slate-200 mt-16">
+      {/* Application footer */}
+      <footer className="bg-white text-slate-600 text-xs border-t border-slate-200 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div className="space-y-2 md:col-span-2">
@@ -188,7 +194,6 @@ const MainLayout: React.FC = () => {
             <button onClick={() => setActiveTab('privacy')} className="hover:text-slate-900 underline underline-offset-2">Privacy Policy</button>
             <button onClick={() => setActiveTab('terms')} className="hover:text-slate-900 underline underline-offset-2">Terms</button>
             <button onClick={() => setActiveTab('cookies')} className="hover:text-slate-900 underline underline-offset-2">Cookie Policy</button>
-            <button onClick={() => setActiveTab('refund')} className="hover:text-slate-900 underline underline-offset-2">Refund / Cancellation</button>
           </nav>
 
           <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center text-[10px] text-slate-400 font-medium uppercase tracking-widest gap-2">

@@ -1,6 +1,9 @@
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 const email = process.argv[2]?.trim().toLowerCase();
@@ -12,13 +15,20 @@ if (!raw || !email) {
 
 const app = getApps().length ? getApps()[0] : initializeApp({ credential: cert(JSON.parse(raw)) });
 const auth = getAuth(app);
-const db = getFirestore(app);
 const user = await auth.getUserByEmail(email);
+if (!user.emailVerified) {
+  console.error('Admin accounts must have a verified email address.');
+  process.exit(1);
+}
 
-await db.collection('admins').doc(user.uid).set({
+const configPath = fileURLToPath(new URL('../firebase-applet-config.json', import.meta.url));
+const clientConfig = JSON.parse(readFileSync(path.resolve(configPath), 'utf8'));
+const databaseId = process.env.FIRESTORE_DATABASE_ID || clientConfig.firestoreDatabaseId || '(default)';
+const adminDb = getFirestore(app, databaseId);
+await adminDb.collection('admins').doc(user.uid).set({
   email: user.email,
   active: true,
   provisionedAt: FieldValue.serverTimestamp(),
 });
 
-console.log(`Admin access provisioned for ${user.email} (${user.uid}).`);
+console.log('Verified admin access provisioned.');

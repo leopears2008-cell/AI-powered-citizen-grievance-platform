@@ -167,40 +167,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </div>
         </div>
 
-        {/* Live Metrics Ribbon */}
-        <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-3 pt-10 mt-10 border-t border-indigo-800 max-w-5xl mx-auto">
-          <div className="bg-indigo-800/50 p-3.5 rounded-xl border border-indigo-700/50 text-center">
-            <div className="flex items-center justify-center space-x-1 text-indigo-300 mb-1">
-              <FileText className="w-4 h-4" />
-              <span className="text-xl sm:text-2xl font-black text-white">—</span>
-            </div>
-            <p className="text-[11px] text-indigo-200 font-medium">{t.quickStatsSubmitted}</p>
-          </div>
-
-          <div className="bg-indigo-800/50 p-3.5 rounded-xl border border-indigo-700/50 text-center">
-            <div className="flex items-center justify-center space-x-1 text-green-400 mb-1">
-              <CheckCircle2 className="w-4 h-4" />
-              <span className="text-xl sm:text-2xl font-black text-white">Demo</span>
-            </div>
-            <p className="text-[11px] text-indigo-200 font-medium">{t.quickStatsResolved}</p>
-          </div>
-
-          <div className="bg-indigo-800/50 p-3.5 rounded-xl border border-indigo-700/50 text-center">
-            <div className="flex items-center justify-center space-x-1 text-orange-400 mb-1">
-              <Clock className="w-4 h-4" />
-              <span className="text-xl sm:text-2xl font-black text-white">—</span>
-            </div>
-            <p className="text-[11px] text-indigo-200 font-medium">{t.quickStatsAvgTime}</p>
-          </div>
-
-          <div className="bg-indigo-800/50 p-3.5 rounded-xl border border-indigo-700/50 text-center">
-            <div className="flex items-center justify-center space-x-1 text-green-300 mb-1">
-              <ThumbsUp className="w-4 h-4" />
-              <span className="text-xl sm:text-2xl font-black text-white">No claim</span>
-            </div>
-            <p className="text-[11px] text-indigo-200 font-medium">{t.quickStatsSatisfaction}</p>
-          </div>
-        </div>
+        <p className="relative z-10 mt-10 border-t border-indigo-800 pt-5 text-center text-xs text-indigo-200">
+          {language === 'ta'
+            ? 'இது முன்-உற்பத்தி தளம். உண்மையான புகார் சேவை அல்லது செயல்பாட்டு புள்ளிவிவரங்கள் உறுதிப்படுத்தப்படவில்லை.'
+            : 'Pre-production interface. No live complaint service or operational metrics are claimed.'}
+        </p>
       </div>
 
       {/* Core Civic Service Categories Section */}
@@ -208,21 +179,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         <div className="flex justify-between items-end mb-6">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-sans">
-              {language === 'ta' ? 'அரசு துறைகள் மற்றும் சேவைகள்' : 'Civic Departments Covered'}
+              {language === 'ta' ? 'குடிமக்கள் சேவை வகைகள்' : 'Civic service categories'}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500">
               {language === 'ta'
-                ? 'AI தானாகவே உங்கள் புகாரை சம்பந்தப்பட்ட துறைக்கு அனுப்பி வைக்கும்'
-                : 'NivaranAI routes your complaint directly to the assigned nodal officer'}
+                ? 'AI வகைப்பாட்டை பரிந்துரைக்கும்; உண்மையான ஒதுக்கீடும் நிலை புதுப்பிப்புகளும் சேவை இயக்குநர் அமைப்பைப் பொறுத்தது.'
+                : 'AI suggests a category. Any real assignment or status update depends on the configured service operator.'}
             </p>
           </div>
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1 hover:underline"
-          >
-            <span>{language === 'ta' ? 'SLA விவரங்கள்' : 'View SLA Performance'}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -303,12 +267,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               03
             </span>
             <h4 className="font-bold text-slate-900 text-sm mt-1">
-              {language === 'ta' ? 'கள அதிகாரி ஆய்வு' : 'Officer Dispatch'}
+              {language === 'ta' ? 'இயக்குநர் ஆய்வு' : 'Operator review'}
             </h4>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
               {language === 'ta'
-                ? 'சம்பந்தப்பட்ட கள அதிகாரிக்கு அனுப்பப்பட்டு பணிகள் தொடங்கப்படும்.'
-                : 'Routed to the zonal engineer for on-site inspection and repair.'}
+                ? 'இந்த முன்-உற்பத்தி பயன்பாட்டில் உண்மையான அதிகாரி ஒதுக்கீடு அமைக்கப்படவில்லை.'
+                : 'This pre-production app does not have a live officer assignment configured.'}
             </p>
           </div>
 
@@ -317,12 +281,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               04
             </span>
             <h4 className="font-bold text-slate-900 text-sm mt-1">
-              {language === 'ta' ? 'தீர்வு & கருத்து' : 'Verified Closure'}
+              {language === 'ta' ? 'நிலைப் புதுப்பிப்பு & கருத்து' : 'Status update and feedback'}
             </h4>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
               {language === 'ta'
-                ? 'சரிசெய்யப்பட்ட பின் குடிமக்கள் 5-நட்சத்திர கருத்து அளிக்கலாம்.'
-                : 'Photo proof submitted upon completion. Citizen provides feedback.'}
+                ? 'இயக்குநர் நிலையைப் புதுப்பித்தால், குடிமக்கள் கருத்து வழங்கலாம்.'
+                : 'Citizens can leave feedback after an operator records a resolution.'}
             </p>
           </div>
         </div>

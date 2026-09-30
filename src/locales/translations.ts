@@ -3,7 +3,7 @@ export const translations = {
     appTitle: 'NivaranAI',
     appSubtitle: 'AI-Powered Citizen Grievance Redressal Portal',
     portalTagline: 'Civic Grievance Platform',
-    emblemSubtitle: 'Truth Alone Triumphs | வாய்மையே வெல்லும்',
+    emblemSubtitle: 'Tamil · English',
     navHome: 'Home',
     navFileComplaint: 'File Grievance',
     navTrack: 'Track Status',
@@ -11,11 +11,11 @@ export const translations = {
     navAdmin: 'Admin Portal',
     navOfficer: 'Officer Desk',
     navAnalytics: 'Analytics & SLA',
-    navDirectory: 'MLA Directory',
-    heroBadge: 'Smart Civic Response 2026',
+    navDirectory: '2026 election results',
+    heroBadge: 'Civic reporting preview',
     heroHeadline: 'Voice Your Concern in Tamil or English.',
     heroSubheadline:
-      'NivaranAI listens, auto-categorizes, assigns to the right municipal department, and tracks real-time resolution with full transparency.',
+      'Describe a civic issue in Tamil or English. AI can suggest a category and service area. Review status updates recorded by the configured operator.',
     btnSpeakComplaint: 'Speak Your Complaint (Tamil/English)',
     btnWriteComplaint: 'Type Complaint Instead',
     btnTrackGrievance: 'Track Existing Grievance',
@@ -26,7 +26,7 @@ export const translations = {
     
     // Voice Modal
     voiceModalTitle: 'Speak Your Grievance',
-    voiceModalSubtitle: 'You can speak in Tamil (தமிழ்) or English naturally. Our AI will transcribe and understand it.',
+    voiceModalSubtitle: 'Speak in Tamil or English. Browser speech recognition creates an editable transcript for AI suggestions.',
     voiceListening: 'Listening to your voice...',
     voiceClickToStart: 'Click microphone to start speaking',
     voiceClickToStop: 'Click to finish speaking',
@@ -55,7 +55,7 @@ export const translations = {
     aiSummaryTitle: 'AI Grievance Classification',
     aiConfidence: 'AI Confidence Score',
     categoryLabel: 'Civic Category',
-    departmentLabel: 'Assigned Department',
+    departmentLabel: 'Suggested Service Area',
     priorityLabel: 'Priority Level',
     priorityReasonLabel: 'Priority Justification',
     locationLabel: 'Incident Location / Address',
@@ -73,12 +73,12 @@ export const translations = {
     evidenceTitle: 'Upload Photo Evidence (Optional)',
     evidenceHelper: 'Upload clear photos of the pothole, leaking pipe, or damaged street light.',
     
-    btnConfirmSubmit: 'Submit Grievance to Department',
+    btnConfirmSubmit: 'Submit Grievance',
     btnEditDetails: 'Edit Details',
     
     // Success
     successTitle: 'Grievance Registered Successfully!',
-    successSub: 'Your complaint has been logged and routed to the department officer.',
+    successSub: 'Your grievance was saved. Keep the tracking ID to check for updates.',
     grievanceIdLabel: 'Grievance Tracking Number',
     keepIdSafe: 'Please save this ID to track your complaint status anytime.',
     btnTrackNow: 'Track Live Progress',
@@ -86,10 +86,10 @@ export const translations = {
     
     // Tracking
     trackTitle: 'Track Grievance Status',
-    trackSub: 'Enter your 12-digit Grievance ID to view real-time inspection, officer notes, and work progress.',
+    trackSub: 'Enter your grievance ID to view status updates recorded in the system.',
     trackInputPlaceholder: 'e.g., GRV-2026-00124',
     btnSearchTrack: 'Track Status',
-    timelineTitle: 'Live Resolution Timeline',
+    timelineTitle: 'Grievance Status History',
     officerDetailsTitle: 'Assigned Field Officer',
     statusSubmitted: 'Complaint Submitted',
     statusAIClassified: 'AI Categorized & Validated',
@@ -108,7 +108,7 @@ export const translations = {
     btnSubmitFeedback: 'Submit Citizen Feedback',
     
     // Admin & Officer
-    adminPortalTitle: 'NivaranAI Command & Control Center',
+    adminPortalTitle: 'NivaranAI Administration',
     officerPortalTitle: 'Field Officer Operations Terminal',
     totalGrievances: 'Total Grievances',
     pendingGrievances: 'Pending Action',
@@ -129,8 +129,8 @@ export const translations = {
   ta: {
     appTitle: 'நிவாரன்AI',
     appSubtitle: 'செயற்கை நுண்ணறிவு பொதுமக்கள் குறைதீர்ப்பு தளம்',
-    portalTagline: 'தமிழ்நாடு அரசு | பொதுமக்கள் குறைதீர்ப்பு மையம்',
-    emblemSubtitle: 'வாய்மையே வெல்லும் | Truth Alone Triumphs',
+    portalTagline: 'குடிமக்கள் குறை பதிவு தளம்',
+    emblemSubtitle: 'தமிழ் · English',
     navHome: 'முகப்பு',
     navFileComplaint: 'புகார் பதிவு செய்க',
     navTrack: 'புகார் நிலை அறிய',
@@ -138,11 +138,11 @@ export const translations = {
     navAdmin: 'நிர்வாக தளம்',
     navOfficer: 'அதிகாரி பிரிவு',
     navAnalytics: 'பகுப்பாய்வு',
-    navDirectory: 'சட்டமன்ற உறுப்பினர் கையேடு',
-    heroBadge: 'ஸ்மார்ட் குடிமக்கள் சேவை 2026',
+    navDirectory: '2026 தேர்தல் முடிவுகள்',
+    heroBadge: 'குடிமக்கள் புகார் முன்னோட்டம்',
     heroHeadline: 'உங்கள் குறைகளை தமிழில் அல்லது ஆங்கிலத்தில் பேசுங்கள்.',
     heroSubheadline:
-      'நிவாரன்AI உங்கள் குரலை உணர்ந்து, சரியான அரசுத் துறைக்கு அனுப்பி, உடனடித் தீர்வு காண வெளிப்படைத்தன்மையுடன் செயல்படுகிறது.',
+      'தமிழ் அல்லது ஆங்கிலத்தில் குடிமக்கள் பிரச்சனையை விவரிக்கவும். AI வகையையும் சேவைப் பகுதியையும் பரிந்துரைக்கும்; புகார் சேவையை இயக்குநர் அமைத்திருக்க வேண்டும்.',
     btnSpeakComplaint: 'குரல் மூலம் புகார் கூற (தமிழ் / English)',
     btnWriteComplaint: 'எழுத்து மூலம் புகார் அளிக்க',
     btnTrackGrievance: 'பதிவு செய்த புகாரைக் கண்காணிக்க',
@@ -153,7 +153,7 @@ export const translations = {
     
     // Voice Modal
     voiceModalTitle: 'உங்கள் புகாரைப் பேசுங்கள்',
-    voiceModalSubtitle: 'நீங்கள் தமிழில் தெளிவாகப் பேசலாம். AI குரலை உணர்ந்து துல்லியமாகப் பதிவு செய்யும்.',
+    voiceModalSubtitle: 'தமிழ் அல்லது ஆங்கிலத்தில் பேசுங்கள். உலாவி குரல் அறிதல் திருத்தக்கூடிய உரையை உருவாக்கும்.',
     voiceListening: 'உங்கள் குரலைக் கேட்கிறது...',
     voiceClickToStart: 'மைக் பொத்தானை அழுத்திப் பேசத் தொடங்குங்கள்',
     voiceClickToStop: 'பேசி முடித்ததும் அழுத்தவும்',
@@ -182,7 +182,7 @@ export const translations = {
     aiSummaryTitle: 'AI புகார் வகைப்பாடு அறிக்கை',
     aiConfidence: 'AI துல்லிய நம்பிக்கை',
     categoryLabel: 'புகார் வகை',
-    departmentLabel: 'ஒதுக்கப்பட்ட துறை',
+    departmentLabel: 'பரிந்துரைக்கப்பட்ட சேவைப் பகுதி',
     priorityLabel: 'முன்னுரிமை நிலை',
     priorityReasonLabel: 'முன்னுரிமைக்கான காரணம்',
     locationLabel: 'சம்பவ இடம் / முகவரி',
@@ -200,12 +200,12 @@ export const translations = {
     evidenceTitle: 'புகைப்பட ஆதாரம் (விருப்பத்தேர்வு)',
     evidenceHelper: 'உடைந்த குழாய், பள்ளம் அல்லது சேதமடைந்த தெருவிளக்கின் தெளிவான படம்.',
     
-    btnConfirmSubmit: 'துறைக்கு புகாரை அனுப்புக',
+    btnConfirmSubmit: 'புகாரைச் சமர்ப்பிக்கவும்',
     btnEditDetails: 'விவரங்களைத் திருத்து',
     
     // Success
     successTitle: 'புகார் வெற்றிகரமாகப் பதிவு செய்யப்பட்டது!',
-    successSub: 'உங்கள் புகார் பதிவு செய்யப்பட்டு துறை ஆய்வாளருக்கு அனுப்பப்பட்டுள்ளது.',
+    successSub: 'உங்கள் புகார் சேமிக்கப்பட்டது. புதுப்பிப்புகளைப் பார்க்க கண்காணிப்பு எண்ணை வைத்திருக்கவும்.',
     grievanceIdLabel: 'புகார் கண்காணிப்பு எண்',
     keepIdSafe: 'புகாரின் நிலையை அறிய இந்த எண்ணைப் பாதுகாத்துக்கொள்ளவும்.',
     btnTrackNow: 'நிலையைக் காண்க',
@@ -213,10 +213,10 @@ export const translations = {
     
     // Tracking
     trackTitle: 'புகாரின் நிலையைக் கண்டறிக',
-    trackSub: 'உங்கள் 12-இலக்க புகார் எண்ணை உள்ளிட்டு நிகழ்நேரத் தகவல்களைப் பெறுங்கள்.',
+    trackSub: 'பதிவு செய்யப்பட்ட நிலை புதுப்பிப்புகளைப் பார்க்க புகார் எண்ணை உள்ளிடவும்.',
     trackInputPlaceholder: 'எ.கா: GRV-2026-00124',
     btnSearchTrack: 'நிலை அறிய',
-    timelineTitle: 'தீர்வு முன்னேற்றக் காலவரிசை',
+    timelineTitle: 'புகார் நிலை வரலாறு',
     officerDetailsTitle: 'பொறுப்பு கள அதிகாரி',
     statusSubmitted: 'புகார் பெறப்பட்டது',
     statusAIClassified: 'AI வகைப்படுத்தியது',

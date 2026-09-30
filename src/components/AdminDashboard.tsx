@@ -59,6 +59,7 @@ export const AdminDashboard: React.FC = () => {
   const [officers, setOfficers] = useState<Officer[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,6 +82,7 @@ export const AdminDashboard: React.FC = () => {
 
   const loadData = async () => {
     setIsLoading(true);
+    setLoadError(false);
     try {
       const [compList, deptList, offList, logs] = await Promise.all([
         api.getComplaints(),
@@ -93,7 +95,7 @@ export const AdminDashboard: React.FC = () => {
       setOfficers(offList);
       setAuditLogs(logs);
     } catch {
-      // ignore
+      setLoadError(true);
     } finally {
       setIsLoading(false);
     }
@@ -245,7 +247,7 @@ export const AdminDashboard: React.FC = () => {
                 {t.adminPortalTitle}
               </h2>
               <p className="text-xs text-slate-500">
-                Tamil Nadu Public Grievances Executive Command & Dispatch Center
+                Grievance administration workspace
               </p>
             </div>
           </div>
@@ -272,8 +274,17 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
-        <strong>Data status:</strong> Records shown here may include development seed data until the production Firestore dataset is provisioned and verified.
+        <strong>Data status:</strong> Records are read from the configured Firestore database. Confirm the project, dataset, and record provenance before acting on them.
       </div>
+
+      {loadError && (
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 flex flex-wrap items-center justify-between gap-3">
+          <span>Some dashboard data could not be loaded. Check the network and Firestore access, then retry.</span>
+          <button type="button" onClick={loadData} disabled={isLoading} className="rounded-lg border border-red-300 px-3 py-1.5 font-semibold hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-700">
+            {isLoading ? 'Loading…' : 'Retry'}
+          </button>
+        </div>
+      )}
 
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">

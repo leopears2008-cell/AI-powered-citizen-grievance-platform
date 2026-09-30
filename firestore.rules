@@ -8,8 +8,41 @@ service cloud.firestore {
 
     function isAdmin() {
       return signedIn()
+        && request.auth.token.email_verified == true
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
         && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true;
+    }
+
+    function validAttachment(attachment) {
+      return attachment is map
+        && attachment.keys().hasOnly(['id', 'url', 'name', 'type', 'uploadedAt'])
+        && attachment.id is string
+        && attachment.id.size() <= 80
+        && attachment.url is string
+        && attachment.url.size() <= 550000
+        && attachment.url.matches('^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/]*={0,2}$')
+        && attachment.name is string
+        && attachment.name.size() <= 120
+        && attachment.type == 'image'
+        && attachment.uploadedAt is string
+        && attachment.uploadedAt.size() <= 40;
+    }
+
+    function validLocation(location) {
+      return location is map
+        && location.keys().hasOnly(['address', 'landmark', 'district', 'constituency', 'wardNumber', 'pincode', 'lat', 'lng'])
+        && location.address is string
+        && location.address.size() > 0
+        && location.address.size() <= 500
+        && location.district is string
+        && location.district.size() > 0
+        && location.district.size() <= 100
+        && (!('landmark' in location) || (location.landmark is string && location.landmark.size() <= 200))
+        && (!('constituency' in location) || (location.constituency is string && location.constituency.size() <= 120))
+        && (!('wardNumber' in location) || (location.wardNumber is string && location.wardNumber.size() <= 50))
+        && (!('pincode' in location) || (location.pincode is string && location.pincode.size() <= 12))
+        && (!('lat' in location) || (location.lat is number && location.lat >= -90 && location.lat <= 90))
+        && (!('lng' in location) || (location.lng is number && location.lng >= -180 && location.lng <= 180));
     }
 
     match /admins/{uid} {
@@ -22,29 +55,107 @@ service cloud.firestore {
       allow read: if isAdmin() || (signedIn() && resource.data.citizenId == request.auth.uid);
 
       allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'id', 'trackId', 'citizenId', 'citizenName', 'citizenPhone', 'citizenEmail', 'language',
+          'originalTranscript', 'summaryEn', 'summaryTa', 'category', 'departmentId', 'departmentName',
+          'priority', 'priorityReason', 'confidenceScore', 'location', 'attachments', 'entities',
+          'estimatedDays', 'targetResolutionDate', 'status', 'statusHistory', 'createdAt', 'updatedAt'
+        ])
         && request.resource.data.citizenId == request.auth.uid
         && request.resource.data.id == grievanceId
         && request.resource.data.trackId == grievanceId
-        && request.resource.data.originalTranscript is string
-        && request.resource.data.originalTranscript.size() <= 10000
+        && grievanceId.matches('^GRV-[0-9]{4}-[A-F0-9]{8}$')
         && request.resource.data.citizenName is string
+        && request.resource.data.citizenName.size() > 0
         && request.resource.data.citizenName.size() <= 120
         && request.resource.data.citizenPhone is string
+        && request.resource.data.citizenPhone.size() >= 7
         && request.resource.data.citizenPhone.size() <= 30
+        && request.resource.data.citizenPhone.matches('^[+]?[0-9 ()-]{7,30}$')
+        && request.resource.data.citizenEmail is string
+        && request.resource.data.citizenEmail.size() <= 254
+        && (request.resource.data.citizenEmail == '' || request.resource.data.citizenEmail.matches('^[^ @]+@[^ @]+[.][^ @]+$'))
+        && request.resource.data.language in ['Tamil', 'English', 'Tanglish', 'Other']
+        && request.resource.data.originalTranscript is string
+        && request.resource.data.originalTranscript.size() > 0
+        && request.resource.data.originalTranscript.size() <= 10000
+        && request.resource.data.summaryEn is string
+        && request.resource.data.summaryEn.size() > 0
+        && request.resource.data.summaryEn.size() <= 2000
+        && request.resource.data.summaryTa is string
+        && request.resource.data.summaryTa.size() <= 2000
+        && request.resource.data.departmentId is string
+        && request.resource.data.departmentId.size() <= 120
+        && request.resource.data.departmentName is string
+        && request.resource.data.departmentName.size() <= 200
+        && request.resource.data.category in [
+          'Street Light', 'Water Supply', 'Roads & Potholes', 'Sanitation & Drainage',
+          'Electricity & Power', 'Public Health & Fogging', 'Transport & Traffic',
+          'Encroachment & Parks', 'Other'
+        ]
+        && request.resource.data.priority in ['Critical', 'High', 'Medium', 'Low']
+        && request.resource.data.priorityReason is string
+        && request.resource.data.priorityReason.size() <= 1000
+        && request.resource.data.confidenceScore is number
+        && request.resource.data.confidenceScore >= 0
+        && request.resource.data.confidenceScore <= 1
+        && request.resource.data.estimatedDays is number
+        && request.resource.data.estimatedDays >= 0
+        && request.resource.data.estimatedDays <= 365
+        && request.resource.data.targetResolutionDate is string
+        && request.resource.data.targetResolutionDate.size() <= 40
+        && request.resource.data.entities is map
+        && request.resource.data.entities.keys().hasOnly(['duration', 'affectedCount', 'equipment', 'urgencyMarkers'])
+        && (!('duration' in request.resource.data.entities) || (request.resource.data.entities.duration is string && request.resource.data.entities.duration.size() <= 200))
+        && (!('affectedCount' in request.resource.data.entities) || (request.resource.data.entities.affectedCount is string && request.resource.data.entities.affectedCount.size() <= 100))
+        && (!('equipment' in request.resource.data.entities) || (request.resource.data.entities.equipment is string && request.resource.data.entities.equipment.size() <= 200))
+        && (!('urgencyMarkers' in request.resource.data.entities) || (request.resource.data.entities.urgencyMarkers is list && request.resource.data.entities.urgencyMarkers.size() <= 10))
+        && request.resource.data.status == 'Submitted'
+        && request.resource.data.createdAt is string
+        && request.resource.data.updatedAt is string
+        && validLocation(request.resource.data.location)
+        && request.resource.data.attachments is list
         && request.resource.data.attachments.size() <= 1
-        && (request.resource.data.attachments.size() == 0 || request.resource.data.attachments[0].url.size() <= 600000);
+        && (request.resource.data.attachments.size() == 0 || validAttachment(request.resource.data.attachments[0]))
+        && request.resource.data.statusHistory is list
+        && request.resource.data.statusHistory.size() == 1
+        && request.resource.data.statusHistory[0].keys().hasOnly(['status', 'timestamp', 'updatedBy', 'role', 'remarks'])
+        && request.resource.data.statusHistory[0].status == 'Submitted'
+        && request.resource.data.statusHistory[0].role == 'CITIZEN'
+        && request.resource.data.statusHistory[0].updatedBy == 'Citizen'
+        && request.resource.data.statusHistory[0].timestamp is string
+        && request.resource.data.statusHistory[0].remarks is string
+        && request.resource.data.statusHistory[0].remarks.size() <= 1000;
 
-      allow update: if isAdmin()
+      allow update: if (
+          isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'statusHistory', 'updatedAt', 'assignedOfficerId', 'assignedOfficerName',
+            'assignedOfficerPhone', 'assignedAt', 'targetResolutionDate', 'resolvedAt',
+            'resolutionRemarks', 'resolutionEvidenceUrl'
+          ])
+          && (!('status' in request.resource.data) || request.resource.data.status in [
+            'Submitted', 'AI Classified', 'Under Review', 'Assigned', 'In Progress', 'Resolved', 'Rejected'
+          ])
+        )
         || (
           signedIn()
           && resource.data.citizenId == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['resolutionFeedback', 'updatedAt'])
-          && request.resource.data.resolutionFeedback.comment is string
-          && request.resource.data.resolutionFeedback.comment.size() <= 1000
+             .hasOnly(['feedback', 'updatedAt'])
+          && request.resource.data.feedback is map
+          && request.resource.data.feedback.keys().hasOnly(['rating', 'comment', 'isResolvedSatisfied', 'submittedAt'])
+          && request.resource.data.feedback.rating is number
+          && request.resource.data.feedback.rating >= 1
+          && request.resource.data.feedback.rating <= 5
+          && request.resource.data.feedback.comment is string
+          && request.resource.data.feedback.comment.size() <= 1000
+          && request.resource.data.feedback.isResolvedSatisfied is bool
+          && request.resource.data.feedback.submittedAt is string
+          && request.resource.data.updatedAt is string
         );
 
-      allow delete: if isAdmin();
+      allow delete: if false;
     }
 
     // Notifications and operational data are accessed through authenticated server APIs.
@@ -60,8 +171,21 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    match /auditLogs/{document=**} {
-      allow read, write: if isAdmin();
+    match /auditLogs/{auditLogId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['id', 'timestamp', 'userId', 'userName', 'userRole', 'action', 'details', 'grievanceId'])
+        && request.resource.data.id == auditLogId
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.userName is string
+        && request.resource.data.userName.size() <= 254
+        && request.resource.data.userRole == 'ADMIN'
+        && request.resource.data.action is string
+        && request.resource.data.action.size() <= 100
+        && request.resource.data.details is string
+        && request.resource.data.details.size() <= 2000
+        && request.resource.data.timestamp is string;
+      allow update, delete: if false;
     }
 
     match /{document=**} {
