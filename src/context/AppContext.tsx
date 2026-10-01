@@ -14,7 +14,7 @@ import {
 } from 'firebase/auth';
 
 export type AppLanguage = 'en' | 'ta';
-export type AppTab = 'home' | 'file' | 'track' | 'history' | 'admin' | 'analytics' | 'directory' | 'privacy' | 'terms' | 'cookies';
+export type AppTab = 'home' | 'file' | 'track' | 'history' | 'admin' | 'analytics' | 'directory' | 'news' | 'privacy' | 'terms' | 'cookies';
 
 interface ToastInfo {
   id: string;
@@ -81,7 +81,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       try {
-        // The admin registry lives in Supabase; the backend answers whether this user is an active admin.
         const admin = nextUser.emailVerified ? await api.checkAdminAccess() : false;
         setIsAdmin(admin);
       } catch (error) {
@@ -119,6 +118,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const t = translations[language] || translations.en;
   const role: UserRole = isAdmin ? 'ADMIN' : 'CITIZEN';
   const isCitizenVerified = Boolean(user && !user.isAnonymous && (user.emailVerified || user.phoneNumber));
+
   const refreshAuthenticatedUser = async () => {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
@@ -126,6 +126,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await currentUser.getIdToken(true);
     setUser(auth.currentUser);
   };
+
   const triggerRefresh = () => setRefreshKey((prev) => prev + 1);
 
   const showToast = (message: string, type: ToastInfo['type'] = 'success') => {

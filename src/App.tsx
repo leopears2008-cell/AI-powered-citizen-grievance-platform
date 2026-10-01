@@ -16,20 +16,15 @@ const AdminDashboard = lazy(() => import('./components/AdminDashboard').then((mo
 const AdminLogin = lazy(() => import('./components/AdminLogin').then((module) => ({ default: module.AdminLogin })));
 const AnalyticsView = lazy(() => import('./components/AnalyticsView').then((module) => ({ default: module.AnalyticsView })));
 const MLADirectory = lazy(() => import('./components/MLADirectory').then((module) => ({ default: module.MLADirectory })));
+const LiveNews = lazy(() => import('./components/LiveNews').then((module) => ({ default: module.LiveNews })));
 import {
-  Phone,
-  ShieldCheck,
   CheckCircle2,
   AlertCircle,
   X,
-  HelpCircle,
-  Globe,
-  HeartHandshake,
-  Sparkles,
 } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
-  const { language, t, activeTab, setActiveTab, toasts, removeToast, isAdmin, authLoading, isCitizenVerified } = useApp();
+  const { language, activeTab, setActiveTab, toasts, removeToast, isAdmin, authLoading, isCitizenVerified } = useApp();
 
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [initialVoiceTranscript, setInitialVoiceTranscript] = useState('');
@@ -43,7 +38,6 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-900 flex flex-col justify-between selection:bg-indigo-600 selection:text-white overflow-hidden">
-      {/* Toast Notification Container */}
       <div aria-live="polite" aria-relevant="additions text" className="fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full">
         {toasts.map((toast) => (
           <div
@@ -76,7 +70,6 @@ const MainLayout: React.FC = () => {
         ))}
       </div>
 
-      {/* Voice Recognition Modal */}
       {isVoiceModalOpen && (
         <VoiceInputModal
           isOpen={isVoiceModalOpen}
@@ -85,89 +78,89 @@ const MainLayout: React.FC = () => {
         />
       )}
 
-      {/* Global State Header */}
       <Header />
 
-      {/* Main Dynamic View Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 flex flex-col space-y-8 overflow-y-auto">
         <Suspense fallback={<PageSkeleton label={language === 'ta' ? 'பக்கத்தை ஏற்றுகிறது…' : 'Loading page…'} />}>
-        {activeTab === 'home' && (
-          <div className="space-y-12 animate-in fade-in duration-300">
-            <HeroSection
-              onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
-              onSelectCategory={(cat) => {
-                setInitialVoiceTranscript('');
-                setActiveTab('file');
-              }}
-            />
-            <AIDemoCard />
-            <InteractiveMap />
-            <FAQSection />
-          </div>
-        )}
-
-        {activeTab === 'file' && (
-          <div className="animate-in fade-in duration-300">
-            {authLoading ? (
-              <div role="status" className="py-16 text-center text-sm text-slate-600">{language === 'ta' ? 'அங்கீகாரத்தைச் சரிபார்க்கிறது…' : 'Checking your account…'}</div>
-            ) : isCitizenVerified ? (
-              <GrievanceForm
-                initialTranscript={initialVoiceTranscript}
-                initialLanguage={initialVoiceLang}
+          {activeTab === 'home' && (
+            <div className="space-y-12 animate-in fade-in duration-300">
+              <HeroSection
                 onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
+                onSelectCategory={() => {
+                  setInitialVoiceTranscript('');
+                  setActiveTab('file');
+                }}
               />
-            ) : (
-              <CitizenVerification />
-            )}
-          </div>
-        )}
+              <AIDemoCard />
+              <InteractiveMap />
+              <FAQSection />
+            </div>
+          )}
 
-        {activeTab === 'track' && (
-          <div className="animate-in fade-in duration-300">
-            <CitizenTracker />
-          </div>
-        )}
+          {activeTab === 'file' && (
+            <div className="animate-in fade-in duration-300">
+              {authLoading ? (
+                <div role="status" className="py-16 text-center text-sm text-slate-600">{language === 'ta' ? 'அங்கீகாரத்தைச் சரிபார்க்கிறது…' : 'Checking your account…'}</div>
+              ) : isCitizenVerified ? (
+                <GrievanceForm
+                  initialTranscript={initialVoiceTranscript}
+                  initialLanguage={initialVoiceLang}
+                  onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
+                />
+              ) : (
+                <CitizenVerification />
+              )}
+            </div>
+          )}
 
-        {activeTab === 'history' && (
-          <div className="animate-in fade-in duration-300">
-            <CitizenHistory />
-          </div>
-        )}
+          {activeTab === 'track' && (
+            <div className="animate-in fade-in duration-300">
+              <CitizenTracker />
+            </div>
+          )}
 
-        {activeTab === 'directory' && (
-          <div className="animate-in fade-in duration-300">
-            <MLADirectory />
-          </div>
-        )}
+          {activeTab === 'history' && (
+            <div className="animate-in fade-in duration-300">
+              <CitizenHistory />
+            </div>
+          )}
 
-        {activeTab === 'admin' && (
-          <div className="animate-in fade-in duration-300">
-            {authLoading ? (
-              <div className="py-16 text-center text-sm text-slate-500" role="status">Checking admin access…</div>
-            ) : isAdmin ? (
-              <AdminDashboard />
-            ) : (
-              <AdminLogin />
-            )}
-          </div>
-        )}
+          {activeTab === 'directory' && (
+            <div className="animate-in fade-in duration-300">
+              <MLADirectory />
+            </div>
+          )}
 
+          {activeTab === 'news' && (
+            <div className="animate-in fade-in duration-300">
+              <LiveNews />
+            </div>
+          )}
 
+          {activeTab === 'admin' && (
+            <div className="animate-in fade-in duration-300">
+              {authLoading ? (
+                <div className="py-16 text-center text-sm text-slate-500" role="status">Checking admin access…</div>
+              ) : isAdmin ? (
+                <AdminDashboard />
+              ) : (
+                <AdminLogin />
+              )}
+            </div>
+          )}
 
-        {activeTab === 'analytics' && isAdmin && (
-          <div className="animate-in fade-in duration-300">
-            <AnalyticsView />
-          </div>
-        )}
+          {activeTab === 'analytics' && isAdmin && (
+            <div className="animate-in fade-in duration-300">
+              <AnalyticsView />
+            </div>
+          )}
 
-        {(activeTab === 'privacy' || activeTab === 'terms' || activeTab === 'cookies') && (
-          <LegalPage type={activeTab} />
-        )}
-
+          {(activeTab === 'privacy' || activeTab === 'terms' || activeTab === 'cookies') && (
+            <LegalPage type={activeTab} />
+          )}
         </Suspense>
       </main>
 
-      {/* Application footer */}
       <footer className="bg-white text-slate-600 text-xs border-t border-slate-200 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
@@ -228,4 +221,3 @@ export default function App() {
     </AppProvider>
   );
 }
-

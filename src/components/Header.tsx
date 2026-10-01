@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { UserRole } from '../types';
 import {
   Bell,
   Globe,
@@ -9,12 +8,12 @@ import {
   X,
   FileText,
   Search,
-  LayoutDashboard,
   BarChart3,
   CheckCircle2,
   AlertCircle,
   ExternalLink,
   Contact,
+  Newspaper,
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -28,7 +27,6 @@ export const Header: React.FC = () => {
     unreadCount,
     markAsRead,
     navigateToTrack,
-    user,
     isAdmin,
     logout,
   } = useApp();
@@ -36,12 +34,15 @@ export const Header: React.FC = () => {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const closeMobileAndOpen = (tab: Parameters<typeof setActiveTab>[0]) => {
+    setActiveTab(tab);
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <header className="sticky top-0 z-40 bg-slate-900 text-white border-b border-slate-800 shadow-lg shrink-0">
-      {/* Top Tiranga Micro Ribbon */}
       <div className="h-1 w-full bg-linear-to-r from-orange-500 via-white to-emerald-600" />
 
-      {/* Official State Banner Header */}
       <div className="bg-slate-950 text-slate-300 text-xs py-1.5 px-4 sm:px-8 flex justify-between items-center border-b border-slate-800">
         <div className="flex items-center space-x-3">
           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
@@ -76,13 +77,17 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Navigation Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-18">
-          {/* Logo & Portal Identity */}
           <div
             className="flex items-center space-x-3 cursor-pointer group"
             onClick={() => setActiveTab('home')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') setActiveTab('home');
+            }}
+            aria-label="Go to home"
           >
             <div className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center overflow-hidden rounded-lg bg-white/95 p-0.5 shadow-sm">
               <img
@@ -100,7 +105,6 @@ export const Header: React.FC = () => {
             </div>
           </div>
 
-          {/* Desktop Navigation Links */}
           <nav className="hidden md:flex items-center space-x-1 lg:space-x-4">
             <button
               onClick={() => setActiveTab('home')}
@@ -112,6 +116,7 @@ export const Header: React.FC = () => {
             >
               {t.navHome}
             </button>
+
             <button
               onClick={() => setActiveTab('file')}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center space-x-1.5 ${
@@ -123,6 +128,7 @@ export const Header: React.FC = () => {
               <FileText className="w-4 h-4" />
               <span>{t.navFileComplaint}</span>
             </button>
+
             <button
               onClick={() => setActiveTab('track')}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center space-x-1.5 ${
@@ -134,6 +140,7 @@ export const Header: React.FC = () => {
               <Search className="w-4 h-4" />
               <span>{t.navTrack}</span>
             </button>
+
             <button
               onClick={() => setActiveTab('history')}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -144,6 +151,7 @@ export const Header: React.FC = () => {
             >
               {t.navHistory}
             </button>
+
             <button
               onClick={() => setActiveTab('directory')}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center space-x-1.5 ${
@@ -155,22 +163,36 @@ export const Header: React.FC = () => {
               <Contact className="w-4 h-4" />
               <span>{t.navDirectory}</span>
             </button>
-            {isAdmin && <button
-              onClick={() => setActiveTab('analytics')}
+
+            <button
+              onClick={() => setActiveTab('news')}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center space-x-1.5 ${
-                activeTab === 'analytics'
-                  ? 'bg-slate-800 text-white font-semibold'
+                activeTab === 'news'
+                  ? 'bg-red-600 text-white font-semibold shadow-sm'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
+              aria-label="Open live news"
             >
-              <BarChart3 className="w-4 h-4" />
-              <span>{t.navAnalytics}</span>
-            </button>}
+              <Newspaper className="w-4 h-4" />
+              <span>{language === 'ta' ? 'நேரலை செய்திகள்' : 'Live News'}</span>
+            </button>
+
+            {isAdmin && (
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center space-x-1.5 ${
+                  activeTab === 'analytics'
+                    ? 'bg-slate-800 text-white font-semibold'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>{t.navAnalytics}</span>
+              </button>
+            )}
           </nav>
 
-          {/* Right Controls: Notifications & Demo Role Switcher */}
           <div className="flex items-center space-x-2 sm:space-x-3">
-            {/* Notification Bell */}
             <div className="relative">
               <button
                 onClick={() => setIsNotifOpen(!isNotifOpen)}
@@ -186,7 +208,6 @@ export const Header: React.FC = () => {
                 )}
               </button>
 
-              {/* Notification Dropdown */}
               {isNotifOpen && (
                 <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-slate-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center">
@@ -244,7 +265,6 @@ export const Header: React.FC = () => {
               )}
             </div>
 
-            {/* Separate admin access */}
             <div className="hidden sm:flex items-center gap-2">
               <button
                 type="button"
@@ -266,82 +286,47 @@ export const Header: React.FC = () => {
               )}
             </div>
 
-            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="md:hidden p-2 rounded-lg text-slate-300 hover:bg-slate-800"
+              aria-label="Open navigation menu"
+              aria-expanded={isMobileMenuOpen}
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Navigation Drawer */}
         {isMobileMenuOpen && (
           <div className="md:hidden py-3 border-t border-slate-200 space-y-1">
-            <button
-              onClick={() => {
-                setActiveTab('home');
-                setIsMobileMenuOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100"
-            >
+            <button onClick={() => closeMobileAndOpen('home')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100">
               {t.navHome}
             </button>
-            <button
-              onClick={() => {
-                setActiveTab('file');
-                setIsMobileMenuOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-blue-700 bg-blue-50"
-            >
+            <button onClick={() => closeMobileAndOpen('file')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-blue-700 bg-blue-50">
               {t.navFileComplaint}
             </button>
-            <button
-              onClick={() => {
-                setActiveTab('track');
-                setIsMobileMenuOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100"
-            >
+            <button onClick={() => closeMobileAndOpen('track')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100">
               {t.navTrack}
             </button>
-            <button
-              onClick={() => {
-                setActiveTab('history');
-                setIsMobileMenuOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100"
-            >
+            <button onClick={() => closeMobileAndOpen('history')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100">
               {t.navHistory}
             </button>
-            <button
-              onClick={() => {
-                setActiveTab('directory');
-                setIsMobileMenuOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100"
-            >
+            <button onClick={() => closeMobileAndOpen('directory')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100">
               {t.navDirectory}
             </button>
             <button
-              onClick={() => {
-                setActiveTab('admin');
-                setIsMobileMenuOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-indigo-700 bg-indigo-50"
+              onClick={() => closeMobileAndOpen('news')}
+              className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-red-700 bg-red-50 flex items-center gap-2"
             >
+              <Newspaper className="w-4 h-4" />
+              {language === 'ta' ? 'நேரலை செய்திகள்' : 'Live News'}
+            </button>
+            <button onClick={() => closeMobileAndOpen('admin')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-indigo-700 bg-indigo-50">
               Admin Dashboard
             </button>
 
             {isAdmin && (
-              <button
-                onClick={() => {
-                  setActiveTab('analytics');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100"
-              >
+              <button onClick={() => closeMobileAndOpen('analytics')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100">
                 {t.navAnalytics}
               </button>
             )}
