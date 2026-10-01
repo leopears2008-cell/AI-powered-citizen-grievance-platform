@@ -84,8 +84,12 @@ export const Header: React.FC = () => {
             className="flex items-center space-x-3 cursor-pointer group"
             onClick={() => setActiveTab('home')}
           >
-            <div className="w-10 h-10 rounded-lg bg-indigo-500 flex items-center justify-center text-white font-bold text-xl">
-              N
+            <div className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center overflow-hidden rounded-lg bg-white/95 p-0.5 shadow-sm">
+              <img
+                src="/logo.webp"
+                alt="NivaranAI Public Grievance Redressal Platform"
+                className="h-full w-full object-contain"
+              />
             </div>
             <div>
               <div className="flex items-center space-x-2">
