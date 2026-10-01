@@ -41,7 +41,7 @@ async function jsonFetch(input: RequestInfo | URL, init: RequestInit = {}) {
 
 export const api = {
   async analyzeComplaint(text: string, languageHint?: string): Promise<AIAnalysisResponse> {
-    const res = await jsonFetch('/api/ai/analyze-complaint', {
+    const res = await jsonFetch(apiUrl('/api/ai/analyze-complaint'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text, languageHint }),
@@ -55,7 +55,7 @@ export const api = {
 
   async checkDuplicates(text: string, category: string, district?: string): Promise<DuplicateMatch[]> {
     try {
-      const res = await jsonFetch('/api/ai/check-duplicates', {
+      const res = await jsonFetch(apiUrl('/api/ai/check-duplicates'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, category, district }),
@@ -69,7 +69,7 @@ export const api = {
   },
 
   async suggestResolution(grievanceId: string, actionTaken?: string) {
-    const res = await jsonFetch('/api/ai/suggest-resolution', {
+    const res = await jsonFetch(apiUrl('/api/ai/suggest-resolution'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ grievanceId, actionTaken }),
