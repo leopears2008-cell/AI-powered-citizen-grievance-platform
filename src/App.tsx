@@ -16,6 +16,7 @@ const AdminDashboard = lazy(() => import('./components/AdminDashboard').then((mo
 const AdminLogin = lazy(() => import('./components/AdminLogin').then((module) => ({ default: module.AdminLogin })));
 const AnalyticsView = lazy(() => import('./components/AnalyticsView').then((module) => ({ default: module.AnalyticsView })));
 const MLADirectory = lazy(() => import('./components/MLADirectory').then((module) => ({ default: module.MLADirectory })));
+const TNMinistersDirectory = lazy(() => import('./components/TNMinistersDirectory').then((module) => ({ default: module.TNMinistersDirectory })));
 const LiveNews = lazy(() => import('./components/LiveNews').then((module) => ({ default: module.LiveNews })));
 import {
   CheckCircle2,
@@ -128,6 +129,12 @@ const MainLayout: React.FC = () => {
           {activeTab === 'directory' && (
             <div className="animate-in fade-in duration-300">
               <MLADirectory />
+            </div>
+          )}
+
+          {activeTab === 'ministers' && (
+            <div className="animate-in fade-in duration-300">
+              <TNMinistersDirectory />
             </div>
           )}
 
