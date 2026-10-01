@@ -343,6 +343,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
 
     try {
       const payload = {
+        title: grievanceTitle.trim(),
         citizenId: user.uid,
         verificationMethod: user.phoneNumber ? 'phone' as const : 'email' as const,
         citizenName: citizenName.trim(),
