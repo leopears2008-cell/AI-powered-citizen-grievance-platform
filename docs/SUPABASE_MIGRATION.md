@@ -1,57 +1,103 @@
-# Firestore -> Supabase migration
+# Firebase Firestore -> Supabase PostgreSQL
 
-**Status: partial.** The Supabase schema, security policies and data-import script are in the repo.
-The application code (`src/services/api.ts`, `server.ts`) still reads and writes Firestore and has **not**
-yet been switched, and nothing here has been built or run against a live Supabase project.
+## Migration status
 
-Authentication and the Gemini integration are unchanged. Firebase Auth stays.
+The application database is now Supabase PostgreSQL. Firebase Authentication remains in use for identity and ID-token verification.
 
-## What exists Firestore -> Supabase
+The production data path is:
 
-| Firestore | Supabase table | Notes |
-| --- | --- | --- |
-| `grievances/{trackId}` | `grievances` | ID kept as text PK (`GRV-YYYY-XXXXXXXX`); `location` map flattened to `location_*` columns; `feedback` map flattened to `feedback_*`; `entities` map -> `jsonb` |
-| `grievances.statusHistory[]` | `grievance_status_history` | one row per entry, FK to `grievances` |
-| `grievances.attachments[]` | `grievance_attachments` | one row per entry, FK to `grievances` |
-| `departments/{id}` | `departments` | |
-| `officers/{id}` | `officers` | FK to `departments` |
-| `admins/{uid}` | `admins` | PK is the Firebase UID |
-| `auditLogs/{id}` | `audit_logs` | optional FK to `grievances` |
-| `notifications` | _not created_ | listed in `firebase-blueprint.json`, but the app never reads or writes it (`getNotifications()` returns `[]`) and `firestore.rules` denies all access |
+**Vercel React/Vite frontend -> Express API -> Supabase PostgreSQL**
 
-Timestamps (ISO strings in Firestore) become `timestamptz`. `citizen_id` is the Firebase UID and is deliberately not a foreign key.
+The browser does not use a Supabase service-role key and does not initialize Firestore.
 
-## Files
+## Firebase -> Supabase mapping
 
-- `supabase/migrations/001_initial_schema.sql`: tables, indexes, `updated_at` triggers, RLS, and a grievance column guard that mirrors the `affectedKeys().hasOnly(...)` rules in `firestore.rules`. Safe to re-run.
-- `scripts/migrate-firestore-to-supabase.mjs`: read-only on Firestore, idempotent on Supabase, supports `--dry-run`, and stops before writing if grievances reference departments or officers that do not exist.
+| Firebase/Firestore | Supabase/PostgreSQL |
+| --- | --- |
+| `grievances/{trackId}` | `grievances` |
+| `grievances.statusHistory[]` | `grievance_status_history` |
+| `grievances.attachments[]` | `grievance_attachments` |
+| `departments/{id}` | `departments` |
+| `officers/{id}` | `officers` |
+| `admins/{uid}` | `admins` |
+| `auditLogs/{id}` | `audit_logs` |
+| `notifications` | Not created because the application does not persist or read notifications. |
 
-## Decision needed before the code switch: how the browser authenticates to Supabase
+Firestore document IDs are preserved where they are part of the application's identity model. Firestore timestamps are imported as PostgreSQL `timestamptz`. Nested grievance maps are flattened into relational columns, while `entities` remains `jsonb`.
 
-RLS policies identify the user through `auth.jwt() ->> 'sub'` (the Firebase UID). That works if Supabase
-accepts Firebase ID tokens:
+## Database access
 
-- **A. Firebase as a Supabase third-party auth provider** (matches the `VITE_SUPABASE_*` plan): add Firebase under Supabase Authentication > Sign In / Providers > Third-Party Auth, give every Firebase user the custom claim `role: "authenticated"` (Admin SDK `setCustomUserClaims` for existing users, plus a blocking function for new ones), then create the browser client with `accessToken: async () => await auth.currentUser?.getIdToken()`.
-- **B. All database access through `server.ts`** with the service-role key kept server-side and the browser calling authenticated API routes. No third-party auth setup, but it adds new endpoints and moves the Firestore calls in `api.ts` behind HTTP.
+Application data is accessed through `server/grievanceRoutes.ts` using the official `@supabase/supabase-js` client.
 
-The schema and policies work with either option.
+`server/supabase.ts` creates exactly one server-side Supabase client and uses `SUPABASE_SERVICE_ROLE_KEY`. This key must never be exposed to Vite or committed to the repository.
 
-## Steps to run
+Firebase Auth remains separate from the database. `src/lib/firebase.ts` initializes Auth only; it no longer imports or initializes Firestore.
 
-1. Create a Supabase project and apply `supabase/migrations/001_initial_schema.sql` (SQL editor or `supabase db push`).
-2. Dry run: `npm install --no-save @supabase/supabase-js && node scripts/migrate-firestore-to-supabase.mjs --dry-run`
-3. Import: `node scripts/migrate-firestore-to-supabase.mjs`, then compare row counts with Firestore.
-4. Re-provision admins into `admins` if you rely on `npm run provision-admin` (that script still writes to Firestore).
+## Schema
 
-## Environment variables
+Primary migration:
 
-Server / script only (never `VITE_`):
+`supabase/migrations/001_initial_schema.sql`
 
+It includes tables, primary/foreign keys, indexes, timestamp triggers, constraints, and Row Level Security policies. The initial migration is self-contained; the obsolete follow-up migration that only removed the grievance department FK is no longer required.
+
+## Existing-data import
+
+`scripts/migrate-firestore-to-supabase.mjs` is intentionally retained as a trusted, one-way import utility. It reads Firestore but does not delete or modify source data.
+
+Required server-side variables for import:
+
+- `FIREBASE_SERVICE_ACCOUNT_JSON`
+- `FIRESTORE_DATABASE_ID`
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-Browser (Vercel, Vite): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Keep all existing Firebase variables while Firebase Auth is in use.
+Run:
 
-## Still Firestore-dependent (to be changed in the code switch)
+`node scripts/migrate-firestore-to-supabase.mjs --dry-run`
 
-`src/lib/firebase.ts` (`db`), `src/services/api.ts`, `server.ts` (`requireAdmin`, duplicate check, resolution drafting), `scripts/provision-admin.mjs`, `tests/firestore.rules.test.ts`, `firestore.rules`.
+then, after validating counts:
+
+`node scripts/migrate-firestore-to-supabase.mjs`
+
+The application itself does not require Firestore credentials after the import. Do not run the import against production more than necessary.
+
+## Environment variables
+
+### Server
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `FIREBASE_SERVICE_ACCOUNT_JSON` for Firebase Auth token verification
+- `GEMINI_API_KEY`
+- `ADMIN_EMAILS`
+- `CORS_ORIGINS`
+
+### Vercel/Vite frontend
+
+- `VITE_API_URL`
+- Firebase Auth public configuration:
+  - `VITE_FIREBASE_API_KEY`
+  - `VITE_FIREBASE_AUTH_DOMAIN`
+  - `VITE_FIREBASE_PROJECT_ID`
+  - `VITE_FIREBASE_STORAGE_BUCKET`
+  - `VITE_FIREBASE_MESSAGING_SENDER_ID`
+  - `VITE_FIREBASE_APP_ID`
+
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are not required by the current frontend because database access is server-mediated. If direct browser Supabase access is introduced later, use the anon key only and configure RLS/third-party Firebase authentication first.
+
+Never expose `SUPABASE_SERVICE_ROLE_KEY` in any `VITE_` variable.
+
+## Verification
+
+Run:
+
+`npm install`
+
+`npm run lint`
+
+`npm test`
+
+`npm run build`
+
+The tests include static checks that the Firebase client no longer imports Firestore and that the initial Supabase migration contains the expected tables and RLS controls.
