@@ -1,25 +1,25 @@
 // One-off, read-only-on-Firebase importer: Firestore -> Supabase PostgreSQL.
 //
-// Usage (run locally or in a trusted environment, never in the browser):
-//   npm install --no-save @supabase/supabase-js
+// Run this ONCE (locally or in a trusted environment, never in the browser) to copy
+// existing Firestore records into Supabase. The running app no longer reads Firestore.
+//
 //   node scripts/migrate-firestore-to-supabase.mjs --dry-run   # counts + reference checks only
 //   node scripts/migrate-firestore-to-supabase.mjs             # perform the import
 //
 // Required environment variables (server-side only):
 //   FIREBASE_SERVICE_ACCOUNT_JSON  Firebase Admin service account (JSON string)
+//   FIRESTORE_DATABASE_ID          ID of the Firestore database to read from
 //   SUPABASE_URL                   https://<project-ref>.supabase.co
 //   SUPABASE_SERVICE_ROLE_KEY      Supabase service-role key. NEVER put this in a VITE_ variable.
-// Optional:
-//   FIRESTORE_DATABASE_ID          defaults to firebase-applet-config.json, then "(default)"
 //
 // Firestore data is only read, never modified or deleted. The import is idempotent:
 // parent rows are upserted by primary key; history/attachment rows are replaced
-// per grievance. Run supabase/migrations/001_initial_schema.sql first.
+// per grievance. Apply supabase/migrations/*.sql first.
 
-import fs from 'node:fs';
 import 'dotenv/config';
 import { getApps, getApp, initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { createClient } from '@supabase/supabase-js';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const BATCH = 200;
@@ -52,15 +52,7 @@ const chunk = (items, size) => {
 function initFirestore() {
   const serviceAccount = JSON.parse(required('FIREBASE_SERVICE_ACCOUNT_JSON'));
   const app = getApps().length ? getApp() : initializeApp({ credential: cert(serviceAccount) });
-  let databaseId = process.env.FIRESTORE_DATABASE_ID;
-  if (!databaseId) {
-    try {
-      databaseId = JSON.parse(fs.readFileSync('firebase-applet-config.json', 'utf8')).firestoreDatabaseId;
-    } catch {
-      /* fall through to default */
-    }
-  }
-  return getFirestore(app, databaseId || '(default)');
+  return getFirestore(app, required('FIRESTORE_DATABASE_ID'));
 }
 
 async function readCollection(firestore, name) {
@@ -219,6 +211,8 @@ function makeWriters(supabase) {
   };
 }
 
+// Grievances keep department_id as a plain AI-assigned ID (no foreign key), so only
+// officers -> departments and grievances -> officers must resolve.
 function findMissingReferences(departments, officers, grievances) {
   const departmentIds = new Set(departments.map((r) => r.id));
   const officerIds = new Set(officers.map((r) => r.id));
@@ -226,7 +220,6 @@ function findMissingReferences(departments, officers, grievances) {
   const missingOfficers = new Set();
   for (const o of officers) if (!departmentIds.has(o.department_id)) missingDepartments.add(o.department_id);
   for (const g of grievances) {
-    if (g.department_id && !departmentIds.has(g.department_id)) missingDepartments.add(g.department_id);
     if (g.assigned_officer_id && !officerIds.has(g.assigned_officer_id)) missingOfficers.add(g.assigned_officer_id);
   }
   return { missingDepartments: [...missingDepartments], missingOfficers: [...missingOfficers] };
@@ -264,16 +257,12 @@ async function main() {
   console.log(`Source (Firestore): admins=${admins.length} departments=${departments.length} officers=${officers.length} grievances=${grievances.length} auditLogs=${auditLogs.length}`);
   if (DRY_RUN) console.log('Dry run: nothing will be written to Supabase.');
 
-  let writers;
-  if (DRY_RUN) {
-    writers = makeWriters(null);
-  } else {
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(required('SUPABASE_URL'), required('SUPABASE_SERVICE_ROLE_KEY'), {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    writers = makeWriters(supabase);
-  }
+  const supabase = DRY_RUN
+    ? null
+    : createClient(required('SUPABASE_URL'), required('SUPABASE_SERVICE_ROLE_KEY'), {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+  const writers = makeWriters(supabase);
 
   // Parents before children so foreign keys resolve.
   await writers.upsert('admins', admins);
@@ -284,7 +273,7 @@ async function main() {
   await writers.replaceChildren('grievance_attachments', [...grievanceIds], attachments);
   await writers.upsert('audit_logs', auditLogs);
 
-  console.log(DRY_RUN ? 'Dry run complete.' : 'Import complete. Compare the counts above with the Supabase tables before cutting over.');
+  console.log(DRY_RUN ? 'Dry run complete.' : 'Import complete. Compare the counts above with the Supabase tables.');
 }
 
 main().catch((error) => {
