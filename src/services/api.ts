@@ -8,29 +8,13 @@ import {
   DuplicateMatch,
   GrievanceStatus,
 } from '../types';
-import { db, auth } from '../lib/firebase';
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  query,
-  where,
-} from 'firebase/firestore';
+import { auth } from '../lib/firebase';
 import type { User } from 'firebase/auth';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
 function apiUrl(path: string) {
   return `${API_BASE_URL}${path}`;
-}
-
-async function isActiveAdmin(user: User | null): Promise<boolean> {
-  if (!user || user.isAnonymous || !user.emailVerified) return false;
-  const record = await getDoc(doc(db, 'admins', user.uid));
-  return record.exists() && record.data()?.active === true;
 }
 
 async function authHeaders() {
@@ -45,7 +29,33 @@ async function jsonFetch(input: RequestInfo | URL, init: RequestInit = {}) {
   return fetch(input, { ...init, headers });
 }
 
+/** Calls the authenticated backend API and surfaces its error message to the existing toast UI. */
+async function request<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+  const res = await jsonFetch(apiUrl(path), {
+    method: init.method ?? 'GET',
+    ...(init.body !== undefined
+      ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(init.body) }
+      : {}),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Request failed.' }));
+    throw new Error(typeof err?.error === 'string' ? err.error : 'Request failed.');
+  }
+  return res.json() as Promise<T>;
+}
+
+/** Admin status is decided by the backend (admins table + verified email). */
+async function fetchIsAdmin(user: User | null): Promise<boolean> {
+  if (!user || user.isAnonymous || !user.emailVerified) return false;
+  const result = await request<{ isAdmin: boolean }>('/api/me/admin');
+  return result.isAdmin === true;
+}
+
 export const api = {
+  async checkAdminAccess(): Promise<boolean> {
+    return fetchIsAdmin(auth.currentUser);
+  },
+
   async analyzeComplaint(text: string, languageHint?: string): Promise<AIAnalysisResponse> {
     const res = await jsonFetch(apiUrl('/api/ai/analyze-complaint'), {
       method: 'POST',
@@ -90,12 +100,8 @@ export const api = {
   }): Promise<Grievance[]> {
     const user = auth.currentUser;
     if (!user) return [];
-    const base = collection(db, 'grievances');
-    const q = await isActiveAdmin(user)
-      ? query(base)
-      : query(base, where('citizenId', '==', user.uid));
-    const snapshot = await getDocs(q);
-    let results = snapshot.docs.map((d) => d.data() as Grievance);
+    // The backend returns every grievance for administrators and only the caller's own otherwise.
+    let results = await request<Grievance[]>('/api/grievances');
 
     if (params) {
       if (params.category) results = results.filter(r => r.category === params.category);
@@ -118,17 +124,7 @@ export const api = {
   async getComplaintById(id: string): Promise<Grievance> {
     const user = auth.currentUser;
     if (!user) throw new Error('Authentication session is not ready.');
-
-    if (user.isAnonymous) {
-      const q = query(collection(db, 'grievances'), where('id', '==', id), where('citizenId', '==', user.uid));
-      const snapshot = await getDocs(q);
-      if (snapshot.empty) throw new Error('Grievance not found or not accessible.');
-      return snapshot.docs[0].data() as Grievance;
-    }
-
-    const snap = await getDoc(doc(db, 'grievances', id));
-    if (!snap.exists()) throw new Error('Grievance not found');
-    return snap.data() as Grievance;
+    return request<Grievance>(`/api/grievances/${encodeURIComponent(id)}`);
   },
 
   async createComplaint(data: Partial<Grievance>): Promise<Grievance> {
@@ -137,130 +133,53 @@ export const api = {
     if (user.isAnonymous || (!user.phoneNumber && !user.emailVerified)) {
       throw new Error('Verify your phone number or email before submitting a grievance.');
     }
-
-    const trackId = `GRV-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-    const now = new Date().toISOString();
-    const estimatedDays = Number.isFinite(Number(data.estimatedDays))
-      ? Math.max(0, Math.min(365, Number(data.estimatedDays)))
-      : 3;
-    const newGrievance = {
-      ...data,
-      id: trackId,
-      trackId,
-      citizenId: user.uid,
-      verificationMethod: user.phoneNumber ? 'phone' : 'email',
-      ...(user.phoneNumber ? { citizenPhone: user.phoneNumber } : {}),
-      ...(user.emailVerified && user.email ? { citizenEmail: user.email } : {}),
-      status: 'Submitted' as GrievanceStatus,
-      createdAt: now,
-      updatedAt: now,
-      targetResolutionDate: new Date(Date.now() + estimatedDays * 86400000).toISOString(),
-      statusHistory: [{
-        status: 'Submitted',
-        timestamp: now,
-        remarks: 'Complaint registered successfully by Citizen',
-        updatedBy: 'Citizen',
-        role: 'CITIZEN',
-      }],
-    };
-    await setDoc(doc(db, 'grievances', trackId), newGrievance);
-    return newGrievance as Grievance;
+    // The backend assigns the tracking ID, citizen identity, status and timestamps.
+    return request<Grievance>('/api/grievances', { method: 'POST', body: data });
   },
 
   async updateComplaintStatus(id: string, payload: {
     status: GrievanceStatus; remarks: string; updatedBy: string;
     role: 'CITIZEN' | 'OFFICER' | 'ADMIN'; evidenceUrl?: string;
   }): Promise<Grievance> {
-    if (!(await isActiveAdmin(auth.currentUser))) throw new Error('Only authorized staff can change grievance status.');
-    const grievance = await this.getComplaintById(id);
-    const updatedHistory = [...grievance.statusHistory, {
-      status: payload.status, timestamp: new Date().toISOString(),
-      remarks: payload.remarks, updatedBy: payload.updatedBy, role: payload.role,
-      evidenceUrl: payload.evidenceUrl,
-    }];
-    await updateDoc(doc(db, 'grievances', id), {
-      status: payload.status,
-      statusHistory: updatedHistory,
-      updatedAt: new Date().toISOString(),
-      ...(payload.status === 'Resolved' ? {
-        resolvedAt: new Date().toISOString(),
-        resolutionRemarks: payload.remarks,
-        ...(payload.evidenceUrl ? { resolutionEvidenceUrl: payload.evidenceUrl } : {}),
-      } : {}),
+    return request<Grievance>(`/api/grievances/${encodeURIComponent(id)}/status`, {
+      method: 'POST',
+      body: payload,
     });
-    await this.addAuditLog('STATUS_UPDATE', `Updated ${id} to ${payload.status}`, id);
-    return this.getComplaintById(id);
   },
 
   async assignOfficer(id: string, officerId: string, adminName?: string): Promise<Grievance> {
-    if (!(await isActiveAdmin(auth.currentUser))) throw new Error('Admin authentication required.');
-    const officerSnap = await getDoc(doc(db, 'officers', officerId));
-    if (!officerSnap.exists()) throw new Error('Officer record not found.');
-    const officer = officerSnap.data() as Officer;
-    const grievance = await this.getComplaintById(id);
-    const now = new Date().toISOString();
-    await updateDoc(doc(db, 'grievances', id), {
-      status: 'Assigned',
-      assignedOfficerId: officerId,
-      assignedOfficerName: `${officer.name} (${officer.designation})`,
-      assignedOfficerPhone: officer.phone,
-      assignedAt: now,
-      statusHistory: [...grievance.statusHistory, {
-        status: 'Assigned',
-        timestamp: now,
-        remarks: `Assigned to Field Officer ID: ${officerId}`,
-        updatedBy: adminName || 'System Admin',
-        role: 'ADMIN',
-      }],
-      updatedAt: now,
+    return request<Grievance>(`/api/grievances/${encodeURIComponent(id)}/assign`, {
+      method: 'POST',
+      body: { officerId, adminName },
     });
-    await this.addAuditLog('OFFICER_ASSIGNMENT', `Assigned ${id} to officer ${officerId}`, id);
-    return this.getComplaintById(id);
   },
 
   async submitFeedback(id: string, payload: { rating: number; comment: string; isResolvedSatisfied: boolean }) {
-    const grievance = await this.getComplaintById(id);
-    if (grievance.citizenId !== auth.currentUser?.uid) throw new Error('You can only provide feedback for your own grievance.');
-    await updateDoc(doc(db, 'grievances', id), {
-      feedback: {
-        rating: Math.max(1, Math.min(5, Number(payload.rating) || 1)),
-        comment: String(payload.comment || '').slice(0, 1000),
-        isResolvedSatisfied: Boolean(payload.isResolvedSatisfied),
-        submittedAt: new Date().toISOString(),
-      },
-      updatedAt: new Date().toISOString(),
+    return request<Grievance>(`/api/grievances/${encodeURIComponent(id)}/feedback`, {
+      method: 'POST',
+      body: payload,
     });
-    return this.getComplaintById(id);
   },
 
   async addAuditLog(action: string, details: string, grievanceId?: string) {
     const user = auth.currentUser;
     if (!user || user.isAnonymous) return;
-    const id = `audit-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-    await setDoc(doc(db, 'auditLogs', id), {
-      id,
-      timestamp: new Date().toISOString(),
-      userId: user.uid,
-      userName: user.email || 'Admin',
-      userRole: 'ADMIN',
-      action,
-      details: details.slice(0, 2000),
-      grievanceId,
+    await request<{ ok: boolean }>('/api/admin/audit-logs', {
+      method: 'POST',
+      body: { action, details: details.slice(0, 2000), grievanceId },
     });
   },
 
   async getDepartments(): Promise<Department[]> {
     const user = auth.currentUser;
     if (!user || user.isAnonymous || !user.emailVerified) throw new Error('Admin authentication required.');
-    const snapshot = await getDocs(collection(db, 'departments'));
-    return snapshot.docs.map((item) => item.data() as Department);
+    return request<Department[]>('/api/admin/departments');
   },
 
   async getOfficers(): Promise<Officer[]> {
     const user = auth.currentUser;
     if (!user || user.isAnonymous || !user.emailVerified) throw new Error('Admin authentication required.');
-    const snapshot = await getDocs(collection(db, 'officers'));
-    return snapshot.docs.map((item) => item.data() as Officer);
+    return request<Officer[]>('/api/admin/officers');
   },
 
   async getNotifications(): Promise<NotificationItem[]> {
@@ -274,7 +193,7 @@ export const api = {
   },
 
   async getAnalytics() {
-    if (!(await isActiveAdmin(auth.currentUser))) throw new Error('Admin authentication required.');
+    if (!(await fetchIsAdmin(auth.currentUser))) throw new Error('Admin authentication required.');
     const complaints = await this.getComplaints();
     const resolved = complaints.filter((c) => c.status === 'Resolved').length;
     const pending = complaints.length - resolved;
@@ -333,11 +252,7 @@ export const api = {
   },
 
   async getAuditLogs(): Promise<AuditLog[]> {
-    if (!(await isActiveAdmin(auth.currentUser))) throw new Error('Admin authentication required.');
-    const snapshot = await getDocs(collection(db, 'auditLogs'));
-    return snapshot.docs
-      .map((item) => item.data() as AuditLog)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 200);
+    if (!(await fetchIsAdmin(auth.currentUser))) throw new Error('Admin authentication required.');
+    return request<AuditLog[]>('/api/admin/audit-logs');
   },
 };
