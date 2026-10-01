@@ -117,7 +117,7 @@ create table if not exists public.grievances (
     'Electricity & Power', 'Public Health & Fogging', 'Transport & Traffic',
     'Encroachment & Parks', 'Other'
   )),
-  department_id text references public.departments (id) on update cascade on delete set null,
+  department_id text,
   department_name text not null default '',
   priority text not null check (priority in ('Critical', 'High', 'Medium', 'Low')),
   priority_reason text not null default '',
