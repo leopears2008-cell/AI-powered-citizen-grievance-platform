@@ -287,7 +287,7 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
           <span className="text-[11px] font-bold text-slate-500 uppercase">{t.totalGrievances}</span>
           <p className="text-2xl font-bold text-slate-900 mt-1 font-mono">{totalCount}</p>
