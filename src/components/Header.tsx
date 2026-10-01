@@ -165,6 +165,19 @@ export const Header: React.FC = () => {
             </button>
 
             <button
+              onClick={() => setActiveTab('ministers')}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center space-x-1.5 ${
+                activeTab === 'ministers'
+                  ? 'bg-indigo-600 text-white font-semibold shadow-sm'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+              }`}
+              aria-label="Open Tamil Nadu ministers directory"
+            >
+              <Contact className="w-4 h-4" />
+              <span>{language === 'ta' ? 'தமிழ்நாடு அமைச்சர்கள்' : 'TN Ministers'}</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('news')}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center space-x-1.5 ${
                 activeTab === 'news'
@@ -313,6 +326,10 @@ export const Header: React.FC = () => {
             </button>
             <button onClick={() => closeMobileAndOpen('directory')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100">
               {t.navDirectory}
+            </button>
+            <button onClick={() => closeMobileAndOpen('ministers')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-indigo-700 bg-indigo-50 flex items-center gap-2">
+              <Contact className="w-4 h-4" />
+              {language === 'ta' ? 'தமிழ்நாடு அமைச்சர்கள்' : 'TN Ministers'}
             </button>
             <button
               onClick={() => closeMobileAndOpen('news')}
