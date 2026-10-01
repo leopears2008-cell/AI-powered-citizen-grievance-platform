@@ -16,7 +16,7 @@ test('initial Supabase migration contains required tables and security', async (
     'grievance_attachments',
     'audit_logs',
   ]) {
-    assert.match(sql, new RegExp(`create table if not exists public.\\${table}\\\\b`, 'i'));
+    assert.match(sql, new RegExp('create table if not exists public\\\\.' + table + '\\\\b', 'i'));
   }
   assert.match(sql, /enable row level security/i);
   assert.match(sql, /create policy grievances_select/i);
