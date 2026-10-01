@@ -646,7 +646,7 @@ export function registerGrievanceRoutes(app: Express, authenticate: RequestHandl
     await createNotification(
       db,
       { id, citizen_id: user.uid },
-      'info',
+      'info_requested',
       'Grievance submitted',
       `Your grievance ${id} was registered successfully.`,
     );
