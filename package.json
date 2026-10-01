@@ -5,14 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build --configLoader runner && node scripts/build-server.mjs",
+    "build": "npm run build:client && npm run build:server",
     "start": "node scripts/start-server.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "test": "firebase emulators:exec --project demo-civic-grievance --only firestore \"node --import tsx --test tests/firestore.rules.test.ts\"",
     "test:rules": "bun run test",
-    "provision-admin": "node scripts/provision-admin.mjs"
+    "provision-admin": "node scripts/provision-admin.mjs",
+    "build:client": "vite build --configLoader runner",
+    "build:server": "node scripts/build-server.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
