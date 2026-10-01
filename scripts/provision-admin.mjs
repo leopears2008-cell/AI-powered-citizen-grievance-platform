@@ -1,18 +1,21 @@
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
+import { createClient } from '@supabase/supabase-js';
 
 const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+const supabaseUrl = process.env.SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const email = process.argv[2]?.trim().toLowerCase();
 
-if (!raw || !email) {
-  console.error('Usage: FIREBASE_SERVICE_ACCOUNT_JSON=... node scripts/provision-admin.mjs admin@example.com');
+if (!raw || !supabaseUrl || !serviceRoleKey || !email) {
+  console.error(
+    'Usage: FIREBASE_SERVICE_ACCOUNT_JSON=... SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... ' +
+      'node scripts/provision-admin.mjs admin@example.com',
+  );
   process.exit(1);
 }
 
+// Admin identity stays in Firebase Auth; the admin registry now lives in Supabase.
 const app = getApps().length ? getApps()[0] : initializeApp({ credential: cert(JSON.parse(raw)) });
 const auth = getAuth(app);
 const user = await auth.getUserByEmail(email);
@@ -21,14 +24,15 @@ if (!user.emailVerified) {
   process.exit(1);
 }
 
-const configPath = fileURLToPath(new URL('../firebase-applet-config.json', import.meta.url));
-const clientConfig = JSON.parse(readFileSync(path.resolve(configPath), 'utf8'));
-const databaseId = process.env.FIRESTORE_DATABASE_ID || clientConfig.firestoreDatabaseId || '(default)';
-const adminDb = getFirestore(app, databaseId);
-await adminDb.collection('admins').doc(user.uid).set({
-  email: user.email,
-  active: true,
-  provisionedAt: FieldValue.serverTimestamp(),
+const supabase = createClient(supabaseUrl, serviceRoleKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
 });
+const { error } = await supabase
+  .from('admins')
+  .upsert({ id: user.uid, email: user.email, active: true }, { onConflict: 'id' });
+if (error) {
+  console.error('Unable to provision admin access in Supabase:', error.code ?? 'unknown error');
+  process.exit(1);
+}
 
 console.log('Verified admin access provisioned.');
