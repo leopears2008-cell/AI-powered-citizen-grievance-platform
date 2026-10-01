@@ -16,7 +16,7 @@ create table if not exists public.grievance_notifications (
   grievance_id text not null references public.grievances(id) on update cascade on delete cascade,
   citizen_id text not null,
   type text not null check (type in (
-    'status_update', 'assignment', 'resolution', 'sla_warning', 'sla_breached', 'appeal', 'info'
+    'status_update', 'assignment', 'resolution', 'sla_warning', 'sla_breached', 'appeal', 'info_requested'
   )),
   title text not null,
   message text not null,
