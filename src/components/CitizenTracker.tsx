@@ -104,7 +104,11 @@ export const CitizenTracker: React.FC = () => {
     try {
       const updated = !isSatisfied
         ? await api.appealGrievance(grievance.id, feedbackText.trim() || 'Citizen requested further action after resolution.')
-        : await api.acceptResolution(grievance.id);
+        : await api.submitFeedback(grievance.id, {
+            rating,
+            comment: feedbackText,
+            isResolvedSatisfied: true,
+          });
       setGrievance(updated);
       setFeedbackSubmitted(true);
       setIsSubmittingFeedback(false);
@@ -374,7 +378,7 @@ export const CitizenTracker: React.FC = () => {
               })()}
             </div>
 
-          {/* ================= LIVE TRACKING PROGRESS ================= */
+          {/* ================= LIVE TRACKING PROGRESS ================= */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-8">
             <h3 className="text-base font-bold text-slate-900 font-sans flex items-center space-x-2">
               <Sparkles className="w-4 h-4 text-indigo-600" />
