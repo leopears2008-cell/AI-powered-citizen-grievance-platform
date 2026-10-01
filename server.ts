@@ -135,7 +135,36 @@ function sanitizeAIResult(value: any): AIAnalysisResponse {
 }
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
+const configuredCorsOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
+function isAllowedCorsOrigin(origin: string | undefined) {
+  if (!origin) return true;
+  if (configuredCorsOrigins.length === 0) {
+    return process.env.NODE_ENV !== 'production';
+  }
+  return configuredCorsOrigins.includes(origin);
+}
+
+app.use((req, res, next) => {
+  const origin = req.get('origin');
+  if (origin && isAllowedCorsOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  }
+  if (req.method === 'OPTIONS') {
+    if (origin && !isAllowedCorsOrigin(origin)) {
+      return res.status(403).json({ error: 'Origin is not allowed.' });
+    }
+    return res.status(204).end();
+  }
+  next();
+});
 
 app.disable('x-powered-by');
 app.use((req, res, next) => {
