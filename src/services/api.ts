@@ -21,6 +21,12 @@ import {
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
+function apiUrl(path: string) {
+  return `${API_BASE_URL}${path}`;
+}
+
 async function isActiveAdmin(user: User | null): Promise<boolean> {
   if (!user || user.isAnonymous || !user.emailVerified) return false;
   const record = await getDoc(doc(db, 'admins', user.uid));
