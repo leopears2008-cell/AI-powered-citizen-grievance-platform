@@ -664,14 +664,15 @@ export function registerGrievanceRoutes(app: Express, authenticate: RequestHandl
     const role = oneOf(b.role ?? 'ADMIN', ROLES, 'role');
     const evidenceUrl = optString(b.evidenceUrl, 'evidenceUrl', 600000);
 
-    if (!(await fetchGrievanceRow(db, id))) throw new HttpError(404, 'Grievance not found');
+    const existingRow = await fetchGrievanceRow(db, id);
+    if (!existingRow) throw new HttpError(404, 'Grievance not found');
 
     const nowIso = new Date().toISOString();
     const patch: Record<string, unknown> = { status, updated_at: nowIso };
     if (status === 'Resolved') {
       patch.resolved_at = nowIso;
       patch.resolution_remarks = remarks;
-      patch.resolution_verification_token = randomUUID();
+      if (!existingRow.resolution_verification_token) patch.resolution_verification_token = randomUUID();
       if (evidenceUrl) patch.resolution_evidence_url = evidenceUrl;
     }
     const { error: updateError } = await db.from('grievances').update(patch).eq('id', id);
