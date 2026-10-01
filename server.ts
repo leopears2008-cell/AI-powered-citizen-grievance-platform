@@ -675,11 +675,13 @@ app.use((error: any, _req: express.Request, res: express.Response, _next: expres
 });
 
 async function startServer() {
-  if (process.env.NODE_ENV === 'production') {
+  const serveClient = process.env.SERVE_CLIENT === 'true';
+
+  if (process.env.NODE_ENV === 'production' && serveClient) {
     const clientDirectory = path.join(__dirname, 'client');
     app.use(express.static(clientDirectory, { index: false }));
     app.get('*', (_req, res) => res.sendFile(path.join(clientDirectory, 'index.html')));
-  } else {
+  } else if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
