@@ -435,6 +435,73 @@ AI-powered-citizen-grievance-platform/
 
 ---
 
+# 🚀 Production Deployment: Vercel Frontend + Separate Express Backend
+
+The production deployment is intentionally split:
+
+    Citizen
+      ↓
+    Vercel
+      ↓
+    React/Vite frontend
+      ↓ HTTPS + Firebase ID token
+    Separate Express API
+      ↓
+    Gemini API
+      ↓
+    Firebase Admin / Firestore
+
+## Frontend — Vercel
+
+Set these Vercel environment variables:
+
+    VITE_API_URL=https://<your-backend-domain>
+    VITE_FIREBASE_API_KEY=<Firebase Web API key>
+    VITE_FIREBASE_AUTH_DOMAIN=<Firebase auth domain>
+    VITE_FIREBASE_PROJECT_ID=<Firebase project id>
+    VITE_FIREBASE_STORAGE_BUCKET=<Firebase storage bucket>
+    VITE_FIREBASE_MESSAGING_SENDER_ID=<Firebase sender id>
+    VITE_FIREBASE_APP_ID=<Firebase app id>
+    VITE_FIRESTORE_DATABASE_ID=<optional database id>
+
+VITE_* values are browser-visible configuration. Never put the Firebase Admin service-account JSON or Gemini API key in a VITE_* variable.
+
+Vercel uses vercel.json and runs:
+
+    npm run build:client
+
+## Backend — Render
+
+This repository includes render.yaml. Create a Render Web Service from the repository, or use the Blueprint configuration.
+
+Set these server-only variables:
+
+    GEMINI_API_KEY=<Gemini API key>
+    FIREBASE_SERVICE_ACCOUNT_JSON=<Firebase Admin service-account JSON>
+    FIRESTORE_DATABASE_ID=<optional database id>
+    ADMIN_EMAILS=<comma-separated verified admin emails>
+    CORS_ORIGINS=https://<your-vercel-domain>
+
+The backend runs:
+
+    npm run build:server
+    npm start
+
+Health check:
+
+    GET /healthz
+
+The backend is API-only in production (SERVE_CLIENT=false). The browser sends Firebase ID tokens in the Authorization: Bearer ... header.
+
+## Deployment order
+
+1. Deploy the backend first and copy its HTTPS URL.
+2. Add that URL to Vercel as VITE_API_URL.
+3. Deploy the Vercel frontend.
+4. Copy the final Vercel domain into backend CORS_ORIGINS.
+5. Add the Vercel domain to Firebase Authentication authorized domains.
+6. Verify GET /healthz, Firebase login, complaint submission, AI analysis, duplicate detection, and admin-only resolution drafting.
+
 # ⚡ Quick Start
 
 ## 1️⃣ Clone
