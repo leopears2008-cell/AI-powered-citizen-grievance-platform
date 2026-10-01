@@ -20,12 +20,18 @@ test('normalizes Wikipedia names and accepts only plausible exact profile matche
 test('Wikimedia URLs encode untrusted search text and request JSON', () => {
   const wikipedia = buildWikipediaSearchUrl('A & B / Tamil Nadu');
   const wikinews = buildWikinewsSearchUrl('Chennai constituency', 15);
-  assert.match(wikipedia, /format=json/);
-  assert.match(wikipedia, /origin=%2A/);
-  assert.match(wikipedia, /A+%26+B+%2F+Tamil+Nadu/);
-  assert.match(wikinews, /gsrlimit=15/);
-  assert.match(wikinews, /gsrsort=timestamp/);
-  assert.match(googleNewsUrl('Tamil Nadu & civic issues'), /Tamil%20Nadu%20%26%20civic%20issues/);
+  // Assert query semantics rather than the exact percent-encoding emitted by
+  // URLSearchParams, which can differ between Node/Bun URL implementations.
+  const wikipediaParams = new URL(wikipedia).searchParams;
+  const wikinewsParams = new URL(wikinews).searchParams;
+  const googleNewsParams = new URL(googleNewsUrl('Tamil Nadu & civic issues')).searchParams;
+
+  assert.equal(wikipediaParams.get('format'), 'json');
+  assert.equal(wikipediaParams.get('origin'), '*');
+  assert.equal(wikipediaParams.get('gsrsearch'), 'A & B / Tamil Nadu');
+  assert.equal(wikinewsParams.get('gsrlimit'), '15');
+  assert.equal(wikinewsParams.get('gsrsort'), 'timestamp');
+  assert.equal(googleNewsParams.get('q'), 'Tamil Nadu & civic issues');
 });
 
 test('Wikipedia profile lookup uses exact-title matching before displaying a person image', async () => {
