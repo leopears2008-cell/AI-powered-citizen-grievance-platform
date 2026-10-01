@@ -12,8 +12,6 @@ import {
   reload,
   User,
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 
 export type AppLanguage = 'en' | 'ta';
 export type AppTab = 'home' | 'file' | 'track' | 'history' | 'admin' | 'analytics' | 'directory' | 'privacy' | 'terms' | 'cookies';
@@ -83,8 +81,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       try {
-        const adminSnap = await getDoc(doc(db, 'admins', nextUser.uid));
-        const admin = nextUser.emailVerified && adminSnap.exists() && adminSnap.data()?.active === true;
+        // The admin registry lives in Supabase; the backend answers whether this user is an active admin.
+        const admin = nextUser.emailVerified ? await api.checkAdminAccess() : false;
         setIsAdmin(admin);
       } catch (error) {
         console.error('Unable to verify admin role:', error instanceof Error ? error.name : 'unknown');
@@ -98,8 +96,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const login = async (email: string, password: string) => {
     const credential = await signInWithEmailAndPassword(auth, email.trim(), password);
-    const adminSnap = await getDoc(doc(db, 'admins', credential.user.uid));
-    if (!credential.user.emailVerified || !adminSnap.exists() || adminSnap.data()?.active !== true) {
+    const admin = credential.user.emailVerified ? await api.checkAdminAccess().catch(() => false) : false;
+    if (!admin) {
       await signOut(auth);
       throw new Error('This account is not verified or is not authorized for the admin dashboard.');
     }
