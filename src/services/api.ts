@@ -209,12 +209,6 @@ export const api = {
     return data;
   },
 
-  async getAuditLogs(): Promise<AuditLog[]> {
-    const user = auth.currentUser;
-    if (!user || user.isAnonymous || !user.emailVerified) throw new Error('Admin authentication required.');
-    return request<AuditLog[]>('/api/admin/audit-logs');
-  },
-
   async getAnalytics() {
     if (!(await fetchIsAdmin(auth.currentUser))) throw new Error('Admin authentication required.');
     const complaints = await this.getComplaints();
