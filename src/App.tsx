@@ -18,6 +18,7 @@ const AnalyticsView = lazy(() => import('./components/AnalyticsView').then((modu
 const MLADirectory = lazy(() => import('./components/MLADirectory').then((module) => ({ default: module.MLADirectory })));
 const TNMinistersDirectory = lazy(() => import('./components/TNMinistersDirectory').then((module) => ({ default: module.TNMinistersDirectory })));
 const LiveNews = lazy(() => import('./components/LiveNews').then((module) => ({ default: module.LiveNews })));
+const VerificationPage = lazy(() => import('./components/VerificationPage').then((module) => ({ default: module.VerificationPage })));
 import {
   CheckCircle2,
   AlertCircle,
@@ -36,6 +37,10 @@ const MainLayout: React.FC = () => {
     setInitialVoiceLang(langHint);
     setActiveTab('file');
   };
+
+  if (window.location.pathname.startsWith('/verify/')) {
+    return <VerificationPage />;
+  }
 
   return (
     <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-900 flex flex-col justify-between selection:bg-indigo-600 selection:text-white overflow-hidden">
