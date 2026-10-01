@@ -274,12 +274,12 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
-        <strong>Data status:</strong> Records are read from the configured Firestore database. Confirm the project, dataset, and record provenance before acting on them.
+        <strong>Data status:</strong> Records are read from the configured Supabase grievance database. Confirm the environment and record provenance before acting on them.
       </div>
 
       {loadError && (
         <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 flex flex-wrap items-center justify-between gap-3">
-          <span>Some dashboard data could not be loaded. Check the network and Firestore access, then retry.</span>
+          <span>Some dashboard data could not be loaded. Check the network and Supabase access, then retry.</span>
           <button type="button" onClick={loadData} disabled={isLoading} className="rounded-lg border border-red-300 px-3 py-1.5 font-semibold hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-700">
             {isLoading ? 'Loading…' : 'Retry'}
           </button>
@@ -287,7 +287,7 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
           <span className="text-[11px] font-bold text-slate-500 uppercase">{t.totalGrievances}</span>
           <p className="text-2xl font-bold text-slate-900 mt-1 font-mono">{totalCount}</p>

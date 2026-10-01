@@ -7,6 +7,7 @@ import {
   AIAnalysisResponse,
   DuplicateMatch,
   GrievanceStatus,
+  GrievanceAppeal,
 } from '../types';
 import { auth } from '../lib/firebase';
 import type { User } from 'firebase/auth';
@@ -183,13 +184,29 @@ export const api = {
   },
 
   async getNotifications(): Promise<NotificationItem[]> {
-    // Notifications are intentionally disabled until a persistent, access-controlled
-    // notification store is configured for production.
-    return [];
+    return request<NotificationItem[]>('/api/notifications');
   },
 
-  async markNotificationRead(_id: string) {
-    return;
+  async markNotificationRead(id: string) {
+    await request<{ ok: boolean }>(`/api/notifications/${encodeURIComponent(id)}/read`, { method: 'POST' });
+  },
+
+  async acceptResolution(id: string): Promise<Grievance> {
+    return request<Grievance>(`/api/grievances/${encodeURIComponent(id)}/accept`, { method: 'POST' });
+  },
+
+  async appealGrievance(id: string, reason: string): Promise<Grievance> {
+    return request<Grievance>(`/api/grievances/${encodeURIComponent(id)}/appeal`, {
+      method: 'POST',
+      body: { reason },
+    });
+  },
+
+  async verifyResolution(token: string) {
+    const res = await fetch(apiUrl(`/api/verify/${encodeURIComponent(token)}`));
+    const data = await res.json().catch(() => ({ verified: false }));
+    if (!res.ok) throw new Error(data.error || 'Verification failed.');
+    return data;
   },
 
   async getAnalytics() {

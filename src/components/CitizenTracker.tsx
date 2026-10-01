@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
 import { Grievance, GrievanceStatus, GrievancePriority } from '../types';
+import { ResolutionRecord } from './ResolutionRecord';
 import {
   Search,
   CheckCircle2,
@@ -101,11 +102,13 @@ export const CitizenTracker: React.FC = () => {
     if (!grievance) return;
     setIsSubmittingFeedback(true);
     try {
-      const updated = await api.submitFeedback(grievance.id, {
-        rating,
-        comment: feedbackText,
-        isResolvedSatisfied: isSatisfied,
-      });
+      const updated = !isSatisfied
+        ? await api.appealGrievance(grievance.id, feedbackText.trim() || 'Citizen requested further action after resolution.')
+        : await api.submitFeedback(grievance.id, {
+            rating,
+            comment: feedbackText,
+            isResolvedSatisfied: true,
+          });
       setGrievance(updated);
       setFeedbackSubmitted(true);
       setIsSubmittingFeedback(false);
@@ -145,6 +148,14 @@ export const CitizenTracker: React.FC = () => {
     if (currentIndex > targetIndex || grievance.status === 'Resolved') return 'completed';
     if (currentIndex === targetIndex) return 'current';
     return 'pending';
+  };
+
+  const getSlaState = (targetDate: string) => {
+    const remaining = new Date(targetDate).getTime() - Date.now();
+    if (!Number.isFinite(remaining)) return { label: 'SLA unavailable', className: 'bg-slate-100 text-slate-700', days: null };
+    if (remaining <= 0) return { label: 'SLA Breached', className: 'bg-red-100 text-red-800', days: Math.ceil(remaining / 86400000) };
+    if (remaining <= 48 * 3600000) return { label: 'SLA Approaching', className: 'bg-amber-100 text-amber-800', days: Math.ceil(remaining / 86400000) };
+    return { label: 'Within SLA', className: 'bg-emerald-100 text-emerald-800', days: Math.ceil(remaining / 86400000) };
   };
 
   const getPriorityBadgeClass = (priority: GrievancePriority) => {
@@ -211,6 +222,7 @@ export const CitizenTracker: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
+                  <span className="font-semibold text-slate-700">{grievance.title}</span><br />
                   {language === 'ta' ? 'பதிவு செய்யப்பட்ட தேதி:' : 'Submitted on:'}{' '}
                   {new Date(grievance.createdAt).toLocaleString('en-IN', {
                     dateStyle: 'medium',
@@ -346,6 +358,26 @@ export const CitizenTracker: React.FC = () => {
             )}
           </div>
 
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+              {(() => {
+                const sla = getSlaState(grievance.targetResolutionDate);
+                return (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Resolution SLA</p>
+                      <p className="text-sm font-bold text-slate-900 mt-1">
+                        Expected by {new Date(grievance.targetResolutionDate).toLocaleString('en-IN', { dateStyle: 'medium' })}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {sla.days === null ? 'Target date unavailable' : sla.days < 0 ? `${Math.abs(sla.days)} days overdue` : `${sla.days} day${sla.days === 1 ? '' : 's'} remaining`}
+                      </p>
+                    </div>
+                    <span className={`inline-flex w-fit px-3 py-1.5 rounded-full text-xs font-bold ${sla.className}`}>{sla.label}</span>
+                  </div>
+                );
+              })()}
+            </div>
+
           {/* ================= LIVE TRACKING PROGRESS ================= */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-8">
             <h3 className="text-base font-bold text-slate-900 font-sans flex items-center space-x-2">
@@ -480,6 +512,8 @@ export const CitizenTracker: React.FC = () => {
             </div>
             </div>
           </div>
+
+          <ResolutionRecord grievance={grievance} />
 
           {/* ================= RESOLUTION FEEDBACK & REOPEN SECTION ================= */}
           {grievance.status === 'Resolved' && (
