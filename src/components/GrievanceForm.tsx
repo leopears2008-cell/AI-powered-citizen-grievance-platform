@@ -47,6 +47,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   // Form State
+  const [grievanceTitle, setGrievanceTitle] = useState('');
   const [complaintText, setComplaintText] = useState(initialTranscript);
   const [selectedLanguage, setSelectedLanguage] = useState<'Tamil' | 'English'>(
     initialLanguage === 'English' ? 'English' : 'Tamil'
@@ -142,30 +143,46 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
     );
   };
 
-  // Image Upload Handler
+  // Evidence upload: one validated image or PDF, kept small for the existing data-URL storage model.
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.currentTarget;
-    const files = input.files;
-    if (!files || files.length === 0) return;
+    const file = input.files?.[0];
+    if (!file) return;
 
-    const file = files[0];
     const maxBytes = 400 * 1024;
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.type) || file.size > maxBytes) {
+    const isImage = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
+    const isPdf = file.type === 'application/pdf';
+    if ((!isImage && !isPdf) || file.size > maxBytes) {
       showToast(
         language === 'ta'
-          ? '400KB-க்கு குறைவான JPEG, PNG அல்லது WebP படத்தை மட்டும் பதிவேற்றவும்'
-          : 'Please upload a JPEG, PNG, or WebP image smaller than 400 KB.',
+          ? '400KB-க்கு குறைவான JPEG, PNG, WebP அல்லது PDF கோப்பை மட்டும் பதிவேற்றவும்'
+          : 'Upload one JPEG, PNG, WebP image or PDF smaller than 400 KB.',
         'warning'
       );
       input.value = '';
       return;
     }
     if (attachments.length >= 1) {
-      showToast(
-        language === 'ta' ? 'ஒரு புகைப்பட ஆதாரம் மட்டும் பதிவேற்றலாம்' : 'Only one photo attachment is allowed in this version.',
-        'warning'
-      );
+      showToast(language === 'ta' ? 'ஒரு ஆதாரம் மட்டும் பதிவேற்றலாம்' : 'Only one evidence attachment is allowed.',
+        'warning');
+      input.value = '';
+      return;
+    }
+
+    if (isPdf) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result !== 'string') return;
+        setAttachments([{
+          id: `att-${Date.now()}`,
+          url: reader.result,
+          name: file.name.replace(/[\\/\\u0000-\\u001f]/g, '_').slice(0, 120),
+          type: 'document',
+          uploadedAt: new Date().toISOString(),
+        }]);
+        showToast(language === 'ta' ? 'PDF ஆதாரம் இணைக்கப்பட்டது' : 'PDF evidence attached', 'success');
+      };
+      reader.readAsDataURL(file);
       input.value = '';
       return;
     }
@@ -179,7 +196,6 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
         input.value = '';
         return;
       }
-
       const canvas = document.createElement('canvas');
       canvas.width = image.naturalWidth;
       canvas.height = image.naturalHeight;
@@ -201,20 +217,16 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
           return;
         }
         const reader = new FileReader();
-        reader.onload = (event) => {
-          if (typeof event.target?.result !== 'string') return;
-          const newAttachment = {
+        reader.onload = () => {
+          if (typeof reader.result !== 'string') return;
+          setAttachments([{
             id: `att-${Date.now()}`,
-            url: event.target.result,
-            name: file.name.replace(/[\\/\u0000-\u001f]/g, '_').slice(0, 120),
-            type: 'image' as const,
+            url: reader.result,
+            name: file.name.replace(/[\\/\\u0000-\\u001f]/g, '_').slice(0, 120),
+            type: 'image',
             uploadedAt: new Date().toISOString(),
-          };
-          setAttachments((prev) => [...prev, newAttachment]);
-          showToast(
-            language === 'ta' ? 'புகைப்பட ஆதாரம் இணைக்கப்பட்டது' : 'Photo evidence uploaded',
-            'success'
-          );
+          }]);
+          showToast(language === 'ta' ? 'புகைப்பட ஆதாரம் இணைக்கப்பட்டது' : 'Photo evidence uploaded', 'success');
         };
         reader.readAsDataURL(blob);
       }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.85);
@@ -229,6 +241,10 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
 
   // Step 1 -> Step 2: Trigger AI Analysis
   const handleStartAnalysis = async () => {
+    if (!grievanceTitle.trim()) {
+      showToast(language === 'ta' ? 'புகார் தலைப்பை உள்ளிடவும்' : 'Please enter a grievance title first', 'warning');
+      return;
+    }
     if (!complaintText.trim()) {
       showToast(
         language === 'ta'
@@ -297,7 +313,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
       );
       return;
     }
-    if (!citizenName.trim() || !citizenPhone.trim() || !district || !address.trim()) {
+    if (!grievanceTitle.trim() || !citizenName.trim() || !citizenPhone.trim() || !district || !address.trim()) {
       showToast(
         language === 'ta'
           ? 'பெயர், தொலைபேசி எண், மாவட்டம் மற்றும் முகவரியை நிரப்பவும்.'
@@ -306,7 +322,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
       );
       return;
     }
-    if (citizenName.trim().length > 120 || citizenPhone.trim().length > 30 || citizenEmail.trim().length > 254 || address.trim().length > 500) {
+    if (grievanceTitle.trim().length > 200 || citizenName.trim().length > 120 || citizenPhone.trim().length > 30 || citizenEmail.trim().length > 254 || address.trim().length > 500) {
       showToast(language === 'ta' ? 'சில புலங்கள் அனுமதிக்கப்பட்ட நீளத்தை மீறுகின்றன.' : 'One or more fields exceed the allowed length.', 'warning');
       return;
     }
@@ -539,6 +555,22 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
             </div>
           </div>
 
+          {/* Grievance Title */}
+          <div>
+            <label htmlFor="grievance-title" className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">
+              {language === 'ta' ? 'புகார் தலைப்பு *' : 'Grievance Title *'}
+            </label>
+            <input
+              id="grievance-title"
+              type="text"
+              maxLength={200}
+              value={grievanceTitle}
+              onChange={(e) => setGrievanceTitle(e.target.value)}
+              placeholder={language === 'ta' ? 'சுருக்கமான புகார் தலைப்பு' : 'e.g. Street light not working'}
+              className="w-full p-3 text-sm text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+            />
+          </div>
+
           {/* Grievance Description Field */}
           <div className="flex flex-col h-full">
             <label htmlFor="grievance-description" className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
@@ -763,17 +795,17 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                 <UploadCloud className="w-5 h-5 text-blue-600 shrink-0" />
                 <div>
                   <p className="text-xs font-bold text-slate-800">
-                    {language === 'ta' ? 'புகைப்படம் பதிவேற்ற' : 'Upload Evidence Photo'}
+                    {language === 'ta' ? 'புகைப்படம் / PDF பதிவேற்ற' : 'Upload Photo / PDF Evidence'}
                   </p>
                   <p className="text-[10px] text-slate-500">{t.evidenceHelper}</p>
                 </div>
-                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageUpload} className="sr-only" />
+                <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={handleImageUpload} className="sr-only" />
               </label>
 
               {/* Uploaded Thumbnails */}
               {attachments.map((att) => (
                 <div key={att.id} className="relative w-16 h-16 rounded-xl border border-slate-300 overflow-hidden group">
-                  <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
+                  <img src={att.type === 'image' ? att.url : '/evidence-placeholder.svg'} alt={att.name} className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => setAttachments((prev) => prev.filter((a) => a.id !== att.id))}
