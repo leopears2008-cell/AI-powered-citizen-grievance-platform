@@ -9,9 +9,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -22,12 +28,12 @@ jobs:
           bun-version: 1.4.2
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Type-check
         run: bun run lint
 
-      - name: Run Supabase migration smoke tests
+      - name: Run tests
         run: bun run test
 
       - name: Build production assets and server
