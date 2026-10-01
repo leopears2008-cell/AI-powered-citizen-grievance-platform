@@ -179,3 +179,12 @@ export interface AuditLog {
   details: string;
   grievanceId?: string;
 }
+
+export interface GrievanceAppeal {
+  id: string;
+  grievanceId: string;
+  reason: string;
+  status: 'Submitted' | 'Under Review' | 'Accepted' | 'Rejected';
+  createdAt: string;
+  updatedAt: string;
+}
