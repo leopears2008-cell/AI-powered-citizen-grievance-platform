@@ -5,16 +5,18 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { createServer as createViteServer } from 'vite';
 import { getApps, initializeApp, cert, getApp } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
-import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
-import firebaseConfig from './firebase-applet-config.json';
 import {
   Grievance,
   AIAnalysisResponse,
   GrievanceStatus,
 } from './src/types';
+import { getSupabase } from './server/supabase';
+import { registerGrievanceRoutes, type AuthenticatedRequest } from './server/grievanceRoutes';
 
 dotenv.config();
 
+// Firebase Admin is used for authentication only (verifying Firebase ID tokens).
+// Application data lives in Supabase PostgreSQL (see server/supabase.ts).
 let firebaseAdminAuth: ReturnType<typeof getAdminAuth> | null = null;
 let firebaseAdminApp: ReturnType<typeof initializeApp> | null = null;
 
@@ -34,14 +36,9 @@ function initializeFirebaseAdmin() {
 }
 initializeFirebaseAdmin();
 
-function getAdminDatabase() {
-  const databaseId = process.env.FIRESTORE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || '(default)';
-  return firebaseAdminApp ? getAdminFirestore(firebaseAdminApp, databaseId) : null;
+if (!getSupabase()) {
+  console.warn('SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not configured. Grievance data APIs will return 503.');
 }
-
-type AuthenticatedRequest = express.Request & {
-  user?: { uid: string; email?: string; email_verified?: boolean };
-};
 
 async function authenticate(req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) {
   const header = req.get('authorization') || '';
@@ -51,7 +48,13 @@ async function authenticate(req: AuthenticatedRequest, res: express.Response, ne
   }
   try {
     const decoded = await firebaseAdminAuth.verifyIdToken(token);
-    req.user = { uid: decoded.uid, email: decoded.email, email_verified: decoded.email_verified };
+    req.user = {
+      uid: decoded.uid,
+      email: decoded.email,
+      email_verified: decoded.email_verified,
+      phone_number: decoded.phone_number,
+      isAnonymous: decoded.firebase?.sign_in_provider === 'anonymous',
+    };
     next();
   } catch {
     return res.status(401).json({ error: 'Invalid or expired authentication token.' });
@@ -66,11 +69,12 @@ async function requireAdmin(req: AuthenticatedRequest, res: express.Response, ne
   if (!req.user?.email || req.user.email_verified !== true || !emails.includes(req.user.email.toLowerCase())) {
     return res.status(403).json({ error: 'Administrator access required.' });
   }
-  const db = getAdminDatabase();
+  const db = getSupabase();
   if (!db) return res.status(503).json({ error: 'Authentication service is not configured.' });
   try {
-    const admin = await db.collection('admins').doc(req.user.uid).get();
-    if (!admin.exists || admin.data()?.active !== true) {
+    const { data, error } = await db.from('admins').select('active').eq('id', req.user.uid).maybeSingle();
+    if (error) throw new Error('Admin lookup failed.');
+    if (data?.active !== true) {
       return res.status(403).json({ error: 'Administrator access required.' });
     }
     next();
@@ -132,6 +136,12 @@ function sanitizeAIResult(value: any): AIAnalysisResponse {
     suggestedOfficerRole: typeof value?.suggestedOfficerRole === 'string' ? value.suggestedOfficerRole.slice(0, 200) : undefined,
     estimatedDays: Number.isFinite(Number(value?.estimatedDays)) ? Math.max(0, Math.min(365, Number(value.estimatedDays))) : 3,
   };
+}
+
+interface DuplicateCandidate {
+  category: string;
+  summaryEn: string;
+  district: string;
 }
 
 const app = express();
@@ -210,6 +220,11 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: '1mb' }));
+
+// ==========================================================
+// 0. Grievance data API (Supabase): /api/grievances, /api/admin/*, /api/me/admin
+// ==========================================================
+registerGrievanceRoutes(app, authenticate as express.RequestHandler);
 
 // ==========================================
 // 1. AI Analysis API (/api/ai/analyze-complaint)
@@ -474,15 +489,24 @@ app.post('/api/ai/check-duplicates', authenticate, async (req, res) => {
     ) {
       return res.status(400).json({ error: 'Complaint text is invalid or too long.' });
     }
-    const db = getAdminDatabase();
+    const db = getSupabase();
     if (!db) return res.status(503).json({ error: 'Grievance data service is not configured.' });
     const ai = getGeminiClient();
 
     const activeStatuses: GrievanceStatus[] = ['Submitted', 'AI Classified', 'Assigned', 'Under Review', 'In Progress', 'Reopened'];
-    const snapshot = await db.collection('grievances').where('status', 'in', activeStatuses).limit(250).get();
-    const candidates = snapshot.docs
-      .map((item) => item.data() as Grievance)
-      .filter((c) => c.category === category || (district && c.location?.district?.toLowerCase() === district.toLowerCase()));
+    const { data: activeRows, error: activeError } = await db
+      .from('grievances')
+      .select('category, summary_en, location_district')
+      .in('status', activeStatuses)
+      .limit(250);
+    if (activeError) throw new Error('Active grievance lookup failed.');
+    const candidates: DuplicateCandidate[] = (activeRows ?? [])
+      .map((row) => ({
+        category: String(row.category),
+        summaryEn: String(row.summary_en ?? ''),
+        district: String(row.location_district ?? ''),
+      }))
+      .filter((c) => c.category === category || (district && c.district.toLowerCase() === district.toLowerCase()));
 
     if (candidates.length === 0) {
       return res.json({ duplicates: [] });
@@ -504,7 +528,7 @@ ${JSON.stringify(candidates.map((c, index) => ({
   id: String(index),
   summary: (c.summaryEn || '').slice(0, 500),
   category: c.category,
-  district: c.location?.district || '',
+  district: c.district,
 })))}
 
 Return only IDs from the supplied list for grievances that describe the same civic issue in the same district with high semantic similarity. Do not infer or create IDs.`;
@@ -586,13 +610,26 @@ app.post('/api/ai/suggest-resolution', requireAuthenticatedAdmin, async (req, re
     if (typeof grievanceId !== 'string' || grievanceId.length > 100 || (actionTaken != null && (typeof actionTaken !== 'string' || actionTaken.length > 5000))) {
       return res.status(400).json({ error: 'Invalid resolution request.' });
     }
-    const db = getAdminDatabase();
+    const db = getSupabase();
     if (!db) return res.status(503).json({ error: 'Grievance data service is not configured.' });
-    const grievanceSnapshot = await db.collection('grievances').doc(grievanceId).get();
-    if (!grievanceSnapshot.exists) {
+    const { data: grievanceRow, error: grievanceError } = await db
+      .from('grievances')
+      .select('id, category, summary_en, location_address, location_district')
+      .eq('id', grievanceId)
+      .maybeSingle();
+    if (grievanceError) throw new Error('Grievance lookup failed.');
+    if (!grievanceRow) {
       return res.status(404).json({ error: 'Grievance not found' });
     }
-    const grievance = grievanceSnapshot.data() as Grievance;
+    const grievance = {
+      id: String(grievanceRow.id),
+      category: String(grievanceRow.category),
+      summaryEn: String(grievanceRow.summary_en ?? ''),
+      location: {
+        address: String(grievanceRow.location_address ?? ''),
+        district: String(grievanceRow.location_district ?? ''),
+      },
+    };
 
     const ai = getGeminiClient();
     if (ai) {
@@ -658,12 +695,12 @@ Generate:
   }
 });
 
-// The grievance store is Firestore. Do not expose the retired in-memory/demo API routes.
-app.use('/api/complaints', (_req, res) => res.status(410).json({ error: 'Use the authenticated Firestore grievance workflow.' }));
-app.use('/api/audit-logs', (_req, res) => res.status(410).json({ error: 'Audit logs are available only from the protected Firestore collection.' }));
-app.use('/api/analytics', (_req, res) => res.status(410).json({ error: 'Analytics are calculated from the authenticated Firestore records.' }));
-app.use('/api/departments', (_req, res) => res.status(410).json({ error: 'Department records must be provisioned in Firestore.' }));
-app.use('/api/officers', (_req, res) => res.status(410).json({ error: 'Officer records must be provisioned in Firestore.' }));
+// The grievance store is Supabase. Do not expose the retired in-memory/demo API routes.
+app.use('/api/complaints', (_req, res) => res.status(410).json({ error: 'Use the authenticated /api/grievances workflow.' }));
+app.use('/api/audit-logs', (_req, res) => res.status(410).json({ error: 'Audit logs are available only from the protected /api/admin/audit-logs route.' }));
+app.use('/api/analytics', (_req, res) => res.status(410).json({ error: 'Analytics are calculated from the authenticated grievance records.' }));
+app.use('/api/departments', (_req, res) => res.status(410).json({ error: 'Department records are available only from the protected /api/admin/departments route.' }));
+app.use('/api/officers', (_req, res) => res.status(410).json({ error: 'Officer records are available only from the protected /api/admin/officers route.' }));
 app.use('/api/notifications', (_req, res) => res.status(410).json({ error: 'Notifications are unavailable until a persistent access-controlled store is configured.' }));
 app.use('/api', (_req, res) => res.status(404).json({ error: 'API route not found.' }));
 app.get('/healthz', (_req, res) => res.status(200).json({ status: 'ok' }));
