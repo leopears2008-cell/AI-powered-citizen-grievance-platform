@@ -38,7 +38,7 @@ export const GrievanceChatbot: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: trimmed,
-          history: nextMessages.slice(-8),
+          history: messages.slice(-8),
         }),
       });
       const data = await response.json().catch(() => ({}));
