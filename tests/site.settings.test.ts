@@ -37,7 +37,7 @@ test('chatbot complaint flow collects the complaint step by step before official
   const chatbot = await readFile('src/components/GrievanceChatbot.tsx', 'utf8');
   assert.match(chatbot, /ComplaintStep/);
   assert.match(chatbot, /problem.*location.*action/);
-  assert.match(chatbot, /Step \{complaintStep/);
+  assert.match(chatbot, /complaintStep === 'problem'/);
   assert.match(chatbot, /What happened\?/);
   assert.match(chatbot, /Where did it happen\?/);
   assert.match(chatbot, /What should be done\?/);
