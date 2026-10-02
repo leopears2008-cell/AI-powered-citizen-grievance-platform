@@ -16,7 +16,15 @@ import {
   Newspaper,
 } from 'lucide-react';
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  siteTitle?: string;
+  siteSubtitle?: string;
+  showDirectory?: boolean;
+  showMinisters?: boolean;
+  showNews?: boolean;
+}
+
+export const Header: React.FC<HeaderProps> = ({ siteTitle = 'NivaranAI', siteSubtitle = 'Grievance System', showDirectory = true, showMinisters = true, showNews = true }) => {
   const {
     language,
     setLanguage,
@@ -99,7 +107,7 @@ export const Header: React.FC = () => {
             <div>
               <div className="flex items-center space-x-2">
                 <span className="text-xl font-semibold tracking-tight text-white font-sans">
-                  NivaranAI <span className="text-indigo-400 text-sm font-normal">| Grievance System</span>
+                  {siteTitle} <span className="text-indigo-400 text-sm font-normal">| {siteSubtitle}</span>
                 </span>
               </div>
             </div>
@@ -152,7 +160,7 @@ export const Header: React.FC = () => {
               {t.navHistory}
             </button>
 
-            <button
+            {showDirectory && <button
               onClick={() => setActiveTab('directory')}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center space-x-1.5 ${
                 activeTab === 'directory'
@@ -162,9 +170,9 @@ export const Header: React.FC = () => {
             >
               <Contact className="w-4 h-4" />
               <span>{t.navDirectory}</span>
-            </button>
+            </button>}
 
-            <button
+            {showMinisters && <button
               onClick={() => setActiveTab('ministers')}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center space-x-1.5 ${
                 activeTab === 'ministers'
@@ -175,9 +183,9 @@ export const Header: React.FC = () => {
             >
               <Contact className="w-4 h-4" />
               <span>{language === 'ta' ? 'தமிழ்நாடு அமைச்சர்கள்' : 'TN Ministers'}</span>
-            </button>
+            </button>}
 
-            <button
+            {showNews && <button
               onClick={() => setActiveTab('news')}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center space-x-1.5 ${
                 activeTab === 'news'
@@ -188,7 +196,7 @@ export const Header: React.FC = () => {
             >
               <Newspaper className="w-4 h-4" />
               <span>{language === 'ta' ? 'நேரலை செய்திகள்' : 'Live News'}</span>
-            </button>
+            </button>}
 
             {isAdmin && (
               <button
@@ -324,14 +332,14 @@ export const Header: React.FC = () => {
             <button onClick={() => closeMobileAndOpen('history')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100">
               {t.navHistory}
             </button>
-            <button onClick={() => closeMobileAndOpen('directory')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100">
+            {showDirectory && <button onClick={() => closeMobileAndOpen('directory')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-100">
               {t.navDirectory}
-            </button>
-            <button onClick={() => closeMobileAndOpen('ministers')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-indigo-700 bg-indigo-50 flex items-center gap-2">
+            </button>}
+            {showMinisters && <button onClick={() => closeMobileAndOpen('ministers')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-indigo-700 bg-indigo-50 flex items-center gap-2">
               <Contact className="w-4 h-4" />
               {language === 'ta' ? 'தமிழ்நாடு அமைச்சர்கள்' : 'TN Ministers'}
-            </button>
-            <button
+            </button>}
+            {showNews && <button
               onClick={() => closeMobileAndOpen('news')}
               className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-red-700 bg-red-50 flex items-center gap-2"
             >
