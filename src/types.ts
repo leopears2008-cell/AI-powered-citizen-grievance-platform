@@ -179,3 +179,19 @@ export interface AuditLog {
   details: string;
   grievanceId?: string;
 }
+
+
+export interface SiteSettings {
+  id: string;
+  siteTitle: string;
+  siteSubtitle: string;
+  announcement: string;
+  chatbotEnabled: boolean;
+  showHero: boolean;
+  showAIDemo: boolean;
+  showMap: boolean;
+  showFAQ: boolean;
+  showDirectory: boolean;
+  showMinisters: boolean;
+  showNews: boolean;
+}
