@@ -31,3 +31,17 @@ test('admin website settings are protected and persisted by the server', async (
   assert.match(migration, /enable row level security/i);
   assert.match(migration, /grant all on table public.site_settings to service_role/i);
 });
+
+
+test('chatbot complaint flow collects the complaint step by step before official filing', async () => {
+  const chatbot = await readFile('src/components/GrievanceChatbot.tsx', 'utf8');
+  assert.match(chatbot, /ComplaintStep/);
+  assert.match(chatbot, /problem.*location.*action/);
+  assert.match(chatbot, /Step \{complaintStep/);
+  assert.match(chatbot, /What happened\?/);
+  assert.match(chatbot, /Where did it happen\?/);
+  assert.match(chatbot, /What should be done\?/);
+  assert.match(chatbot, /Review your complaint/);
+  assert.match(chatbot, /Continue to official form/);
+  assert.match(chatbot, /onStartComplaint\(draft\)/);
+});
