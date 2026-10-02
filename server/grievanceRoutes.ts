@@ -511,6 +511,66 @@ function handle(fn: Handler, options: { admin?: boolean } = {}): RequestHandler 
 }
 
 export function registerGrievanceRoutes(app: Express, authenticate: RequestHandler): void {
+  const DEFAULT_SITE_SETTINGS = {
+    id: 'default', siteTitle: 'NivaranAI Grievance Portal', siteSubtitle: 'AI-assisted civic grievance management', announcement: '', chatbotEnabled: true, showHero: true, showAIDemo: true, showMap: true, showFAQ: true, showDirectory: true, showMinisters: true, showNews: true,
+  };
+
+  const normaliseSiteSettings = (row: Record<string, unknown> | null) => ({
+    ...DEFAULT_SITE_SETTINGS,
+    ...(row || {}),
+    id: 'default',
+    siteTitle: typeof row?.site_title === 'string' ? row.site_title.slice(0, 120) : DEFAULT_SITE_SETTINGS.siteTitle,
+    siteSubtitle: typeof row?.site_subtitle === 'string' ? row.site_subtitle.slice(0, 240) : DEFAULT_SITE_SETTINGS.siteSubtitle,
+    announcement: typeof row?.announcement === 'string' ? row.announcement.slice(0, 500) : '',
+    chatbotEnabled: row?.chatbot_enabled !== false,
+    showHero: row?.show_hero !== false,
+    showAIDemo: row?.show_ai_demo !== false,
+    showMap: row?.show_map !== false,
+    showFAQ: row?.show_faq !== false,
+    showDirectory: row?.show_directory !== false,
+    showMinisters: row?.show_ministers !== false,
+    showNews: row?.show_news !== false,
+  });
+
+  // Public website configuration is read-only to citizens; writes are admin-only.
+  app.get('/api/site-settings', handle(async (_req, _user, res) => {
+    const db = requireDb();
+    const { data, error } = await db.from('site_settings').select('*').eq('id', 'default').maybeSingle();
+    if (error) fail(error);
+    res.json(normaliseSiteSettings((data ?? null) as Record<string, unknown> | null));
+  }));
+
+  app.get('/api/site-settings/admin', authenticate, handle(async (_req, _user, res) => {
+    const db = requireDb();
+    const { data, error } = await db.from('site_settings').select('*').eq('id', 'default').maybeSingle();
+    if (error) fail(error);
+    res.json(normaliseSiteSettings((data ?? null) as Record<string, unknown> | null));
+  }, { admin: true }));
+
+  app.put('/api/site-settings', authenticate, handle(async (req, user, res) => {
+    const b = asRecord(req.body);
+    const db = requireDb();
+    const patch = {
+      id: 'default',
+      site_title: reqString(b.siteTitle, 'siteTitle', 120),
+      site_subtitle: reqString(b.siteSubtitle, 'siteSubtitle', 240),
+      announcement: optString(b.announcement, 'announcement', 500) ?? '',
+      chatbot_enabled: b.chatbotEnabled !== false,
+      show_hero: b.showHero !== false,
+      show_ai_demo: b.showAIDemo !== false,
+      show_map: b.showMap !== false,
+      show_faq: b.showFAQ !== false,
+      show_directory: b.showDirectory !== false,
+      show_ministers: b.showMinisters !== false,
+      show_news: b.showNews !== false,
+      updated_at: new Date().toISOString(),
+    };
+    const { data, error } = await db.from('site_settings').upsert(patch, { onConflict: 'id' }).select('*').single();
+    if (error) fail(error);
+    await writeAudit(db, user, 'SITE_SETTINGS_UPDATE', 'Updated public website visibility and assistant settings.');
+    res.json(normaliseSiteSettings((data ?? patch) as Record<string, unknown>));
+  }, { admin: true }));
+
   // Is the signed-in user an active, verified administrator?
   app.get('/api/me/admin', authenticate, handle(async (_req, user, res) => {
     res.json({ isAdmin: await isAdmin(user) });
