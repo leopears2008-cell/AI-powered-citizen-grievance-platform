@@ -102,13 +102,6 @@ const MainLayout: React.FC = () => {
                   {siteSettings.announcement}
                 </div>
               )}
-              {siteSettings.chatbotEnabled && (
-                <GrievanceChatbot onStartComplaint={(draft) => {
-                  setInitialVoiceTranscript(draft);
-                  setInitialVoiceLang('English');
-                  setActiveTab('file');
-                }} />
-              )}
               {siteSettings.showHero && (
                 <HeroSection
                   onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
@@ -117,6 +110,13 @@ const MainLayout: React.FC = () => {
                     setActiveTab('file');
                   }}
                 />
+              )}
+              {siteSettings.chatbotEnabled && (
+                <GrievanceChatbot onStartComplaint={(draft) => {
+                  setInitialVoiceTranscript(draft);
+                  setInitialVoiceLang('English');
+                  setActiveTab('file');
+                }} />
               )}
               {siteSettings.showAIDemo && <AIDemoCard />}
               {siteSettings.showMap && <InteractiveMap />}
