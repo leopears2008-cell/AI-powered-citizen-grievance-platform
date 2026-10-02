@@ -91,7 +91,7 @@ const MainLayout: React.FC = () => {
         />
       )}
 
-      <Header />
+      <Header siteTitle={siteSettings.siteTitle} siteSubtitle={siteSettings.siteSubtitle} showDirectory={siteSettings.showDirectory} showMinisters={siteSettings.showMinisters} showNews={siteSettings.showNews} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 flex flex-col space-y-8 overflow-y-auto">
         <Suspense fallback={<PageSkeleton label={language === 'ta' ? 'பக்கத்தை ஏற்றுகிறது…' : 'Loading page…'} />}>
