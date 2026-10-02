@@ -192,6 +192,14 @@ export const api = {
     return;
   },
 
+  async getSiteSettings(): Promise<import('../types').SiteSettings> {
+    return request<import('../types').SiteSettings>('/api/site-settings');
+  },
+
+  async updateSiteSettings(settings: import('../types').SiteSettings): Promise<import('../types').SiteSettings> {
+    return request<import('../types').SiteSettings>('/api/site-settings', { method: 'PUT', body: settings });
+  },
+
   async getAnalytics() {
     if (!(await fetchIsAdmin(auth.currentUser))) throw new Error('Admin authentication required.');
     const complaints = await this.getComplaints();
