@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
+import { AdminSettings } from './AdminSettings';
 import {
   Grievance,
   Department,
@@ -73,6 +74,7 @@ export const AdminDashboard: React.FC = () => {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isAuditDrawerOpen, setIsAuditDrawerOpen] = useState(false);
+  const [showSiteSettings, setShowSiteSettings] = useState(false);
 
   // Form states
   const [targetOfficerId, setTargetOfficerId] = useState('');
