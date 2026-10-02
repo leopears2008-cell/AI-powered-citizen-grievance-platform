@@ -2,11 +2,13 @@ import React, { useMemo, useState } from 'react';
 import { Bot, Send, Sparkles, Search, FileText, Clock3, ArrowUpRight, X } from 'lucide-react';
 
 type Message = { role: 'user' | 'assistant'; text: string };
+type ComplaintStep = 'problem' | 'location' | 'action' | 'review';
+
 
 interface GrievanceChatbotProps { onStartComplaint: (draft: string) => void; }
 
 const quickActions = [
-  { label: 'Submit a grievance', icon: FileText, prompt: 'Help me submit a civic grievance.' },
+  { label: 'Submit a grievance', icon: FileText, prompt: 'START_COMPLAINT_FLOW' },
   { label: 'Write my complaint', icon: Sparkles, prompt: 'Help me turn my rough complaint into a clear grievance draft.' },
   { label: 'Check SLA', icon: Clock3, prompt: 'Explain how grievance SLA and resolution deadlines work.' },
   { label: 'Track my grievance', icon: Search, prompt: 'I want to track an existing grievance.' },
@@ -16,6 +18,9 @@ export const GrievanceChatbot: React.FC<GrievanceChatbotProps> = ({ onStartCompl
   const [open, setOpen] = useState(true);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [complaintMode, setComplaintMode] = useState(false);
+  const [complaintStep, setComplaintStep] = useState<ComplaintStep>('problem');
+  const [complaint, setComplaint] = useState({ problem: '', location: '', action: '' });
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -25,7 +30,50 @@ export const GrievanceChatbot: React.FC<GrievanceChatbotProps> = ({ onStartCompl
 
   const apiBase = useMemo(() => (import.meta.env.VITE_API_URL || '').replace(/\/$/, ''), []);
 
+  function startComplaintFlow() {
+    setComplaintMode(true);
+    setComplaintStep('problem');
+    setComplaint({ problem: '', location: '', action: '' });
+    setMessages((current) => [...current, {
+      role: 'assistant',
+      text: 'Let’s file your complaint step by step. Step 1 of 4: What problem do you want to report? Include the main issue and important facts.',
+    }]);
+  }
+
+  function finishComplaint() {
+    const draft = [
+      `Complaint: ${complaint.problem.trim()}`,
+      `Location: ${complaint.location.trim()}`,
+      `Requested action: ${complaint.action.trim()}`,
+    ].join('\\n');
+    onStartComplaint(draft);
+    setComplaintMode(false);
+    setComplaintStep('problem');
+    setMessages((current) => [...current, {
+      role: 'assistant',
+      text: 'Your complaint details are ready. I’ve opened the official grievance form with your information. Please review the details, add any required contact/evidence information, and submit it there.',
+    }]);
+  }
+
+  function nextComplaintStep() {
+    const value = complaint[complaintStep === 'problem' ? 'problem' : complaintStep === 'location' ? 'location' : 'action'].trim();
+    if (!value) return;
+    if (complaintStep === 'problem') setComplaintStep('location');
+    else if (complaintStep === 'location') setComplaintStep('action');
+    else if (complaintStep === 'action') setComplaintStep('review');
+  }
+
+  function complaintBack() {
+    if (complaintStep === 'location') setComplaintStep('problem');
+    else if (complaintStep === 'action') setComplaintStep('location');
+    else if (complaintStep === 'review') setComplaintStep('action');
+  }
+
   async function sendMessage(message: string) {
+    if (message === 'START_COMPLAINT_FLOW') {
+      startComplaintFlow();
+      return;
+    }
     const trimmed = message.trim();
     if (!trimmed || busy) return;
 
@@ -95,6 +143,47 @@ export const GrievanceChatbot: React.FC<GrievanceChatbotProps> = ({ onStartCompl
 
       {open && (
         <div id="grievance-assistant-panel" className="p-4 sm:p-6">
+          {complaintMode && (
+            <div className="mb-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-4" aria-label="Step-by-step complaint form">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-indigo-700">Complaint filing — step {complaintStep === 'problem' ? 1 : complaintStep === 'location' ? 2 : complaintStep === 'action' ? 3 : 4} of 4</p>
+                  <p className="mt-1 text-sm font-bold text-slate-900">
+                    {complaintStep === 'problem' && 'What happened?'}
+                    {complaintStep === 'location' && 'Where did it happen?'}
+                    {complaintStep === 'action' && 'What should be done?'}
+                    {complaintStep === 'review' && 'Review your complaint'}
+                  </p>
+                </div>
+                <button type="button" onClick={() => setComplaintMode(false)} className="text-xs font-semibold text-slate-500 hover:text-slate-800">Cancel</button>
+              </div>
+
+              {complaintStep === 'problem' && (
+                <textarea value={complaint.problem} onChange={(e) => setComplaint((x) => ({ ...x, problem: e.target.value.slice(0, 3000) }))} rows={4} maxLength={3000} placeholder="Example: Describe the civic problem, what happened, and when it happened." className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              )}
+              {complaintStep === 'location' && (
+                <textarea value={complaint.location} onChange={(e) => setComplaint((x) => ({ ...x, location: e.target.value.slice(0, 1000) }))} rows={3} maxLength={1000} placeholder="Area, street, ward, village/town, district, or other useful location details." className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              )}
+              {complaintStep === 'action' && (
+                <textarea value={complaint.action} onChange={(e) => setComplaint((x) => ({ ...x, action: e.target.value.slice(0, 1500) }))} rows={3} maxLength={1500} placeholder="What action or resolution are you requesting?" className="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              )}
+              {complaintStep === 'review' && (
+                <div className="space-y-3 text-sm text-slate-700">
+                  <div className="rounded-xl bg-white border border-slate-200 p-3"><b>Problem:</b><p className="mt-1 whitespace-pre-wrap">{complaint.problem}</p></div>
+                  <div className="rounded-xl bg-white border border-slate-200 p-3"><b>Location:</b><p className="mt-1 whitespace-pre-wrap">{complaint.location}</p></div>
+                  <div className="rounded-xl bg-white border border-slate-200 p-3"><b>Requested action:</b><p className="mt-1 whitespace-pre-wrap">{complaint.action}</p></div>
+                </div>
+              )}
+
+              <div className="mt-3 flex justify-between gap-2">
+                <button type="button" onClick={complaintBack} disabled={complaintStep === 'problem'} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40">Back</button>
+                {complaintStep === 'review'
+                  ? <button type="button" onClick={finishComplaint} className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700">Continue to official form</button>
+                  : <button type="button" onClick={nextComplaintStep} disabled={!complaint[complaintStep === 'problem' ? 'problem' : complaintStep === 'location' ? 'location' : 'action'].trim()} className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">Next step</button>}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
             {quickActions.map(({ label, icon: Icon, prompt }) => (
               <button
@@ -151,7 +240,7 @@ export const GrievanceChatbot: React.FC<GrievanceChatbotProps> = ({ onStartCompl
             </button>
           </form>
 
-          <button type="button" onClick={() => onStartComplaint(messages.filter((m) => m.role === 'user').at(-1)?.text || '')} disabled={!messages.some((m) => m.role === 'user')} className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 disabled:opacity-50">Use my complaint in the official filing form</button>
+          {!complaintMode && <button type="button" onClick={startComplaintFlow} className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700">File complaint step by step</button>}
 
           <p className="mt-3 text-[10px] text-slate-400">
             AI responses are guidance only. It cannot approve, reject, assign, resolve, or change a government grievance.
