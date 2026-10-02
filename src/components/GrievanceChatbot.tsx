@@ -82,7 +82,7 @@ export const GrievanceChatbot: React.FC<GrievanceChatbotProps> = ({ onStartCompl
           </button>
           <button
             type="button"
-            onClick={() => setOpen((value) => !value)
+            onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
             aria-controls="grievance-assistant-panel"
             className="shrink-0 rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:text-indigo-700 hover:border-indigo-200"
