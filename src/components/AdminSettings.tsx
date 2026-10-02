@@ -93,7 +93,7 @@ export const AdminSettings: React.FC = () => {
         <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
           <div className="flex items-center gap-2 mb-3 text-sm font-bold text-slate-900"><MessageCircle className="w-4 h-4 text-indigo-600" /> Citizen AI Assistant</div>
           <label className="flex items-center justify-between gap-4 rounded-xl bg-white p-3 border border-slate-200 cursor-pointer">
-            <span className="text-sm text-slate-700">Show the Gemini-powered citizen assistant on the home page</span>
+            <span className="text-sm text-slate-700">Show the citizen AI assistant on the home page</span>
             <input type="checkbox" checked={settings.chatbotEnabled} onChange={(e) => set('chatbotEnabled', e.target.checked)} className="h-4 w-4" />
           </label>
         </div>
