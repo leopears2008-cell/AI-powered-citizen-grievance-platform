@@ -6,6 +6,7 @@ import { LegalPage } from './components/LegalPage';
 import { InteractiveMap } from './components/InteractiveMap';
 import { FAQSection } from './components/FAQSection';
 import { AIDemoCard } from './components/AIDemoCard';
+import { GrievanceChatbot } from './components/GrievanceChatbot';
 import { PageSkeleton } from './components/Skeleton';
 const VoiceInputModal = lazy(() => import('./components/VoiceInputModal').then((module) => ({ default: module.VoiceInputModal })));
 const GrievanceForm = lazy(() => import('./components/GrievanceForm').then((module) => ({ default: module.GrievanceForm })));
@@ -93,6 +94,7 @@ const MainLayout: React.FC = () => {
                 }}
               />
               <AIDemoCard />
+              <GrievanceChatbot />
               <InteractiveMap />
               <FAQSection />
             </div>
