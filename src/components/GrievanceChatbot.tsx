@@ -67,9 +67,7 @@ export const GrievanceChatbot: React.FC = () => {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h2 id="grievance-assistant-title" className="text-lg sm:text-xl font-black text-slate-900">Citizen Grievance AI Assistant</h2>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold">
-                <Sparkles className="w-3 h-3" aria-hidden="true" /> Gemini AI
-              </span>
+              
             </div>
             <p className="mt-1 text-xs sm:text-sm text-slate-500">Write complaints clearly, understand the process, and get guided to the right page.</p>
           </div>
@@ -115,7 +113,7 @@ export const GrievanceChatbot: React.FC = () => {
                 </div>
               </div>
             ))}
-            {busy && <div className="text-xs text-slate-500 px-2">Gemini is preparing a response…</div>}
+            {busy && <div className="text-xs text-slate-500 px-2">Preparing a response…</div>}
           </div>
 
           <form
