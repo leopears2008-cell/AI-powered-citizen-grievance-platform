@@ -8,6 +8,7 @@ import { FAQSection } from './components/FAQSection';
 import { AIDemoCard } from './components/AIDemoCard';
 import { GrievanceChatbot } from './components/GrievanceChatbot';
 import { PageSkeleton } from './components/Skeleton';
+import type { SiteSettings } from './types';
 const VoiceInputModal = lazy(() => import('./components/VoiceInputModal').then((module) => ({ default: module.VoiceInputModal })));
 const GrievanceForm = lazy(() => import('./components/GrievanceForm').then((module) => ({ default: module.GrievanceForm })));
 const CitizenVerification = lazy(() => import('./components/CitizenVerification').then((module) => ({ default: module.CitizenVerification })));
@@ -24,6 +25,11 @@ import {
   AlertCircle,
   X,
 } from 'lucide-react';
+import { api } from './services/api';
+
+const DEFAULT_SITE_SETTINGS: SiteSettings = {
+  id: 'default', siteTitle: 'NivaranAI Grievance Portal', siteSubtitle: 'AI-assisted civic grievance management', announcement: '', chatbotEnabled: true, showHero: true, showAIDemo: true, showMap: true, showFAQ: true, showDirectory: true, showMinisters: true, showNews: true,
+};
 
 const MainLayout: React.FC = () => {
   const { language, activeTab, setActiveTab, toasts, removeToast, isAdmin, authLoading, isCitizenVerified } = useApp();
@@ -31,6 +37,11 @@ const MainLayout: React.FC = () => {
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [initialVoiceTranscript, setInitialVoiceTranscript] = useState('');
   const [initialVoiceLang, setInitialVoiceLang] = useState('Tamil');
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
+
+  React.useEffect(() => {
+    api.getSiteSettings().then(setSiteSettings).catch(() => setSiteSettings(DEFAULT_SITE_SETTINGS));
+  }, []);
 
   const handleVoiceTranscriptConfirmed = (transcript: string, langHint: string) => {
     setInitialVoiceTranscript(transcript);
@@ -85,18 +96,31 @@ const MainLayout: React.FC = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 flex flex-col space-y-8 overflow-y-auto">
         <Suspense fallback={<PageSkeleton label={language === 'ta' ? 'பக்கத்தை ஏற்றுகிறது…' : 'Loading page…'} />}>
           {activeTab === 'home' && (
-            <div className="space-y-12 animate-in fade-in duration-300">
-              <HeroSection
-                onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
-                onSelectCategory={() => {
-                  setInitialVoiceTranscript('');
+            <div className="space-y-8 animate-in fade-in duration-300">
+              {siteSettings.announcement && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900" role="status">
+                  {siteSettings.announcement}
+                </div>
+              )}
+              {siteSettings.chatbotEnabled && (
+                <GrievanceChatbot onStartComplaint={(draft) => {
+                  setInitialVoiceTranscript(draft);
+                  setInitialVoiceLang('English');
                   setActiveTab('file');
-                }}
-              />
-              <AIDemoCard />
-              <GrievanceChatbot />
-              <InteractiveMap />
-              <FAQSection />
+                }} />
+              )}
+              {siteSettings.showHero && (
+                <HeroSection
+                  onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
+                  onSelectCategory={() => {
+                    setInitialVoiceTranscript('');
+                    setActiveTab('file');
+                  }}
+                />
+              )}
+              {siteSettings.showAIDemo && <AIDemoCard />}
+              {siteSettings.showMap && <InteractiveMap />}
+              {siteSettings.showFAQ && <FAQSection />}
             </div>
           )}
 
