@@ -345,7 +345,7 @@ export const Header: React.FC<HeaderProps> = ({ siteTitle = 'NivaranAI', siteSub
             >
               <Newspaper className="w-4 h-4" />
               {language === 'ta' ? 'நேரலை செய்திகள்' : 'Live News'}
-            </button>
+            </button>}
             <button onClick={() => closeMobileAndOpen('admin')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-indigo-700 bg-indigo-50">
               Admin Dashboard
             </button>
