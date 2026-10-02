@@ -533,12 +533,19 @@ export function registerGrievanceRoutes(app: Express, authenticate: RequestHandl
   });
 
   // Public website configuration is read-only to citizens; writes are admin-only.
-  app.get('/api/site-settings', handle(async (_req, _user, res) => {
-    const db = requireDb();
-    const { data, error } = await db.from('site_settings').select('*').eq('id', 'default').maybeSingle();
-    if (error) fail(error);
-    res.json(normaliseSiteSettings((data ?? null) as Record<string, unknown> | null));
-  }));
+  app.get('/api/site-settings', async (_req, res) => {
+    try {
+      const db = requireDb();
+      const { data, error } = await db.from('site_settings').select('*').eq('id', 'default').maybeSingle();
+      if (error) {
+        console.error('Public site settings lookup failed:', error.code ?? 'unknown');
+        return res.json(DEFAULT_SITE_SETTINGS);
+      }
+      return res.json(normaliseSiteSettings((data ?? null) as Record<string, unknown> | null));
+    } catch {
+      return res.json(DEFAULT_SITE_SETTINGS);
+    }
+  });
 
   app.get('/api/site-settings/admin', authenticate, handle(async (_req, _user, res) => {
     const db = requireDb();
