@@ -3,6 +3,8 @@ import { Bot, Send, Sparkles, Search, FileText, Clock3, ArrowUpRight, X } from '
 
 type Message = { role: 'user' | 'assistant'; text: string };
 
+interface GrievanceChatbotProps { onStartComplaint: (draft: string) => void; }
+
 const quickActions = [
   { label: 'Submit a grievance', icon: FileText, prompt: 'Help me submit a civic grievance.' },
   { label: 'Write my complaint', icon: Sparkles, prompt: 'Help me turn my rough complaint into a clear grievance draft.' },
@@ -10,8 +12,8 @@ const quickActions = [
   { label: 'Track my grievance', icon: Search, prompt: 'I want to track an existing grievance.' },
 ];
 
-export const GrievanceChatbot: React.FC = () => {
-  const [open, setOpen] = useState(false);
+export const GrievanceChatbot: React.FC<GrievanceChatbotProps> = ({ onStartComplaint }) => {
+  const [open, setOpen] = useState(true);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -73,7 +75,14 @@ export const GrievanceChatbot: React.FC = () => {
           </div>
           <button
             type="button"
-            onClick={() => setOpen((value) => !value)}
+            onClick={() => onStartComplaint('')}
+            className="hidden sm:inline-flex shrink-0 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-700"
+          >
+            File real complaint
+          </button>
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)
             aria-expanded={open}
             aria-controls="grievance-assistant-panel"
             className="shrink-0 rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:text-indigo-700 hover:border-indigo-200"
@@ -141,6 +150,8 @@ export const GrievanceChatbot: React.FC = () => {
               <Send className="w-5 h-5" aria-hidden="true" />
             </button>
           </form>
+
+          <button type="button" onClick={() => onStartComplaint(messages.filter((m) => m.role === 'user').at(-1)?.text || '')} disabled={!messages.some((m) => m.role === 'user')} className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 disabled:opacity-50">Use my complaint in the official filing form</button>
 
           <p className="mt-3 text-[10px] text-slate-400">
             AI responses are guidance only. It cannot approve, reject, assign, resolve, or change a government grievance.
