@@ -54,6 +54,11 @@ export async function storeEvidence(dataUrl: string, grievanceId: string, name: 
   const db = getSupabase();
   if (!db) throw new Error('Storage service is not configured.');
   const bucket = process.env.GRIEVANCE_STORAGE_BUCKET || DEFAULT_BUCKET;
+  const { data: existingBucket } = await db.storage.getBucket(bucket);
+  if (!existingBucket) {
+    const { error: bucketError } = await db.storage.createBucket(bucket, { public: false, fileSizeLimit: '400KB', allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'] });
+    if (bucketError && !/already exists/i.test(bucketError.message)) throw new Error('Evidence storage bucket is unavailable.');
+  }
   const attachmentId = requestedAttachmentId && /^[A-Za-z0-9_-]{1,80}$/.test(requestedAttachmentId) ? requestedAttachmentId : randomUUID();
   const extension = ALLOWED.get(detectedType)!.extension;
   const storagePath = `grievances/${grievanceId}/${attachmentId}.${extension}`;
