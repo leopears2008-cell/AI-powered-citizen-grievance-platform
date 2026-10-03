@@ -268,6 +268,30 @@ export const api = {
     );
   },
 
+  async getPublicTransparency() {
+    return request<{
+      generatedAt: string;
+      metrics: { total:number; active:number; resolved:number; breached:number; verified:number; resolutionRate:number; averageRating:number|null };
+      districts: Array<{district:string;total:number;active:number;resolved:number;lat:number|null;lng:number|null}>;
+      categories: Array<{name:string;value:number}>;
+      heatmap: Array<{lat:number;lng:number;count:number}>;
+    }>('/api/public/transparency');
+  },
+
+  async assessComplaintQuality(payload: { text:string; category?:string; district?:string; priority?:GrievancePriority }) {
+    return request<{
+      completenessScore:number; qualityBand:string; missingFields:string[]; routing:string; routingReason:string;
+      severity:GrievancePriority; severityReason:string; slaDays:number; duplicateProbability:number;
+      duplicates:Array<{id:string;score:number;category:string;district:string;status:string}>;
+    }>('/api/ai/complaint-quality',{method:'POST',body:payload});
+  },
+
+  async runEscalationScan() {
+    return request<{scanned:number;escalated:number;results:Array<{id:string;level:number;reason:string}>}>(
+      '/api/admin/escalation-scan',{method:'POST',body:{}}
+    );
+  },
+
   async getNotifications(): Promise<NotificationItem[]> {
     // Notifications are intentionally disabled until a persistent, access-controlled
     // notification store is configured for production.
