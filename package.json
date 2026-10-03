@@ -14,7 +14,9 @@
     "provision-admin": "node scripts/provision-admin.mjs",
     "migrate:firestore-to-supabase": "node scripts/migrate-firestore-to-supabase.mjs",
     "build:client": "vite build --configLoader runner",
-    "build:server": "node scripts/build-server.mjs"
+    "build:server": "node scripts/build-server.mjs",
+    "evaluate:ai": "tsx scripts/run-ai-evaluation.ts",
+    "test:e2e": "node --import tsx --test tests/e2e.workflow.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
