@@ -1,9 +1,8 @@
 /**
  * Wikimedia-backed civic information helpers.
  *
- * Wikipedia is used for person/profile metadata. Wikinews is used for news.
- * The Google News URL helper is only an external discovery link; it is never
- * presented as if its content came from Wikipedia/Wikinews.
+ * Wikipedia/Wikimedia is used only for person/profile metadata. Live news is
+ * handled by the separate backend Google News RSS service.
  */
 
 export interface WikipediaProfile {
@@ -22,12 +21,9 @@ export interface WikinewsArticle {
 }
 
 const WIKIPEDIA_API = 'https://en.wikipedia.org/w/api.php';
-const WIKINEWS_API = 'https://en.wikinews.org/w/api.php';
 const PROFILE_TTL_MS = 15 * 60 * 1000;
-const NEWS_TTL_MS = 60 * 1000;
 
 const profileCache = new Map<string, { expiresAt: number; value: WikipediaProfile | null }>();
-const newsCache = new Map<string, { expiresAt: number; value: WikinewsArticle[] }>();
 
 export const normalizeWikiTitle = (value: string): string =>
   value
