@@ -15,11 +15,15 @@ function clamp(n:number,min=0,max=1){return Math.max(min,Math.min(max,n));}
 function publicDistrictName(value: unknown){ return typeof value === 'string' && value.trim() ? value.trim().slice(0,80) : 'Unknown'; }
 
 export async function buildPublicTransparency(db: SupabaseClient) {
-  const { data, error } = await db.from('grievances')
-    .select('id,category,priority,status,location_district,location_lat,location_lng,created_at,resolved_at,target_resolution_date,feedback_rating,feedback_satisfied')
-    .limit(10000);
-  if (error) throw error;
-  const rows = data ?? [];
+  const rows: any[] = [];
+  for (let from = 0; ; from += 500) {
+    const { data, error } = await db.from('grievances')
+      .select('id,category,priority,status,location_district,location_lat,location_lng,created_at,resolved_at,target_resolution_date,feedback_rating,feedback_satisfied')
+      .range(from, from + 499);
+    if (error) throw error;
+    rows.push(...(data ?? []));
+    if (!data || data.length < 500 || rows.length >= 10000) break;
+  }
   const total = rows.length;
   const resolved = rows.filter(r => r.status === 'Resolved').length;
   const active = rows.filter(r => r.status !== 'Resolved' && r.status !== 'Rejected').length;
