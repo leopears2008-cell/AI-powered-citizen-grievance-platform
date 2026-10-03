@@ -51,7 +51,7 @@ export function routeDepartment(text: string, category?: string) {
     const score = rule.words.reduce((count, word) => count + (haystack.includes(normalize(word)) ? 1 : 0), 0);
     if (score > best.score) best = { id: rule.id, score, label: rule.label };
   }
-  return { departmentId: best.id, reason: best.label };
+  return { departmentId: best.id, departmentReason: best.label };
 }
 
 export function severityAndSla(text: string, suppliedPriority?: IntelligenceInput['priority']) {
