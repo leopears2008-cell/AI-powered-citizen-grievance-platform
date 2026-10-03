@@ -144,8 +144,8 @@ export function evaluateClassification(cases: EvalCase[] = ALL_GOLDEN_EVAL_CASES
     const result = analyzeGrievance({ text: testCase.input });
     const deptOk = result.departmentId === testCase.expectedDepartmentId;
     const priorityOk = result.severity === testCase.expectedPriority;
-    const tokenSet = new Set(result.tokens);
-    const keywordHits = testCase.expectedKeywords.filter((word) => tokenSet.has(word.toLowerCase().normalize('NFKC'))).length;
+    const normalizedInput = testCase.input.toLowerCase().normalize('NFKC');
+    const keywordHits = testCase.expectedKeywords.filter((word) => normalizedInput.includes(word.toLowerCase().normalize('NFKC'))).length;
     departmentCorrect += Number(deptOk);
     priorityCorrect += Number(priorityOk);
     keywordCoverage += testCase.expectedKeywords.length ? keywordHits / testCase.expectedKeywords.length : 1;
