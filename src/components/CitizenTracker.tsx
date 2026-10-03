@@ -101,6 +101,7 @@ export const CitizenTracker: React.FC = () => {
     if (!grievance) return;
     setIsSubmittingFeedback(true);
     try {
+      await api.verifyResolution(grievance.id, isSatisfied);
       const updated = await api.submitFeedback(grievance.id, {
         rating,
         comment: feedbackText,
