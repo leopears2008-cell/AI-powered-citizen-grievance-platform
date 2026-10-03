@@ -103,15 +103,15 @@ async function fetchGoogleRss(query: string, limit: number): Promise<NewsArticle
   const xml = await response.text();
   if (xml.length > 2_000_000) throw new Error('News provider response is too large.');
 
-  const items = xml.match(/<item\\b[^>]*>[\\s\\S]*?<\\/item>/gi) ?? [];
+  const items = xml.match(/<item\b[^>]*>[\s\S]*?<\/item>/gi) ?? [];
   const articles: NewsArticle[] = [];
 
   for (const item of items) {
     if (articles.length >= limit) break;
     const tag = (name: string) => clean(
-      item.match(new RegExp('<' + name + '\\\\b[^>]*>([\\s\\S]*?)</' + name + '>', 'i'))?.[1],
+      item.match(new RegExp('<' + name + '\\b[^>]*>([\\s\\S]*?)</' + name + '>', 'i'))?.[1],
       2000,
-    ).replace(/<!\\[CDATA\\[|\\]\\]>/g, '');
+    ).replace(/<!\[CDATA\[|\]\]>/g, '');
 
     const title = tag('title');
     const url = tag('link');
