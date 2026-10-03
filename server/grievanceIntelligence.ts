@@ -18,13 +18,13 @@ export type IntelligenceResult = {
 const STOP_WORDS = new Set(['the','and','with','this','that','from','have','been','near','there','issue','please','need','கள்','ஒரு','இந்த','அது','மற்றும்']);
 
 const DEPARTMENT_RULES: Array<{ id: string; words: string[]; label: string }> = [
-  { id: 'dept-electric', words: ['wire','spark','transformer','electric','power','current','shock','மின்சாரம்','மின்மாற்றி'], label: 'Electrical safety/infrastructure terms detected.' },
-  { id: 'dept-water', words: ['water','pipe','leak','burst','sewage','drainage','குடிநீர்','தண்ணீர்','குழாய்','கழிவுநீர்'], label: 'Water/drainage infrastructure terms detected.' },
-  { id: 'dept-roads', words: ['road','pothole','tar','footpath','pavement','சாலை','பள்ளம்'], label: 'Road/public-works terms detected.' },
-  { id: 'dept-streetlight', words: ['streetlight','street','lamp','dark','light','pole','விளக்கு','இருட்டு'], label: 'Street-lighting terms detected.' },
-  { id: 'dept-health', words: ['mosquito','dengue','malaria','fogging','stagnant','fever','கொசு','டெங்கு'], label: 'Public-health/vector-control terms detected.' },
-  { id: 'dept-sanitation', words: ['garbage','waste','bin','toilet','smell','குப்பை','நாற்றம்'], label: 'Sanitation/waste terms detected.' },
-  { id: 'dept-transport', words: ['bus','traffic','signal','parking','transport','பேருந்து','போக்குவரத்து'], label: 'Transport/traffic terms detected.' },
+  { id: 'dept-electric', words: ['wire','spark','transformer','electric','power','current','shock','min','min kambi','மின்சாரம்','மின்மாற்றி'], label: 'Electrical safety/infrastructure terms detected.' },
+  { id: 'dept-water', words: ['water','pipe','leak','burst','sewage','drainage','thanni','kuzhai','kuzhaai','குடிநீர்','தண்ணீர்','குழாய்','கழிவுநீர்'], label: 'Water/drainage infrastructure terms detected.' },
+  { id: 'dept-roads', words: ['road','pothole','pothol','tar','footpath','pavement','saalai','சாலை','பள்ளம்'], label: 'Road/public-works terms detected.' },
+  { id: 'dept-streetlight', words: ['streetlight','street','lamp','dark','light','pole','vilakku','விளக்கு','இருட்டு'], label: 'Street-lighting terms detected.' },
+  { id: 'dept-health', words: ['mosquito','dengue','malaria','fogging','stagnant','fever','kosu','கொசு','டெங்கு'], label: 'Public-health/vector-control terms detected.' },
+  { id: 'dept-sanitation', words: ['garbage','waste','bin','toilet','smell','kuppai','குப்பை','நாற்றம்'], label: 'Sanitation/waste terms detected.' },
+  { id: 'dept-transport', words: ['bus','traffic','signal','parking','transport','pokkuvarathu','பேருந்து','போக்குவரத்து'], label: 'Transport/traffic terms detected.' },
 ];
 
 function normalize(text: string) {
