@@ -154,6 +154,13 @@ export const api = {
     });
   },
 
+  async verifyResolution(id: string, confirmed: boolean) {
+    return request<{ ok: boolean; verified: boolean; status: GrievanceStatus; updatedAt: string }>(
+      `/api/grievances/${encodeURIComponent(id)}/verify-resolution`,
+      { method: 'POST', body: { confirmed } }
+    );
+  },
+
   async submitFeedback(id: string, payload: { rating: number; comment: string; isResolvedSatisfied: boolean }) {
     return request<Grievance>(`/api/grievances/${encodeURIComponent(id)}/feedback`, {
       method: 'POST',
