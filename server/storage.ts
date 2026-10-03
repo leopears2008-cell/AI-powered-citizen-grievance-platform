@@ -41,7 +41,7 @@ async function malwareScan(bytes: Buffer): Promise<void> {
   }
 }
 
-export async function storeEvidence(dataUrl: string, grievanceId: string, name: string): Promise<StoredEvidence> {
+export async function storeEvidence(dataUrl: string, grievanceId: string, name: string, requestedAttachmentId?: string): Promise<StoredEvidence> {
   const match = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]*={0,2})$/.exec(dataUrl);
   if (!match) throw new Error('Only JPEG, PNG, and WebP evidence is accepted.');
   const declaredType = match[1];
@@ -54,7 +54,7 @@ export async function storeEvidence(dataUrl: string, grievanceId: string, name: 
   const db = getSupabase();
   if (!db) throw new Error('Storage service is not configured.');
   const bucket = process.env.GRIEVANCE_STORAGE_BUCKET || DEFAULT_BUCKET;
-  const attachmentId = randomUUID();
+  const attachmentId = requestedAttachmentId && /^[A-Za-z0-9_-]{1,80}$/.test(requestedAttachmentId) ? requestedAttachmentId : randomUUID();
   const extension = ALLOWED.get(detectedType)!.extension;
   const storagePath = `grievances/${grievanceId}/${attachmentId}.${extension}`;
 
@@ -84,4 +84,11 @@ export function attachmentProxyUrl(grievanceId: string, attachmentId: string) {
 
 export function safeAttachmentName(value: string) {
   return value.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 120) || 'evidence';
+}
+
+export async function removeEvidence(storagePath: string) {
+  const db = getSupabase();
+  if (!db) return;
+  const bucket = process.env.GRIEVANCE_STORAGE_BUCKET || DEFAULT_BUCKET;
+  await db.storage.from(bucket).remove([storagePath]);
 }
