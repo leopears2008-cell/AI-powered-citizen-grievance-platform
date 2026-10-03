@@ -251,7 +251,7 @@ app.use(async (req, res, next) => {
     next();
   } catch (error) {
     console.error(JSON.stringify({ event: 'rate_limit_error', message: error instanceof Error ? error.message : 'unknown' }));
-    if (process.env.NODE_ENV === 'production' && process.env.FAIL_CLOSED_RATE_LIMIT === 'true') {
+    if (process.env.NODE_ENV === 'production') {
       return res.status(503).json({ error: 'Rate limiting service is temporarily unavailable.' });
     }
     next();
