@@ -16,17 +16,17 @@ const GOLDEN_GROUPS: Array<{
   cases: string[];
 }> = [
   {
-    id: 'electric', department: 'dept-electric', priority: 'Critical', keywords: ['electric', 'wire'],
+    id: 'electric', department: 'dept-electric', priority: 'Critical', keywords: ['wire'],
     cases: [
       'Exposed electric wire sparking near a school gate', 'Electric wire is hanging low beside homes', 'Live electric wire is dangerous near a playground',
-      'Broken electric cable is sparking beside the road', 'Electric power wire has fallen across the street', 'Exposed wire may cause an electric shock',
+      'Broken electric wire is sparking beside the road', 'Electric power wire has fallen across the street', 'Exposed electric wire may cause an electric shock',
       'Damaged electric wire is touching a public pole', 'Electric wire is burning near a market', 'Loose electric wire is creating a safety hazard',
-      'Power wire is exposed near a bus stop', 'Electric wire has fallen after a storm', 'Sparking electric wire is near a school',
-      'Exposed electric wire is blocking a footpath', 'Electric wire is dangerously close to residents', 'Broken power wire is sparking in public area'
+      'Electric power wire is exposed near a bus stop', 'Electric wire has fallen after a storm', 'Sparking electric wire is near a school',
+      'Exposed electric wire is blocking a footpath', 'Electric wire is dangerously close to residents', 'Broken electric power wire is sparking in public area'
     ]
   },
   {
-    id: 'water', department: 'dept-water', priority: 'Medium', keywords: ['water', 'pipe'],
+    id: 'water', department: 'dept-water', priority: 'Medium', keywords: ['water'],
     cases: [
       'Drinking water pipe is leaking outside the house', 'Water pipe leak is wasting drinking water', 'Municipal water pipe needs repair',
       'Water pipe is broken near the street', 'Water supply pipe is leaking continuously', 'A damaged water pipe needs repair',
@@ -36,7 +36,7 @@ const GOLDEN_GROUPS: Array<{
     ]
   },
   {
-    id: 'roads', department: 'dept-roads', priority: 'Medium', keywords: ['road', 'pothole'],
+    id: 'roads', department: 'dept-roads', priority: 'Medium', keywords: ['road'],
     cases: [
       'Large road pothole is damaging vehicles', 'Road pothole is dangerous for motorcycles', 'A pothole is blocking the road lane',
       'Road has several potholes near the market', 'Pothole on the main road needs repair', 'Road pothole is causing traffic problems',
@@ -46,7 +46,7 @@ const GOLDEN_GROUPS: Array<{
     ]
   },
   {
-    id: 'streetlight', department: 'dept-streetlight', priority: 'Medium', keywords: ['street', 'light'],
+    id: 'streetlight', department: 'dept-streetlight', priority: 'Medium', keywords: ['street'],
     cases: [
       'Street light is broken near the bus stop', 'Street light is not working at night', 'Broken street light leaves the road dark',
       'Street light pole needs repair', 'Street lamp is off near the school', 'Street light is flickering every night',
@@ -56,33 +56,33 @@ const GOLDEN_GROUPS: Array<{
     ]
   },
   {
-    id: 'health', department: 'dept-health', priority: 'High', keywords: ['mosquito', 'dengue'],
+    id: 'health', department: 'dept-health', priority: 'High', keywords: ['mosquito'],
     cases: [
       'Mosquito breeding is raising dengue concern', 'Heavy mosquito activity may spread dengue', 'Dengue risk is increasing because of mosquitoes',
       'Mosquito breeding near homes needs fogging', 'Stagnant water is attracting mosquitoes and dengue risk', 'Mosquito problem is severe near the school',
-      'Dengue prevention is needed because of mosquito breeding', 'Mosquitoes are breeding in stagnant water', 'Mosquito breeding is affecting residents',
-      'Dengue concern is reported with many mosquitoes', 'Mosquito breeding is increasing after rain', 'Public area has mosquitoes and dengue risk',
+      'Dengue prevention is needed because of mosquito breeding', 'Mosquito is breeding in stagnant water', 'Mosquito breeding is affecting residents',
+      'Dengue concern is reported with many mosquito cases', 'Mosquito breeding is increasing after rain', 'Public area has mosquitoes and dengue risk',
       'Mosquito infestation needs health department action', 'Dengue risk from mosquito breeding is high', 'Mosquito breeding near homes requires fogging'
     ]
   },
   {
-    id: 'sanitation', department: 'dept-sanitation', priority: 'Medium', keywords: ['garbage', 'waste'],
+    id: 'sanitation', department: 'dept-sanitation', priority: 'Medium', keywords: ['garbage'],
     cases: [
-      'Garbage waste has not been collected for days', 'Garbage and waste are piling up near homes', 'Waste collection is missed and garbage is overflowing',
+      'Garbage waste has not been collected for days', 'Garbage and waste are piling up near homes', 'Garbage collection is missed and garbage is overflowing',
       'Garbage waste is creating a bad smell', 'Public garbage needs immediate collection', 'Waste bins are full of garbage',
       'Garbage waste is blocking the roadside', 'Uncollected garbage waste is attracting pests', 'Garbage collection has stopped in the street',
-      'Waste is scattered around the garbage collection point', 'Garbage waste has accumulated near the market', 'Residents report uncollected garbage waste',
-      'Garbage waste is causing sanitation problems', 'Public waste bins are overflowing with garbage', 'Garbage waste needs cleaning today'
+      'Garbage waste is scattered around the collection point', 'Garbage waste has accumulated near the market', 'Residents report uncollected garbage waste',
+      'Garbage waste is causing sanitation problems', 'Public garbage bins are overflowing with waste', 'Garbage waste needs cleaning today'
     ]
   },
   {
-    id: 'transport', department: 'dept-transport', priority: 'Medium', keywords: ['bus', 'traffic'],
+    id: 'transport', department: 'dept-transport', priority: 'Medium', keywords: ['bus'],
     cases: [
       'Bus traffic is causing congestion near the stop', 'Bus traffic signal is malfunctioning', 'Heavy bus traffic blocks the junction',
-      'Bus stop traffic needs better management', 'Traffic signal near the bus stop is broken', 'Bus traffic is delayed by the signal',
+      'Bus stop traffic needs better management', 'Bus traffic signal near the bus stop is broken', 'Bus traffic is delayed by the signal',
       'Bus lane traffic is creating congestion', 'Public bus traffic needs route support', 'Traffic around the bus stop is unsafe',
       'Bus traffic is blocking the main junction', 'Traffic signal is affecting bus movement', 'Bus stop traffic congestion is increasing',
-      'Bus traffic management is needed near the market', 'Traffic near the bus stand is causing delays', 'Public bus traffic needs attention'
+      'Bus traffic management is needed near the market', 'Bus traffic near the bus stand is causing delays', 'Public bus traffic needs attention'
     ]
   }
 ];
