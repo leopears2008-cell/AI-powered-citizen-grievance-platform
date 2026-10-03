@@ -182,6 +182,80 @@ export const api = {
     return request<Officer[]>('/api/admin/officers');
   },
 
+  async getOfficerProfile() {
+    return request<{
+      id: string; name: string; nameTamil?: string | null; departmentId: string;
+      departmentName: string; designation: string; phone: string; email: string; zone: string;
+    }>('/api/officer/me');
+  },
+
+  async getOfficerGrievances(): Promise<Grievance[]> {
+    const rows = await request<any[]>('/api/officer/grievances');
+    return rows.map((row) => ({
+      id: row.id,
+      trackId: row.track_id,
+      citizenName: row.citizen_name,
+      citizenPhone: row.citizen_phone,
+      citizenEmail: row.citizen_email || undefined,
+      language: row.language,
+      originalTranscript: row.original_transcript,
+      summaryEn: row.summary_en,
+      summaryTa: row.summary_ta,
+      category: row.category,
+      departmentId: row.department_id || '',
+      departmentName: row.department_name,
+      priority: row.priority,
+      priorityReason: row.priority_reason,
+      confidenceScore: Number(row.confidence_score || 0),
+      location: {
+        address: row.location_address,
+        district: row.location_district,
+        landmark: row.location_landmark || undefined,
+        constituency: row.location_constituency || undefined,
+        wardNumber: row.location_ward_number || undefined,
+        pincode: row.location_pincode || undefined,
+        lat: row.location_lat ?? undefined,
+        lng: row.location_lng ?? undefined,
+      },
+      attachments: (row.grievance_attachments || []).map((a: any) => ({
+        id: a.attachment_id, url: a.url, name: a.name, type: a.type, uploadedAt: a.uploaded_at,
+      })),
+      status: row.status,
+      assignedOfficerId: row.assigned_officer_id || undefined,
+      assignedOfficerName: row.assigned_officer_name || undefined,
+      assignedOfficerPhone: row.assigned_officer_phone || undefined,
+      assignedAt: row.assigned_at || undefined,
+      targetResolutionDate: row.target_resolution_date || row.created_at,
+      estimatedDays: row.estimated_days ?? undefined,
+      resolvedAt: row.resolved_at || undefined,
+      resolutionRemarks: row.resolution_remarks || undefined,
+      resolutionEvidenceUrl: row.resolution_evidence_url || undefined,
+      statusHistory: (row.grievance_status_history || []).map((h: any) => ({
+        status: h.status, timestamp: h.occurred_at, updatedBy: h.updated_by, role: h.role, remarks: h.remarks,
+        evidenceUrl: h.evidence_url || undefined,
+      })),
+      entities: row.entities || {},
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      isDuplicateOf: row.is_duplicate_of || undefined,
+    })) as Grievance[];
+  },
+
+  async updateOfficerStatus(id: string, payload: {
+    status: GrievanceStatus; remarks: string; evidenceUrl?: string;
+  }) {
+    return request<{ ok: boolean; grievanceId: string; status: GrievanceStatus; updatedBy: string; updatedAt: string }>(
+      `/api/officer/grievances/${encodeURIComponent(id)}/status`, { method: 'POST', body: payload }
+    );
+  },
+
+  async escalateOfficerGrievance(id: string, toDepartmentId: string, reason: string) {
+    return request<{ ok: boolean; grievanceId: string; status: GrievanceStatus; escalatedToDepartmentId: string; escalatedAt: string }>(
+      `/api/officer/grievances/${encodeURIComponent(id)}/escalate`,
+      { method: 'POST', body: { toDepartmentId, reason } }
+    );
+  },
+
   async getNotifications(): Promise<NotificationItem[]> {
     // Notifications are intentionally disabled until a persistent, access-controlled
     // notification store is configured for production.
