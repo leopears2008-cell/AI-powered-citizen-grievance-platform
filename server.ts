@@ -370,7 +370,7 @@ app.get('/api/news/tamil-nadu', async (req, res) => {
   if (query.length > 180) return res.status(400).json({ error: 'News search query is too long.' });
 
   try {
-    const news = await fetchNews(query, limit);\n    const articles = news.articles;
+    const news = await fetchNews(query, limit);
     res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
     return res.json({
       provider: news.provider,
