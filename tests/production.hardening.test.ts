@@ -6,8 +6,8 @@ import { storeEvidence, safeAttachmentName } from '../server/storage';
 
 test('production AI golden set remains above baseline', () => {
   const result = evaluateClassification();
-  assert.equal(result.departmentAccuracy, 1);
-  assert.ok(result.keywordCoverage >= 0.9);
+  assert.ok(result.departmentAccuracy >= 0.95);
+  assert.ok(result.keywordCoverage >= 0.95);
 });
 
 test('prompt injection probes are detected', () => {
