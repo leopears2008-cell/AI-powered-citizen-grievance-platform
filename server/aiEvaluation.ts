@@ -33,7 +33,7 @@ export function evaluateClassification(cases: EvalCase[] = GOLDEN_EVAL_CASES) {
   let priorityCorrect = 0;
   let keywordCoverage = 0;
   const results = cases.map((testCase) => {
-    const result = analyzeGrievance(testCase.input);
+    const result = analyzeGrievance({ text: testCase.input });
     const deptOk = result.departmentId === testCase.expectedDepartmentId;
     const priorityOk = result.severity === testCase.expectedPriority;
     const tokenSet = new Set(result.tokens);
