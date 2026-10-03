@@ -29,7 +29,7 @@ const GOLDEN_GROUPS: Array<{
     id: 'water', department: 'dept-water', priority: 'Medium', keywords: ['water', 'pipe'],
     cases: [
       'Drinking water pipe is leaking outside the house', 'Water pipe leak is wasting drinking water', 'Municipal water pipe needs repair',
-      'Water pipe is broken near the street', 'Water supply pipe is leaking continuously', 'A damaged water pipe is flooding the lane',
+      'Water pipe is broken near the street', 'Water supply pipe is leaking continuously', 'A damaged water pipe needs repair',
       'Water pipe has a small leak near the school', 'Drinking water pipe is damaged', 'Water pipe connection is leaking near homes',
       'Public water pipe is leaking beside the road', 'Water supply from the pipe is interrupted', 'Water pipe repair is needed urgently',
       'Water pipe is leaking near the market', 'Broken water pipe is wasting water', 'Water pipeline has a persistent leak'
