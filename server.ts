@@ -19,6 +19,7 @@ import { runAiEvaluation } from './server/aiEvaluation';
 import { officerCanTransition } from './server/workflow';
 import { checkRateLimit } from './server/distributedRateLimit';
 import { fetchNews } from './server/newsProvider';
+import { registerCivicFeatureRoutes, runAutomaticEscalationScan } from './server/civicFeatures';
 
 dotenv.config();
 
@@ -456,6 +457,18 @@ app.post('/api/ai/grievance-chat', async (req, res) => {
 // 0. Grievance data API (Supabase): /api/grievances, /api/admin/*, /api/me/admin
 // ==========================================================
 registerGrievanceRoutes(app, authenticate as express.RequestHandler);
+registerCivicFeatureRoutes(app, authenticate as express.RequestHandler);
+
+// SLA escalation engine: production schedulers can also call POST /api/admin/escalation-scan.
+// The interval is deliberately bounded and idempotent for a 24-hour window per grievance.
+if (process.env.ENABLE_SLA_ENGINE !== 'false') {
+  const intervalMs = Math.max(5 * 60 * 1000, Number(process.env.SLA_ENGINE_INTERVAL_MS || 15 * 60 * 1000));
+  setInterval(async () => {
+    const db = getSupabase();
+    if (!db) return;
+    try { await runAutomaticEscalationScan(db); } catch { console.error('SLA escalation scan failed.'); }
+  }, intervalMs).unref();
+}
 
 
 // ==========================================================
