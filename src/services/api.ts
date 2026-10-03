@@ -7,6 +7,7 @@ import {
   AIAnalysisResponse,
   DuplicateMatch,
   GrievanceStatus,
+  GrievancePriority,
 } from '../types';
 import { auth } from '../lib/firebase';
 import type { User } from 'firebase/auth';
