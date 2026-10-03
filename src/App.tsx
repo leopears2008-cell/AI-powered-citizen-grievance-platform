@@ -8,6 +8,7 @@ import { FAQSection } from './components/FAQSection';
 import { AIDemoCard } from './components/AIDemoCard';
 import { GrievanceChatbot } from './components/GrievanceChatbot';
 import { PageSkeleton } from './components/Skeleton';
+import { PublicTransparencyDashboard } from './components/PublicTransparencyDashboard';
 import type { SiteSettings } from './types';
 const VoiceInputModal = lazy(() => import('./components/VoiceInputModal').then((module) => ({ default: module.VoiceInputModal })));
 const GrievanceForm = lazy(() => import('./components/GrievanceForm').then((module) => ({ default: module.GrievanceForm })));
@@ -120,6 +121,7 @@ const MainLayout: React.FC = () => {
               )}
               {siteSettings.showAIDemo && <AIDemoCard />}
               {siteSettings.showMap && <InteractiveMap />}
+              <PublicTransparencyDashboard />
               {siteSettings.showFAQ && <FAQSection />}
             </div>
           )}
