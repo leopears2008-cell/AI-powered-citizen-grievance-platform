@@ -6,6 +6,7 @@ import { storeEvidence, safeAttachmentName } from '../server/storage';
 
 test('production AI golden set remains above baseline', () => {
   const result = evaluateClassification();
+  console.log('AI_EVAL_METRICS', JSON.stringify({ total: result.total, departmentAccuracy: result.departmentAccuracy, priorityAccuracy: result.priorityAccuracy, keywordCoverage: result.keywordCoverage, failed: result.results.filter((row) => !row.departmentOk || !row.priorityOk || row.keywordCoverage < 1) }));
   assert.ok(result.departmentAccuracy >= 0.95);
   assert.ok(result.keywordCoverage >= 0.95);
 });
