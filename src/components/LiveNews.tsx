@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Newspaper, RefreshCw, Search, Radio } from 'lucide-react';
-import { fetchWikinews, googleNewsUrl, type WikinewsArticle } from '../services/wikimedia';
+import { fetchLiveNews, googleNewsUrl, type LiveNewsArticle } from '../services/news';
 
 interface LiveNewsProps {
   initialQuery?: string;
@@ -14,7 +14,7 @@ export const LiveNews: React.FC<LiveNewsProps> = ({
   title = 'Live News',
 }) => {
   const [query, setQuery] = useState(initialQuery);
-  const [articles, setArticles] = useState<WikinewsArticle[]>([]);
+  const [articles, setArticles] = useState<LiveNewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshNonce, setRefreshNonce] = useState(0);
 
@@ -28,7 +28,7 @@ export const LiveNews: React.FC<LiveNewsProps> = ({
     let cancelled = false;
     setLoading(true);
 
-    fetchWikinews(query, compact ? 6 : 12)
+    fetchLiveNews(query, compact ? 6 : 12)
       .then((items) => {
         if (!cancelled) setArticles(items);
       })
@@ -58,7 +58,7 @@ export const LiveNews: React.FC<LiveNewsProps> = ({
               <div>
                 <h2 className="text-xl font-bold text-slate-900">{title}</h2>
                 <p className="text-[11px] text-slate-500">
-                  Wikimedia/Wikinews search · refreshes on demand
+                  Google News live feed · refreshes on demand
                 </p>
               </div>
             </div>
@@ -126,7 +126,7 @@ export const LiveNews: React.FC<LiveNewsProps> = ({
             Search: <span className="font-semibold text-slate-800">{query}</span>
           </div>
           <div className="text-[10px] text-slate-400">
-            News attribution: Wikinews. Wikipedia is used separately for MLA profile metadata.
+            Live coverage is provided through Google News. Wikipedia remains separate for MLA profile metadata.
           </div>
         </div>
       </div>
@@ -138,7 +138,7 @@ export const LiveNews: React.FC<LiveNewsProps> = ({
       ) : articles.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
           <Newspaper className="w-10 h-10 mx-auto text-slate-300 mb-3" />
-          <p className="text-sm font-semibold text-slate-800">No Wikinews articles matched this search.</p>
+          <p className="text-sm font-semibold text-slate-800">No live news articles matched this search.</p>
           <p className="text-xs text-slate-500 mt-1">
             Try a broader search, or open the external live-coverage link above.
           </p>
@@ -172,7 +172,7 @@ export const LiveNews: React.FC<LiveNewsProps> = ({
                   rel="noopener noreferrer"
                   className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
                 >
-                  Read on Wikinews <ExternalLink className="w-3 h-3" />
+                  Read original article <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
             </article>
