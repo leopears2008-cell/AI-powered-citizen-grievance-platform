@@ -1178,7 +1178,25 @@ app.use('/api/departments', (_req, res) => res.status(410).json({ error: 'Depart
 app.use('/api/officers', (_req, res) => res.status(410).json({ error: 'Officer records are available only from the protected /api/admin/officers route.' }));
 app.use('/api/notifications', (_req, res) => res.status(410).json({ error: 'Notifications are unavailable until a persistent access-controlled store is configured.' }));
 app.use('/api', (_req, res) => res.status(404).json({ error: 'API route not found.' }));
-app.get('/healthz', (_req, res) => res.status(200).json({ status: 'ok' }));
+app.get('/healthz', (_req, res) => res.status(200).json({ status: 'ok', service: 'nivaranai-api', timestamp: new Date().toISOString() }));
+app.get('/readyz', async (_req, res) => {
+  const checks: Record<string, string> = {};
+  const db = getSupabase();
+  if (!db) checks.database = 'not_configured';
+  else {
+    try {
+      const { error } = await db.from('site_settings').select('id').limit(1);
+      checks.database = error ? 'unhealthy' : 'ok';
+    } catch { checks.database = 'unhealthy'; }
+  }
+  checks.authentication = firebaseAdminAuth ? 'ok' : 'not_configured';
+  checks.ai = process.env.GEMINI_API_KEY ? 'ok' : 'not_configured';
+  checks.distributedRateLimit = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN ? 'ok' : 'fallback';
+  checks.malwareScanning = process.env.CLAMAV_SCAN_URL ? 'ok' : 'not_configured';
+  checks.newsProvider = process.env.NEWS_PROVIDER || 'google-rss';
+  const ready = checks.database === 'ok' && checks.authentication === 'ok' && (!process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT || checks.distributedRateLimit === 'ok') && (!process.env.REQUIRE_MALWARE_SCAN || checks.malwareScanning === 'ok');
+  return res.status(ready ? 200 : 503).json({ status: ready ? 'ready' : 'not_ready', checks, timestamp: new Date().toISOString() });
+});
 
 app.use((error: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const status = error?.status === 413 ? 413 : error?.status === 400 ? 400 : 500;
