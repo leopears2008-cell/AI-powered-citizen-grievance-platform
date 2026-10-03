@@ -12,6 +12,7 @@ import type {
 } from '../src/types';
 import { getSupabase } from './supabase';
 import { canTransition } from './workflow';
+import { attachmentProxyUrl, downloadEvidence, removeEvidence, storeEvidence } from './storage';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -43,6 +44,10 @@ interface AttachmentRow {
   name: string;
   type: Attachment['type'];
   uploaded_at: string;
+  storage_path?: string | null;
+  mime_type?: string | null;
+  size_bytes?: number | null;
+  malware_scan_status?: string | null;
 }
 
 interface GrievanceRow {
@@ -267,7 +272,7 @@ function toGrievance(row: GrievanceRow): Grievance {
   }));
   const attachments: Attachment[] = (row.grievance_attachments ?? []).map((a) => ({
     id: a.attachment_id,
-    url: a.url,
+    url: a.storage_path ? attachmentProxyUrl(row.id, a.attachment_id) : a.url,
     name: a.name,
     type: a.type,
     uploadedAt: toIso(a.uploaded_at),
@@ -630,6 +635,27 @@ export function registerGrievanceRoutes(app: Express, authenticate: RequestHandl
     const db = requireDb();
     const input = parseNewGrievance(req.body, user);
     const id = `GRV-${new Date().getFullYear()}-${randomUUID().slice(0, 8).toUpperCase()}`;
+    const storedAttachments: Array<Record<string, unknown>> = [];
+    const storedPaths: string[] = [];
+    try {
+      for (const attachment of input.attachments) {
+        const stored = await storeEvidence(attachment.url, id, attachment.name, attachment.attachment_id);
+        storedPaths.push(stored.storagePath);
+        storedAttachments.push({
+          attachment_id: attachment.attachment_id,
+          url: attachmentProxyUrl(id, attachment.attachment_id),
+          name: attachment.name,
+          type: attachment.type,
+          storage_path: stored.storagePath,
+          mime_type: stored.mimeType,
+          size_bytes: stored.sizeBytes,
+          malware_scan_status: 'clean',
+        });
+      }
+    } catch (error) {
+      for (const storagePath of storedPaths) await removeEvidence(storagePath);
+      throw new HttpError(400, error instanceof Error ? error.message : 'Evidence upload failed.');
+    }
     const now = new Date();
     const nowIso = now.toISOString();
 
@@ -684,15 +710,38 @@ export function registerGrievanceRoutes(app: Express, authenticate: RequestHandl
 
     if (input.attachments.length > 0) {
       const { error: attachmentError } = await db.from('grievance_attachments').insert(
-        input.attachments.map((a) => ({ ...a, grievance_id: id, uploaded_at: nowIso })),
+        storedAttachments.map((a) => ({ ...a, grievance_id: id, uploaded_at: nowIso })),
       );
       if (attachmentError) {
         await db.from('grievances').delete().eq('id', id);
+        for (const storagePath of storedPaths) await removeEvidence(storagePath);
         fail(attachmentError);
       }
     }
 
     res.status(201).json(await loadGrievance(db, id));
+  }));
+
+  app.get('/api/grievances/:id/attachments/:attachmentId', authenticate, handle(async (req, user, res) => {
+    const db = requireDb();
+    const grievanceId = routeId(req);
+    const attachmentId = req.params.attachmentId;
+    if (typeof attachmentId !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(attachmentId)) throw new HttpError(400, 'Invalid attachment identifier.');
+    const row = await loadAccessibleRow(db, user, grievanceId);
+    const attachment = (row.grievance_attachments ?? []).find((item) => item.attachment_id === attachmentId);
+    if (!attachment) throw new HttpError(404, 'Attachment not found.');
+    if (!attachment.storage_path) {
+      return res.redirect(attachment.url);
+    }
+    try {
+      const blob = await downloadEvidence(attachment.storage_path);
+      res.setHeader('Content-Type', attachment.mime_type || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `inline; filename="${attachment.name.replace(/[^A-Za-z0-9._-]/g, '_')}"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(Buffer.from(await blob.arrayBuffer()));
+    } catch {
+      throw new HttpError(404, 'Attachment could not be retrieved.');
+    }
   }));
 
   app.post('/api/grievances/:id/status', authenticate, handle(async (req, user, res) => {
