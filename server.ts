@@ -92,6 +92,28 @@ function requireAuthenticatedAdmin(req: AuthenticatedRequest, res: express.Respo
   return authenticate(req, res, () => { void requireAdmin(req, res, next); });
 }
 
+async function requireAdminOrOfficer(req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) {
+  return authenticate(req, res, async () => {
+    try {
+      const emails = (process.env.ADMIN_EMAILS || '').split(',').map((email) => email.trim().toLowerCase()).filter(Boolean);
+      const db = getSupabase();
+      const user = req.user;
+      if (!db || !user || user.isAnonymous || user.email_verified !== true) {
+        return res.status(403).json({ error: 'Authorized staff access required.' });
+      }
+      if (user.email && emails.includes(user.email.toLowerCase())) {
+        const { data } = await db.from('admins').select('active').eq('id', user.uid).maybeSingle();
+        if (data?.active === true) return next();
+      }
+      const { data: officer } = await db.from('officers').select('id').eq('auth_uid', user.uid).eq('active', true).maybeSingle();
+      if (officer) return next();
+      return res.status(403).json({ error: 'Authorized staff access required.' });
+    } catch {
+      return res.status(503).json({ error: 'Authorization service is temporarily unavailable.' });
+    }
+  });
+}
+
 // Initialize Gemini SDK lazily
 function getGeminiClient(): GoogleGenAI | null {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -1015,7 +1037,7 @@ Return only IDs from the supplied list for grievances that describe the same civ
 // ==========================================
 // 3. AI Resolution Drafting Helper for Officers
 // ==========================================
-app.post('/api/ai/suggest-resolution', requireAuthenticatedAdmin, async (req, res) => {
+app.post('/api/ai/suggest-resolution', requireAdminOrOfficer, async (req, res) => {
   try {
     const { grievanceId, actionTaken } = req.body;
     if (typeof grievanceId !== 'string' || grievanceId.length > 100 || (actionTaken != null && (typeof actionTaken !== 'string' || actionTaken.length > 5000))) {
@@ -1031,6 +1053,16 @@ app.post('/api/ai/suggest-resolution', requireAuthenticatedAdmin, async (req, re
     if (grievanceError) throw new Error('Grievance lookup failed.');
     if (!grievanceRow) {
       return res.status(404).json({ error: 'Grievance not found' });
+    }
+    const staffReq = req as AuthenticatedRequest;
+    const staffUser = staffReq.user;
+    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map((email) => email.trim().toLowerCase()).filter(Boolean);
+    const staffIsAdmin = Boolean(staffUser?.email && adminEmails.includes(staffUser.email.toLowerCase()));
+    if (!staffIsAdmin) {
+      const officer = await getOfficerForUser(staffUser);
+      if (!officer || String((grievanceRow as any).assigned_officer_id || '') !== officer.id) {
+        return res.status(403).json({ error: 'This grievance is not assigned to your officer account.' });
+      }
     }
     const grievance = {
       id: String(grievanceRow.id),
