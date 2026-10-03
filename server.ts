@@ -371,6 +371,7 @@ app.get('/api/news/tamil-nadu', async (req, res) => {
 
   try {
     const news = await fetchNews(query, limit);
+    const articles = news.articles;
     res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
     return res.json({
       provider: news.provider,
