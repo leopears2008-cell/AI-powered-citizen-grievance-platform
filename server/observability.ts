@@ -9,6 +9,18 @@ type RouteMetric = {
 
 const startedAt = Date.now();
 const routes = new Map<string, RouteMetric>();
+let lastAlertAt = 0;
+
+async function sendAlert(payload: Record<string, unknown>) {
+  const url = process.env.OBSERVABILITY_WEBHOOK_URL;
+  if (!url || Date.now() - lastAlertAt < 60_000) return;
+  lastAlertAt = Date.now();
+  try {
+    await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(5_000) });
+  } catch {
+    // Alerting must never break the request path.
+  }
+}
 
 function routeKey(req: Request) {
   return `${req.method} ${req.route?.path || req.path}`;
@@ -26,7 +38,11 @@ export function observabilityMiddleware(req: Request, res: Response, next: NextF
     current.maxMs = Math.max(current.maxMs, durationMs);
     routes.set(key, current);
 
-    if (process.env.LOG_REQUESTS === 'true') {
+    if (res.statusCode >= 500) {
+      void sendAlert({ event: 'server_error', requestId: res.getHeader('X-Request-Id') || undefined, method: req.method, route: key, status: res.statusCode, durationMs: Math.round(durationMs * 100) / 100, occurredAt: new Date().toISOString() });
+    }
+
+    if (process.env.LOG_REQUESTS === 'true' || res.statusCode >= 500) {
       console.info(JSON.stringify({
         event: 'http_request',
         method: req.method,
