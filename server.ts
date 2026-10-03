@@ -247,7 +247,7 @@ function decodeXmlEntities(value: string): string {
 }
 
 function rssTag(item: string, tag: string): string {
-  const match = item.match(new RegExp(String.raw\`<\${tag}\\b[^>]*>([\\s\\S]*?)<\\/\${tag}>\`, 'i'));
+  const match = item.match(new RegExp('<' + tag + '\\b[^>]*>([\\s\\S]*?)</' + tag + '>', 'i'));
   return match ? decodeXmlEntities(match[1]) : '';
 }
 
