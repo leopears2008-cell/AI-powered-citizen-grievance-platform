@@ -89,7 +89,7 @@ const GOLDEN_GROUPS: Array<{
 
 const GOLDEN_EVAL_CASES: EvalCase[] = GOLDEN_GROUPS.flatMap((group) =>
   group.cases.map((input, index) => ({
-    id: \`\${group.id}-\${String(index + 1).padStart(2, '0')}\`,
+    id: `${group.id}-${String(index + 1).padStart(2, '0')}`,
     input,
     expectedDepartmentId: group.department,
     expectedPriority: group.priority,
