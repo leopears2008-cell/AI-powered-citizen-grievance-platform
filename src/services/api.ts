@@ -238,6 +238,11 @@ export const api = {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       isDuplicateOf: row.is_duplicate_of || undefined,
+      resolutionVerifiedAt: row.resolution_verified_at || undefined,
+      resolutionVerifiedBy: row.resolution_verified_by || undefined,
+      escalationReason: row.escalation_reason || undefined,
+      escalatedAt: row.escalated_at || undefined,
+      escalatedToDepartmentId: row.escalated_to_department_id || undefined,
     })) as Grievance[];
   },
 
