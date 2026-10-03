@@ -29,6 +29,7 @@ import {
   Search,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { ComplaintQualityCard } from './ComplaintQualityCard';
 
 interface GrievanceFormProps {
   initialTranscript?: string;
@@ -573,6 +574,8 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
               </p>
             </div>
           </div>
+
+          <ComplaintQualityCard text={complaintText} district={district} />
 
           {/* Citizen Details Form Section */}
           <div className="pt-2">
