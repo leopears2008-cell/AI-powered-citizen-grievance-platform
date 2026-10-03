@@ -17,6 +17,8 @@ import { observabilityMiddleware, getObservabilitySnapshot } from './server/obse
 import { analyzeGrievance, scoreDuplicate } from './server/grievanceIntelligence';
 import { runAiEvaluation } from './server/aiEvaluation';
 import { officerCanTransition } from './server/workflow';
+import { checkRateLimit } from './server/distributedRateLimit';
+import { fetchNews } from './server/newsProvider';
 
 dotenv.config();
 
@@ -229,29 +231,23 @@ app.use((req, res, next) => {
   next();
 });
 
-const rateBuckets = new Map<string, { count: number; resetAt: number }>();
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   const key = `${req.ip}:${req.path}`;
-  const now = Date.now();
-  if (rateBuckets.size > 5000) {
-    for (const [bucketKey, value] of rateBuckets) {
-      if (value.resetAt <= now) rateBuckets.delete(bucketKey);
-    }
-  }
-  const bucket = rateBuckets.get(key);
-  if (!bucket || bucket.resetAt <= now) {
-    if (rateBuckets.size >= 10000) {
-      return res.status(429).json({ error: 'Too many requests. Please try again later.' });
-    }
-    rateBuckets.set(key, { count: 1, resetAt: now + 60_000 });
-    return next();
-  }
-  bucket.count += 1;
   const limit = req.path.startsWith('/api/ai/') ? 10 : 60;
-  if (bucket.count > limit) {
-    return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+  try {
+    const result = await checkRateLimit(key, limit, 60);
+    res.setHeader('X-RateLimit-Limit', String(limit));
+    res.setHeader('X-RateLimit-Remaining', String(result.remaining));
+    res.setHeader('X-RateLimit-Reset', String(Math.ceil(result.resetAt / 1000)));
+    if (!result.allowed) return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    next();
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'rate_limit_error', message: error instanceof Error ? error.message : 'unknown' }));
+    if (process.env.NODE_ENV === 'production' && process.env.FAIL_CLOSED_RATE_LIMIT === 'true') {
+      return res.status(503).json({ error: 'Rate limiting service is temporarily unavailable.' });
+    }
+    next();
   }
-  next();
 });
 
 app.use(express.json({ limit: '1mb', strict: true }));
@@ -366,10 +362,10 @@ app.get('/api/news/tamil-nadu', async (req, res) => {
   if (query.length > 180) return res.status(400).json({ error: 'News search query is too long.' });
 
   try {
-    const articles = await fetchGoogleNewsRss(query, limit);
+    const news = await fetchNews(query, limit);\n    const articles = news.articles;
     res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
     return res.json({
-      provider: 'Google News RSS',
+      provider: news.provider,
       query,
       fetchedAt: new Date().toISOString(),
       articles,
