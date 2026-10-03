@@ -21,7 +21,7 @@ const DEPARTMENT_RULES: Array<{ id: string; words: string[]; label: string }> = 
   { id: 'dept-electric', words: ['wire','spark','transformer','electric','power','current','shock','min','min kambi','மின்சாரம்','மின்கம்பி','மின்மாற்றி'], label: 'Electrical safety/infrastructure terms detected.' },
   { id: 'dept-water', words: ['water','pipe','leak','burst','sewage','drainage','thanni','kuzhai','kuzhaai','குடிநீர்','தண்ணீர்','குழாய்','கழிவுநீர்'], label: 'Water/drainage infrastructure terms detected.' },
   { id: 'dept-roads', words: ['road','pothole','pothol','tar','footpath','pavement','saalai','சாலை','பள்ளம்'], label: 'Road/public-works terms detected.' },
-  { id: 'dept-streetlight', words: ['streetlight','street','lamp','dark','light','pole','vilakku','விளக்கு','இருட்டு'], label: 'Street-lighting terms detected.' },
+  { id: 'dept-streetlight', words: ['streetlight','lamp','dark','light','pole','vilakku','விளக்கு','இருட்டு'], label: 'Street-lighting terms detected.' },
   { id: 'dept-health', words: ['mosquito','dengue','malaria','fogging','stagnant','fever','kosu','கொசு','டெங்கு'], label: 'Public-health/vector-control terms detected.' },
   { id: 'dept-sanitation', words: ['garbage','waste','bin','toilet','smell','kuppai','குப்பை','நாற்றம்'], label: 'Sanitation/waste terms detected.' },
   { id: 'dept-transport', words: ['bus','traffic','signal','parking','transport','pokkuvarathu','பேருந்து','போக்குவரத்து'], label: 'Transport/traffic terms detected.' },
@@ -56,8 +56,8 @@ export function routeDepartment(text: string, category?: string) {
 
 export function severityAndSla(text: string, suppliedPriority?: IntelligenceInput['priority']) {
   const haystack = normalize(text);
-  const critical = ['live wire','exposed wire','electric shock','transformer spark','electric wire','sparking electric','major burst','life hazard','உயிர் ஆபத்து','மின்கம்பி','மின்மாற்றி'].some((x) => haystack.includes(normalize(x)));
-  const high = ['sewage overflow','dengue','blocked road','mosquito breeding','flooding','கழிவுநீர்','டெங்கு','கொசு'].some((x) => haystack.includes(normalize(x)));
+  const critical = ['live wire','exposed wire','electric shock','transformer spark','electric wire','power wire','sparking electric','major burst','life hazard','உயிர் ஆபத்து','மின்கம்பி','மின்மாற்றி'].some((x) => haystack.includes(normalize(x)));
+  const high = ['sewage overflow','dengue','blocked road','mosquito','mosquito breeding','flooding','கழிவுநீர்','டெங்கு','கொசு'].some((x) => haystack.includes(normalize(x)));
   let severity: IntelligenceResult['severity'] = suppliedPriority || 'Medium';
   let reason = 'Routine operational impact; staff verification is required.';
   if (critical) { severity = 'Critical'; reason = 'Potential immediate safety hazard detected.'; }
