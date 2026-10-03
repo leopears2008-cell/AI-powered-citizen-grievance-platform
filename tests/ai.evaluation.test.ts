@@ -4,9 +4,9 @@ import { containsPromptInjection, evaluateClassification, evaluateHallucination,
 
 test('golden classification suite has useful baseline accuracy', () => {
   const result = evaluateClassification();
-  assert.equal(result.total, 5);
-  assert.ok(result.departmentAccuracy >= 0.8);
-  assert.ok(result.priorityAccuracy >= 0.6);
+  assert.ok(result.total >= 100);
+  assert.ok(result.departmentAccuracy >= 0.95);
+  assert.ok(result.priorityAccuracy >= 0.95);
 });
 
 test('prompt injection patterns are detected', () => {
