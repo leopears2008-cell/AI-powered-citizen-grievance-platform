@@ -217,6 +217,22 @@ function optNumberIn(value: unknown, field: string, min: number, max: number): n
 const toIso = (value: string): string => new Date(value).toISOString();
 const toOptIso = (value: string | null): string | undefined => (value ? toIso(value) : undefined);
 
+function validateImageDataUrl(value: string): boolean {
+  if (!DATA_URL_PATTERN.test(value) || value.length > 550000) return false;
+  const comma = value.indexOf(',');
+  if (comma < 0) return false;
+  try {
+    const bytes = Buffer.from(value.slice(comma + 1), 'base64');
+    if (bytes.length === 0 || bytes.length > 400000) return false;
+    const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+    const isPng = bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+    const isWebp = bytes.length >= 12 && bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP';
+    return isJpeg || isPng || isWebp;
+  } catch {
+    return false;
+  }
+}
+
 function routeId(req: Request): string {
   const id = req.params.id;
   if (typeof id !== 'string' || !ID_PATTERN.test(id)) throw new HttpError(400, 'Invalid identifier.');
@@ -442,7 +458,7 @@ function parseNewGrievance(body: unknown, user: AuthenticatedUser) {
   const attachments = (rawAttachments as unknown[]).map((item) => {
     const a = asRecord(item);
     const url = reqString(a.url, 'attachment url', 550000);
-    if (!DATA_URL_PATTERN.test(url) || a.type !== 'image') bad('attachment');
+    if (a.type !== 'image' || !validateImageDataUrl(url)) bad('attachment');
     return {
       attachment_id: reqString(a.id, 'attachment id', 80),
       url,
