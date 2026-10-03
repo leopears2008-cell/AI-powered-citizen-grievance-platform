@@ -36,5 +36,11 @@ jobs:
       - name: Run tests
         run: bun run test
 
+      - name: Run production hardening tests
+        run: bunx tsx --test tests/production.hardening.test.ts
+
+      - name: Validate production configuration contract
+        run: node scripts/validate-production.mjs
+
       - name: Build production assets and server
         run: bun run build
