@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { containsPromptInjection, evaluateClassification, evaluateRetrieval } from '../server/aiEvaluation';
 import { routeDepartment, severityAndSla } from '../server/grievanceIntelligence';
+import { storeEvidence, safeAttachmentName } from '../server/storage';
 
 test('production AI golden set remains above baseline', () => {
   const result = evaluateClassification();
@@ -25,4 +26,14 @@ test('routing and SLA intelligence remain deterministic', () => {
   assert.equal(routeDepartment('Exposed live wire near school').departmentId, 'dept-electric');
   assert.equal(severityAndSla('Exposed live wire sparking').severity, 'Critical');
   assert.equal(severityAndSla('Routine pothole').slaDays, 7);
+});
+
+
+test('evidence validation rejects mismatched signatures before storage', async () => {
+  const fakePng = 'data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/';
+  await assert.rejects(() => storeEvidence(fakePng, 'GRV-2026-ABCDEF12', 'evidence.png'), /content does not match|Only JPEG/);
+});
+
+test('attachment filenames are sanitized', () => {
+  assert.equal(safeAttachmentName('../../private\\\\secret?.png'), '.._.._private_secret_.png');
 });
