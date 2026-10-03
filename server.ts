@@ -172,6 +172,7 @@ interface DuplicateCandidate {
 }
 
 const app = express();
+app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? 1 : false);
 
 app.use((req, res, next) => {
   const requestId = randomUUID();
@@ -253,7 +254,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '1mb', strict: true }));
 
 
 interface LiveNewsArticle {
@@ -484,6 +485,41 @@ async function getOfficerForUser(user: AuthenticatedRequest['user']) {
   }
   return data as OfficerRecord | null;
 }
+
+app.post('/api/admin/officers/:id/link-account', requireAuthenticatedAdmin, async (req, res) => {
+  const officerId = String(req.params.id || '').slice(0, 100);
+  const uid = typeof req.body?.uid === 'string' ? req.body.uid.trim().slice(0, 200) : '';
+  if (!officerId || !uid) return res.status(400).json({ error: 'Officer ID and Firebase UID are required.' });
+  if (!firebaseAdminAuth) return res.status(503).json({ error: 'Authentication service is not configured.' });
+  const db = getSupabase();
+  if (!db) return res.status(503).json({ error: 'Grievance data service is not configured.' });
+  try {
+    const firebaseUser = await firebaseAdminAuth.getUser(uid);
+    if (!firebaseUser.emailVerified) return res.status(400).json({ error: 'The officer Firebase account must have a verified email.' });
+    const { data: officer } = await db.from('officers').select('id,name').eq('id', officerId).maybeSingle();
+    if (!officer) return res.status(404).json({ error: 'Officer record not found.' });
+    const { error } = await db.from('officers').update({
+      auth_uid: firebaseUser.uid,
+      email: firebaseUser.email || '',
+      updated_at: new Date().toISOString(),
+    }).eq('id', officerId);
+    if (error) return res.status(500).json({ error: 'Unable to link officer account.' });
+    const adminUser = (req as AuthenticatedRequest).user;
+    await db.from('audit_logs').insert({
+      id: `audit-${Date.now()}-${randomUUID().slice(0, 8)}`,
+      occurred_at: new Date().toISOString(),
+      user_id: adminUser?.uid || 'unknown',
+      user_name: adminUser?.email || 'Administrator',
+      user_role: 'ADMIN',
+      action: 'OFFICER_ACCOUNT_LINKED',
+      details: `Linked verified Firebase account to officer ${officerId}.`,
+      grievance_id: null,
+    });
+    return res.json({ ok: true, officerId, linkedUid: firebaseUser.uid, email: firebaseUser.email || '' });
+  } catch {
+    return res.status(400).json({ error: 'The supplied Firebase account could not be verified.' });
+  }
+});
 
 app.get('/api/officer/me', authenticate, async (req, res) => {
   const officer = await getOfficerForUser((req as AuthenticatedRequest).user);
