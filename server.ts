@@ -235,27 +235,27 @@ const LIVE_NEWS_TTL_MS = 60 * 1000;
 
 function decodeXmlEntities(value: string): string {
   return value
-    .replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, '$1')
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;|&apos;/g, "'")
-    .replace(/&#(\\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
     .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
     .trim();
 }
 
 function rssTag(item: string, tag: string): string {
-  const escaped = tag.replace(/[.*+?^$\\{\\}()|[\\]\\]/g, '\\\\app.use(express.json({ limit: '1mb' }));
+  const escaped = tag.replace(/[.*+?^$\\{\\}()|[\]\]/g, '\\\\app.use(express.json({ limit: '1mb' }));
 
 ');
-  const match = item.match(new RegExp(`<${escaped}\\\\b[^>]*>([\\\\s\\\\S]*?)<\\\\/${escaped}>`, 'i'));
+  const match = item.match(new RegExp(`<${escaped}\\b[^>]*>([\\\\s\\\\S]*?)<\\\\/${escaped}>`, 'i'));
   return match ? decodeXmlEntities(match[1]) : '';
 }
 
 function parseGoogleNewsRss(xml: string, limit: number): LiveNewsArticle[] {
-  const items = xml.match(/<item\\b[^>]*>[\\s\\S]*?<\\/item>/gi) ?? [];
+  const items = xml.match(/<item\b[^>]*>[\s\S]*?<\/item>/gi) ?? [];
   const seen = new Set<string>();
   const articles: LiveNewsArticle[] = [];
 
@@ -267,10 +267,10 @@ function parseGoogleNewsRss(xml: string, limit: number): LiveNewsArticle[] {
     const source = rssTag(item, 'source') || 'Google News';
     const publishedAt = rssTag(item, 'pubDate');
 
-    if (!title || !/^https?:\\/\\//i.test(url) || seen.has(url)) continue;
+    if (!title || !/^https?:\/\//i.test(url) || seen.has(url)) continue;
     seen.add(url);
 
-    const extract = description.replace(/<[^>]*>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 600);
+    const extract = description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 600);
     articles.push({
       title: title.slice(0, 300),
       url: url.slice(0, 2000),
