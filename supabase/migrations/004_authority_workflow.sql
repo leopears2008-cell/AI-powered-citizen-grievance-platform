@@ -102,3 +102,26 @@ begin
   return new;
 end;
 $$;
+
+
+-- Enforce the authority workflow column guard for authenticated/anon Supabase sessions.
+drop trigger if exists trg_grievances_guard_update on public.grievances;
+create trigger trg_grievances_guard_update
+before update on public.grievances
+for each row execute function public.grievances_guard_update();
+
+-- Audit records are append-only. Application code never updates or deletes them.
+create or replace function public.prevent_audit_log_mutation()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  raise exception 'Audit logs are immutable.' using errcode = '42501';
+end;
+$$;
+
+drop trigger if exists trg_audit_logs_immutable on public.audit_logs;
+create trigger trg_audit_logs_immutable
+before update or delete on public.audit_logs
+for each row execute function public.prevent_audit_log_mutation();
