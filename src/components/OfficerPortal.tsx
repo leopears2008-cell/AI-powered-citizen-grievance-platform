@@ -34,6 +34,7 @@ export const OfficerPortal: React.FC = () => {
   const [proofPhotoUrl, setProofPhotoUrl] = useState('');
   const [isGeneratingAiDraft, setIsGeneratingAiDraft] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [officerProfile, setOfficerProfile] = useState<{ name: string; designation: string; zone: string } | null>(null);
 
   const officerName = 'Er. K. Vasanthakumar';
   const officerDesignation = 'Assistant Executive Engineer (TANGEDCO / GCC)';
@@ -121,7 +122,7 @@ export const OfficerPortal: React.FC = () => {
         <div className="flex items-center space-x-4 bg-white/10 px-4 py-2 rounded-2xl backdrop-blur-md border border-white/10 text-xs">
           <div>
             <span className="text-slate-400 block text-[10px]">Zone / Ward</span>
-            <span className="font-bold text-white">Chennai Central - Zone 5</span>
+            <span className="font-bold text-white">{officerProfile?.zone || 'Assigned zone'}</span>
           </div>
           <div className="h-6 w-px bg-white/20" />
           <div>
