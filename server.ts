@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import { randomUUID } from 'node:crypto';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
 import { createServer as createViteServer } from 'vite';
@@ -12,6 +13,10 @@ import {
 } from './src/types';
 import { getSupabase } from './server/supabase';
 import { registerGrievanceRoutes, type AuthenticatedRequest } from './server/grievanceRoutes';
+import { observabilityMiddleware, getObservabilitySnapshot } from './server/observability';
+import { analyzeGrievance, scoreDuplicate } from './server/grievanceIntelligence';
+import { runAiEvaluation } from './server/aiEvaluation';
+import { officerCanTransition } from './server/workflow';
 
 dotenv.config();
 
@@ -145,6 +150,13 @@ interface DuplicateCandidate {
 }
 
 const app = express();
+
+app.use((req, res, next) => {
+  const requestId = randomUUID();
+  res.setHeader('X-Request-Id', requestId);
+  next();
+});
+app.use(observabilityMiddleware);
 const PORT = Number(process.env.PORT || 3000);
 const configuredCorsOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
@@ -416,6 +428,214 @@ app.post('/api/ai/grievance-chat', async (req, res) => {
 // 0. Grievance data API (Supabase): /api/grievances, /api/admin/*, /api/me/admin
 // ==========================================================
 registerGrievanceRoutes(app, authenticate as express.RequestHandler);
+
+
+// ==========================================================
+// Authority workflow + intelligence + operational controls
+// ==========================================================
+type OfficerRecord = {
+  id: string;
+  name: string;
+  name_tamil: string | null;
+  department_id: string;
+  department_name: string;
+  designation: string;
+  phone: string;
+  email: string;
+  zone: string;
+  active: boolean;
+  auth_uid: string | null;
+};
+
+async function getOfficerForUser(user: AuthenticatedRequest['user']) {
+  if (!user || user.isAnonymous || user.email_verified !== true) return null;
+  const db = getSupabase();
+  if (!db) return null;
+  const { data, error } = await db.from('officers')
+    .select('id,name,name_tamil,department_id,department_name,designation,phone,email,zone,active,auth_uid')
+    .eq('auth_uid', user.uid)
+    .eq('active', true)
+    .maybeSingle();
+  if (error) {
+    console.error('Officer lookup failed:', error.code ?? 'unknown');
+    return null;
+  }
+  return data as OfficerRecord | null;
+}
+
+app.get('/api/officer/me', authenticate, async (req, res) => {
+  const officer = await getOfficerForUser((req as AuthenticatedRequest).user);
+  if (!officer) return res.status(403).json({ error: 'Active officer access is not configured for this account.' });
+  return res.json({
+    id: officer.id,
+    name: officer.name,
+    nameTamil: officer.name_tamil,
+    departmentId: officer.department_id,
+    departmentName: officer.department_name,
+    designation: officer.designation,
+    phone: officer.phone,
+    email: officer.email,
+    zone: officer.zone,
+  });
+});
+
+app.get('/api/officer/grievances', authenticate, async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const officer = await getOfficerForUser(authReq.user);
+  if (!officer) return res.status(403).json({ error: 'Active officer access is not configured for this account.' });
+  const db = getSupabase();
+  if (!db) return res.status(503).json({ error: 'Grievance data service is not configured.' });
+  const { data, error } = await db.from('grievances')
+    .select('*, grievance_status_history(*), grievance_attachments(*)')
+    .eq('assigned_officer_id', officer.id)
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: 'Unable to load assigned grievances.' });
+  // Reuse the public mapping route through a minimal local import-free shape.
+  return res.json(data ?? []);
+});
+
+app.post('/api/officer/grievances/:id/status', authenticate, async (req, res) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const officer = await getOfficerForUser(authReq.user);
+    if (!officer) return res.status(403).json({ error: 'Active officer access is not configured for this account.' });
+    const db = getSupabase();
+    if (!db) return res.status(503).json({ error: 'Grievance data service is not configured.' });
+    const id = String(req.params.id || '');
+    const body = req.body ?? {};
+    const status = body.status;
+    const remarks = typeof body.remarks === 'string' ? body.remarks.trim().slice(0, 1500) : '';
+    const evidenceUrl = typeof body.evidenceUrl === 'string' ? body.evidenceUrl.trim().slice(0, 2000) : '';
+    if (!id || !['Under Review','In Progress','Resolved'].includes(status) || !remarks) {
+      return res.status(400).json({ error: 'A valid status and verified field remarks are required.' });
+    }
+    const { data: grievance, error: lookupError } = await db.from('grievances')
+      .select('id,status,assigned_officer_id')
+      .eq('id', id).maybeSingle();
+    if (lookupError || !grievance) return res.status(404).json({ error: 'Grievance not found.' });
+    if (grievance.assigned_officer_id !== officer.id) return res.status(403).json({ error: 'This grievance is not assigned to your officer account.' });
+    if (!officerCanTransition(grievance.status as GrievanceStatus, status as GrievanceStatus)) {
+      return res.status(409).json({ error: 'That workflow transition is not allowed.' });
+    }
+    const now = new Date().toISOString();
+    const patch: Record<string, unknown> = { status, updated_at: now };
+    if (status === 'Resolved') {
+      if (evidenceUrl && !/^https:\/\//i.test(evidenceUrl)) return res.status(400).json({ error: 'Resolution evidence must use an HTTPS URL.' });
+      if (!evidenceUrl) return res.status(400).json({ error: 'Resolution evidence is required before resolution.' });
+      patch.resolved_at = now;
+      patch.resolution_remarks = remarks;
+      patch.resolution_evidence_url = evidenceUrl;
+    }
+    const { error: updateError } = await db.from('grievances').update(patch).eq('id', id).eq('assigned_officer_id', officer.id);
+    if (updateError) return res.status(500).json({ error: 'Unable to update grievance.' });
+    const { error: historyError } = await db.from('grievance_status_history').insert({
+      grievance_id: id, status, occurred_at: now, updated_by: officer.name, role: 'OFFICER', remarks,
+      evidence_url: evidenceUrl || null,
+    });
+    if (historyError) return res.status(500).json({ error: 'Unable to record workflow history.' });
+    await db.from('audit_logs').insert({
+      id: `audit-${Date.now()}-${randomUUID().slice(0, 8)}`,
+      occurred_at: now, user_id: officer.auth_uid, user_name: officer.name, user_role: 'OFFICER',
+      action: `OFFICER_STATUS_${String(status).toUpperCase().replace(/ /g, '_')}`,
+      details: `Officer updated ${id} to ${status}.`, grievance_id: id,
+    });
+    return res.json({ ok: true, grievanceId: id, status, updatedBy: officer.name, updatedAt: now });
+  } catch (error) {
+    console.error('Officer workflow error:', error instanceof Error ? error.name : 'unknown');
+    return res.status(500).json({ error: 'Officer workflow request failed.' });
+  }
+});
+
+app.post('/api/officer/grievances/:id/escalate', authenticate, async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const officer = await getOfficerForUser(authReq.user);
+  if (!officer) return res.status(403).json({ error: 'Active officer access is not configured for this account.' });
+  const db = getSupabase();
+  if (!db) return res.status(503).json({ error: 'Grievance data service is not configured.' });
+  const id = String(req.params.id || '');
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 1000) : '';
+  const toDepartmentId = typeof req.body?.toDepartmentId === 'string' ? req.body.toDepartmentId.trim().slice(0, 120) : '';
+  if (!reason || !toDepartmentId || toDepartmentId === officer.department_id) return res.status(400).json({ error: 'A different target department and escalation reason are required.' });
+  const { data: grievance } = await db.from('grievances').select('id,status,assigned_officer_id,department_id').eq('id', id).maybeSingle();
+  if (!grievance) return res.status(404).json({ error: 'Grievance not found.' });
+  if (grievance.assigned_officer_id !== officer.id) return res.status(403).json({ error: 'This grievance is not assigned to your officer account.' });
+  const { data: target } = await db.from('departments').select('id').eq('id', toDepartmentId).maybeSingle();
+  if (!target) return res.status(404).json({ error: 'Target department not found.' });
+  const now = new Date().toISOString();
+  const { error: escalationError } = await db.from('grievance_escalations').insert({
+    grievance_id: id, from_department_id: officer.department_id, to_department_id: toDepartmentId,
+    reason, created_by: officer.auth_uid, created_at: now,
+  });
+  if (escalationError) return res.status(500).json({ error: 'Unable to record escalation.' });
+  const { error } = await db.from('grievances').update({
+    department_id: toDepartmentId, status: 'Under Review', escalation_reason: reason,
+    escalated_at: now, escalated_to_department_id: toDepartmentId, updated_at: now,
+  }).eq('id', id);
+  if (error) return res.status(500).json({ error: 'Unable to escalate grievance.' });
+  return res.json({ ok: true, grievanceId: id, status: 'Under Review', escalatedToDepartmentId: toDepartmentId, escalatedAt: now });
+});
+
+app.post('/api/grievances/:id/verify-resolution', authenticate, async (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const user = authReq.user;
+  if (!user || user.isAnonymous) return res.status(401).json({ error: 'Authentication required.' });
+  const db = getSupabase();
+  if (!db) return res.status(503).json({ error: 'Grievance data service is not configured.' });
+  const id = String(req.params.id || '');
+  const confirmed = req.body?.confirmed === true;
+  const { data: grievance } = await db.from('grievances').select('id,citizen_id,status,resolved_at').eq('id', id).maybeSingle();
+  if (!grievance || grievance.citizen_id !== user.uid) return res.status(404).json({ error: 'Grievance not found.' });
+  if (grievance.status !== 'Resolved') return res.status(409).json({ error: 'Only a resolved grievance can be verified.' });
+  const now = new Date().toISOString();
+  const patch = confirmed
+    ? { resolution_verified_at: now, resolution_verified_by: user.uid, updated_at: now }
+    : { status: 'Reopened', resolution_verified_at: null, resolution_verified_by: null, updated_at: now };
+  const { error } = await db.from('grievances').update(patch).eq('id', id).eq('citizen_id', user.uid);
+  if (error) return res.status(500).json({ error: 'Unable to record resolution verification.' });
+  const { error: historyError } = await db.from('grievance_status_history').insert({
+    grievance_id: id, status: confirmed ? 'Resolved' : 'Reopened', occurred_at: now,
+    updated_by: user.email || 'Citizen', role: 'CITIZEN',
+    remarks: confirmed ? 'Citizen verified the reported resolution.' : 'Citizen reported that the issue remains unresolved.',
+  });
+  if (historyError) return res.status(500).json({ error: 'Unable to record verification history.' });
+  return res.json({ ok: true, verified: confirmed, status: confirmed ? 'Resolved' : 'Reopened', updatedAt: now });
+});
+
+app.post('/api/ai/intelligence', authenticate, async (req, res) => {
+  const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
+  const category = typeof req.body?.category === 'string' ? req.body.category : undefined;
+  const district = typeof req.body?.district === 'string' ? req.body.district : undefined;
+  const priority = ['Critical','High','Medium','Low'].includes(req.body?.priority) ? req.body.priority : undefined;
+  if (!text || text.length > 10000) return res.status(400).json({ error: 'Complaint text is required and must be <= 10000 characters.' });
+  const base = analyzeGrievance({ text, category, district, priority });
+  const db = getSupabase();
+  if (db) {
+    const { data } = await db.from('grievances')
+      .select('id,summary_en,category,location_district,status,created_at')
+      .in('status', ['Submitted','AI Classified','Assigned','Under Review','In Progress','Reopened'])
+      .limit(250);
+    const candidates = (data ?? [])
+      .filter((row) => (!category || row.category === category) && (!district || String(row.location_district).toLowerCase() === district.toLowerCase()))
+      .map((row) => ({
+        id: String(row.id), score: scoreDuplicate(text, String(row.summary_en || '')),
+        category: String(row.category), district: String(row.location_district || ''),
+        status: String(row.status), createdAt: String(row.created_at),
+      }))
+      .filter((row) => row.score >= 0.35)
+      .sort((a,b) => b.score-a.score)
+      .slice(0, 5);
+    return res.json({ ...base, duplicates: candidates });
+  }
+  return res.json({ ...base, duplicates: [] });
+});
+
+app.get('/api/admin/ai-evaluation', requireAuthenticatedAdmin, async (_req, res) => {
+  return res.json(runAiEvaluation());
+});
+
+app.get('/api/admin/observability', requireAuthenticatedAdmin, async (_req, res) => {
+  return res.json(getObservabilitySnapshot());
+});
 
 // ==========================================
 // 1. AI Analysis API (/api/ai/analyze-complaint)
