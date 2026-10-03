@@ -247,10 +247,7 @@ function decodeXmlEntities(value: string): string {
 }
 
 function rssTag(item: string, tag: string): string {
-  const escaped = tag.replace(/[.*+?^$\\{\\}()|[\]\]/g, '\\\\app.use(express.json({ limit: '1mb' }));
-
-');
-  const match = item.match(new RegExp(`<${escaped}\\b[^>]*>([\\\\s\\\\S]*?)<\\\\/${escaped}>`, 'i'));
+  const match = item.match(new RegExp(`<${tag}\\\\b[^>]*>([\\\\s\\\\S]*?)<\\\\/${tag}>`, 'i'));
   return match ? decodeXmlEntities(match[1]) : '';
 }
 
