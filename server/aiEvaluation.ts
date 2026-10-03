@@ -1,4 +1,4 @@
-import { analyzeGrievance, jaccardSimilarity } from './grievanceIntelligence';
+import { analyzeGrievance } from './grievanceIntelligence';
 
 export type EvalCase = {
   id: string;
