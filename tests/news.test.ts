@@ -27,7 +27,7 @@ test('live news maps backend JSON into article cards', async () => {
       source: 'Example News',
       publishedAt: '2026-10-03T12:00:00Z',
     }],
-  }), { status: 200, headers: { 'Content-Type': 'application/json' } })) as typeof fetch;
+  }), { status: 200, headers: { 'Content-Type': 'application/json' } })) as unknown as typeof fetch;
 
   try {
     const articles = await fetchLiveNews(`test-news-${Date.now()}`, 5);
