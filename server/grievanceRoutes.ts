@@ -11,6 +11,7 @@ import type {
   UserRole,
 } from '../src/types';
 import { getSupabase } from './supabase';
+import { canTransition } from './workflow';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -674,18 +675,25 @@ export function registerGrievanceRoutes(app: Express, authenticate: RequestHandl
     const b = asRecord(req.body);
     const status = oneOf(b.status, ADMIN_STATUSES, 'status');
     const remarks = reqString(b.remarks, 'remarks', 1000, 0);
-    const updatedBy = reqString(b.updatedBy, 'updatedBy', 254, 0);
-    const role = oneOf(b.role ?? 'ADMIN', ROLES, 'role');
-    const evidenceUrl = optString(b.evidenceUrl, 'evidenceUrl', 600000);
+    const evidenceUrl = optString(b.evidenceUrl, 'evidenceUrl', 2000);
 
-    if (!(await fetchGrievanceRow(db, id))) throw new HttpError(404, 'Grievance not found');
+    const current = await fetchGrievanceRow(db, id);
+    if (!current) throw new HttpError(404, 'Grievance not found');
+    if (!canTransition(current.status, status)) throw new HttpError(409, 'That grievance status transition is not allowed.');
+
+    if (evidenceUrl && !/^https:\/\//i.test(evidenceUrl)) {
+      throw new HttpError(400, 'Resolution evidence must use an HTTPS URL.');
+    }
+    if (status === 'Resolved' && !evidenceUrl) {
+      throw new HttpError(400, 'Resolution evidence is required before marking a grievance resolved.');
+    }
 
     const nowIso = new Date().toISOString();
     const patch: Record<string, unknown> = { status, updated_at: nowIso };
     if (status === 'Resolved') {
       patch.resolved_at = nowIso;
       patch.resolution_remarks = remarks;
-      if (evidenceUrl) patch.resolution_evidence_url = evidenceUrl;
+      patch.resolution_evidence_url = evidenceUrl;
     }
     const { error: updateError } = await db.from('grievances').update(patch).eq('id', id);
     if (updateError) fail(updateError);
@@ -694,8 +702,8 @@ export function registerGrievanceRoutes(app: Express, authenticate: RequestHandl
       grievance_id: id,
       status,
       occurred_at: nowIso,
-      updated_by: updatedBy,
-      role,
+      updated_by: (user.email || 'Administrator').slice(0, 254),
+      role: 'ADMIN',
       remarks,
       evidence_url: evidenceUrl ?? null,
     });
