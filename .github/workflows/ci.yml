@@ -34,8 +34,10 @@ jobs:
         shell: bash
         run: |
           set +e
-          bun run lint 2>&1 | tee typecheck.log
-          status=${PIPESTATUS[0]}
+          bun run lint > typecheck.log 2>&1
+          status=$?
+          echo "TYPECHECK_EXIT=$status" >> typecheck.log
+          cat typecheck.log
           exit $status
 
       - name: Upload type-check diagnostics
