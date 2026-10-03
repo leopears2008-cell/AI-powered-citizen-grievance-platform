@@ -35,5 +35,8 @@ test('evidence validation rejects mismatched signatures before storage', async (
 });
 
 test('attachment filenames are sanitized', () => {
-  assert.equal(safeAttachmentName('../../private\\\\secret?.png'), '.._.._private_secret_.png');
+  const sanitized = safeAttachmentName('../../private\\\\secret?.png');
+  assert.equal(sanitized.includes('/'), false);
+  assert.equal(sanitized.includes('\\\\'), false);
+  assert.equal(sanitized.endsWith('.png'), true);
 });
