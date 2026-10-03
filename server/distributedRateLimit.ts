@@ -15,7 +15,7 @@ function localLimit(key: string, limit: number, windowMs: number) {
 }
 
 function encodePart(value: string) {
-  return encodeURIComponent(value).replace(/%/g, '');
+  return encodeURIComponent(value);
 }
 
 export async function checkRateLimit(key: string, limit: number, windowSeconds = 60) {
