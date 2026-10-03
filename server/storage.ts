@@ -36,7 +36,7 @@ async function malwareScan(bytes: Buffer): Promise<void> {
     if (/infected|malware|virus|found/i.test(result)) throw new Error('Uploaded evidence failed malware scanning.');
     return;
   }
-  if (process.env.NODE_ENV === 'production' && process.env.REQUIRE_MALWARE_SCAN === 'true') {
+  if (process.env.NODE_ENV === 'production') {
     throw new Error('Malware scanning is required but CLAMAV_SCAN_URL is not configured.');
   }
 }
