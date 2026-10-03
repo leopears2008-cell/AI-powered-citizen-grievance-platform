@@ -232,8 +232,16 @@ app.use((req, res, next) => {
 });
 
 app.use(async (req, res, next) => {
-  const key = `${req.ip}:${req.path}`;
-  const limit = req.path.startsWith('/api/ai/') ? 10 : 60;
+  const pathName = req.path;
+  const key = `${req.ip}:${req.method}:${pathName}`;
+  const limit =
+    pathName.startsWith('/api/ai/') ? 10 :
+    pathName.startsWith('/api/news/') ? 30 :
+    pathName.includes('/attachments') ? 5 :
+    pathName === '/api/grievances' && req.method === 'POST' ? 5 :
+    pathName.startsWith('/api/admin/') ? 120 :
+    pathName.startsWith('/api/officer/') ? 60 :
+    pathName.startsWith('/api/grievances/') ? 30 : 60;
   try {
     const result = await checkRateLimit(key, limit, 60);
     res.setHeader('X-RateLimit-Limit', String(limit));
@@ -1191,10 +1199,18 @@ app.get('/readyz', async (_req, res) => {
   }
   checks.authentication = firebaseAdminAuth ? 'ok' : 'not_configured';
   checks.ai = process.env.GEMINI_API_KEY ? 'ok' : 'not_configured';
-  checks.distributedRateLimit = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN ? 'ok' : 'fallback';
+  checks.distributedRateLimit = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN ? 'ok' : 'not_configured';
   checks.malwareScanning = process.env.CLAMAV_SCAN_URL ? 'ok' : 'not_configured';
-  checks.newsProvider = process.env.NEWS_PROVIDER || 'google-rss';
-  const ready = checks.database === 'ok' && checks.authentication === 'ok' && (!process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT || checks.distributedRateLimit === 'ok') && (!process.env.REQUIRE_MALWARE_SCAN || checks.malwareScanning === 'ok');
+  checks.storage = getSupabase() && process.env.GRIEVANCE_STORAGE_BUCKET ? 'ok' : 'not_configured';
+  checks.newsProvider = process.env.NEWS_PROVIDER === 'newsapi' && process.env.NEWS_API_KEY ? 'ok' : (process.env.NODE_ENV === 'production' ? 'not_configured' : 'transition');
+  const production = process.env.NODE_ENV === 'production';
+  const ready = checks.database === 'ok' &&
+    checks.authentication === 'ok' &&
+    (!production || checks.ai === 'ok') &&
+    (!production || checks.distributedRateLimit === 'ok') &&
+    (!production || checks.malwareScanning === 'ok') &&
+    (!production || checks.storage === 'ok') &&
+    (!production || checks.newsProvider === 'ok');
   return res.status(ready ? 200 : 503).json({ status: ready ? 'ready' : 'not_ready', checks, timestamp: new Date().toISOString() });
 });
 
