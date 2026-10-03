@@ -221,6 +221,133 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '1mb' }));
 
+
+interface LiveNewsArticle {
+  title: string;
+  url: string;
+  extract: string;
+  source: string;
+  publishedAt?: string;
+}
+
+const liveNewsCache = new Map<string, { expiresAt: number; value: LiveNewsArticle[] }>();
+const LIVE_NEWS_TTL_MS = 60 * 1000;
+
+function decodeXmlEntities(value: string): string {
+  return value
+    .replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, '$1')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&#(\\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
+    .trim();
+}
+
+function rssTag(item: string, tag: string): string {
+  const escaped = tag.replace(/[.*+?^$\\{\\}()|[\\]\\]/g, '\\\\app.use(express.json({ limit: '1mb' }));
+
+');
+  const match = item.match(new RegExp(`<${escaped}\\\\b[^>]*>([\\\\s\\\\S]*?)<\\\\/${escaped}>`, 'i'));
+  return match ? decodeXmlEntities(match[1]) : '';
+}
+
+function parseGoogleNewsRss(xml: string, limit: number): LiveNewsArticle[] {
+  const items = xml.match(/<item\\b[^>]*>[\\s\\S]*?<\\/item>/gi) ?? [];
+  const seen = new Set<string>();
+  const articles: LiveNewsArticle[] = [];
+
+  for (const item of items) {
+    if (articles.length >= limit) break;
+    const title = rssTag(item, 'title');
+    const url = rssTag(item, 'link');
+    const description = rssTag(item, 'description');
+    const source = rssTag(item, 'source') || 'Google News';
+    const publishedAt = rssTag(item, 'pubDate');
+
+    if (!title || !/^https?:\\/\\//i.test(url) || seen.has(url)) continue;
+    seen.add(url);
+
+    const extract = description.replace(/<[^>]*>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 600);
+    articles.push({
+      title: title.slice(0, 300),
+      url: url.slice(0, 2000),
+      extract,
+      source: source.slice(0, 200),
+      publishedAt: publishedAt ? publishedAt.slice(0, 100) : undefined,
+    });
+  }
+
+  return articles;
+}
+
+async function fetchGoogleNewsRss(query: string, limit: number): Promise<LiveNewsArticle[]> {
+  const safeQuery = query.trim().slice(0, 180);
+  const safeLimit = Math.min(Math.max(limit, 1), 20);
+  if (!safeQuery) return [];
+
+  const cacheKey = `${safeQuery.toLowerCase()}::${safeLimit}`;
+  const cached = liveNewsCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+
+  const params = new URLSearchParams({
+    q: safeQuery,
+    hl: 'en-IN',
+    gl: 'IN',
+    ceid: 'IN:en',
+  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8_000);
+
+  try {
+    const response = await fetch(`https://news.google.com/rss/search?${params.toString()}`, {
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8',
+        'User-Agent': 'NivaranAI/1.0 civic-news-service',
+      },
+    });
+    if (!response.ok) throw new Error(`Google News RSS returned HTTP ${response.status}`);
+
+    const xml = await response.text();
+    const articles = parseGoogleNewsRss(xml, safeLimit);
+    liveNewsCache.set(cacheKey, { expiresAt: Date.now() + LIVE_NEWS_TTL_MS, value: articles });
+
+    if (liveNewsCache.size > 100) {
+      const oldestKey = liveNewsCache.keys().next().value;
+      if (oldestKey) liveNewsCache.delete(oldestKey);
+    }
+
+    return articles;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+app.get('/api/news/tamil-nadu', async (req, res) => {
+  const query = typeof req.query.q === 'string' && req.query.q.trim() ? req.query.q.trim() : 'Tamil Nadu';
+  const requestedLimit = Number(req.query.limit ?? 12);
+  const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(Math.floor(requestedLimit), 1), 20) : 12;
+
+  if (query.length > 180) return res.status(400).json({ error: 'News search query is too long.' });
+
+  try {
+    const articles = await fetchGoogleNewsRss(query, limit);
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+    return res.json({
+      provider: 'Google News RSS',
+      query,
+      fetchedAt: new Date().toISOString(),
+      articles,
+    });
+  } catch (error) {
+    console.error('Google News RSS request failed:', error instanceof Error ? error.name : 'unknown');
+    return res.status(502).json({ error: 'Live news is temporarily unavailable.' });
+  }
+});
+
 /**
  * Public citizen assistant. It never receives private grievance records and cannot
  * mutate grievance state. Tracking/submission actions remain behind the existing
