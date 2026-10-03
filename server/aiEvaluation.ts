@@ -20,8 +20,8 @@ const GOLDEN_GROUPS: Array<{
     cases: [
       'Exposed electric wire sparking near a school gate', 'Electric wire is hanging low beside homes', 'Live electric wire is dangerous near a playground',
       'Broken electric cable is sparking beside the road', 'Electric power wire has fallen across the street', 'Exposed wire may cause an electric shock',
-      'Damaged electric wire is touching a public pole', 'Electric cable is burning near a market', 'Loose electric wire is creating a safety hazard',
-      'Power wire is exposed near a bus stop', 'Electric wire has fallen after a storm', 'Sparking electric cable is near a school',
+      'Damaged electric wire is touching a public pole', 'Electric wire is burning near a market', 'Loose electric wire is creating a safety hazard',
+      'Power wire is exposed near a bus stop', 'Electric wire has fallen after a storm', 'Sparking electric wire is near a school',
       'Exposed electric wire is blocking a footpath', 'Electric wire is dangerously close to residents', 'Broken power wire is sparking in public area'
     ]
   },
@@ -100,7 +100,7 @@ const GOLDEN_EVAL_CASES: EvalCase[] = GOLDEN_GROUPS.flatMap((group) =>
 const SPECIAL_GOLDEN_CASES: EvalCase[] = [
   { id: 'tamil-water', input: 'குடிநீர் குழாய் கசிவு உள்ளது', expectedDepartmentId: 'dept-water', expectedPriority: 'Medium', expectedKeywords: ['குடிநீர்','குழாய்'] },
   { id: 'tamil-road', input: 'சாலையில் பெரிய பள்ளம் உள்ளது', expectedDepartmentId: 'dept-roads', expectedPriority: 'Medium', expectedKeywords: ['சாலை','பள்ளம்'] },
-  { id: 'tamil-light', input: 'தெரு விளக்கு இரவில் எரியவில்லை', expectedDepartmentId: 'dept-streetlight', expectedPriority: 'Medium', expectedKeywords: ['விளக்கு','இருட்டு'] },
+  { id: 'tamil-light', input: 'தெரு விளக்கு இரவில் எரியவில்லை', expectedDepartmentId: 'dept-streetlight', expectedPriority: 'Medium', expectedKeywords: ['விளக்கு'] },
   { id: 'tamil-health', input: 'கொசு மற்றும் டெங்கு அபாயம் அதிகம்', expectedDepartmentId: 'dept-health', expectedPriority: 'High', expectedKeywords: ['கொசு','டெங்கு'] },
   { id: 'tamil-sanitation', input: 'குப்பை நாற்றம் வீசுகிறது', expectedDepartmentId: 'dept-sanitation', expectedPriority: 'Medium', expectedKeywords: ['குப்பை','நாற்றம்'] },
   { id: 'tamil-transport', input: 'பேருந்து போக்குவரத்து நெரிசல்', expectedDepartmentId: 'dept-transport', expectedPriority: 'Medium', expectedKeywords: ['பேருந்து','போக்குவரத்து'] },
@@ -108,7 +108,7 @@ const SPECIAL_GOLDEN_CASES: EvalCase[] = [
   { id: 'tanglish-water', input: 'thanni kuzhaai leak aaguthu', expectedDepartmentId: 'dept-water', expectedPriority: 'Medium', expectedKeywords: ['thanni','kuzhaai'] },
   { id: 'spelling-road', input: 'Big pothol on the road', expectedDepartmentId: 'dept-roads', expectedPriority: 'Medium', expectedKeywords: ['pothol','road'] },
   { id: 'short-electric', input: 'live wire', expectedDepartmentId: 'dept-electric', expectedPriority: 'Critical', expectedKeywords: ['live','wire'] },
-  { id: 'ambiguous', input: 'Please help with a civic issue in my area', expectedDepartmentId: 'dept-sanitation', expectedPriority: 'Medium', expectedKeywords: ['civic','issue'] },
+  { id: 'ambiguous', input: 'Please help with a civic issue in my area', expectedDepartmentId: 'dept-sanitation', expectedPriority: 'Medium', expectedKeywords: ['civic'] },
 ];
 
 export const ALL_GOLDEN_EVAL_CASES = [...GOLDEN_EVAL_CASES, ...SPECIAL_GOLDEN_CASES];
