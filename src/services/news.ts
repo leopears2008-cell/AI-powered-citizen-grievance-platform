@@ -15,7 +15,7 @@ export interface LiveNewsArticle {
 }
 
 const NEWS_TTL_MS = 60 * 1000;
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const API_BASE = (import.meta.env?.VITE_API_URL || '').replace(/\/$/, '');
 const newsCache = new Map<string, { expiresAt: number; value: LiveNewsArticle[] }>();
 
 export const googleNewsUrl = (query: string): string =>
