@@ -87,6 +87,11 @@ interface GrievanceRow {
   feedback_submitted_at: string | null;
   entities: Grievance['entities'] | null;
   is_duplicate_of: string | null;
+  resolution_verified_at: string | null;
+  resolution_verified_by: string | null;
+  escalation_reason: string | null;
+  escalated_at: string | null;
+  escalated_to_department_id: string | null;
   created_at: string;
   updated_at: string;
   grievance_status_history?: HistoryRow[] | null;
@@ -306,6 +311,11 @@ function toGrievance(row: GrievanceRow): Grievance {
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
     ...(row.is_duplicate_of ? { isDuplicateOf: row.is_duplicate_of } : {}),
+    ...(row.resolution_verified_at ? { resolutionVerifiedAt: toIso(row.resolution_verified_at) } : {}),
+    ...(row.resolution_verified_by ? { resolutionVerifiedBy: row.resolution_verified_by } : {}),
+    ...(row.escalation_reason ? { escalationReason: row.escalation_reason } : {}),
+    ...(row.escalated_at ? { escalatedAt: toIso(row.escalated_at) } : {}),
+    ...(row.escalated_to_department_id ? { escalatedToDepartmentId: row.escalated_to_department_id } : {}),
   };
 }
 
