@@ -18,7 +18,7 @@ export type IntelligenceResult = {
 const STOP_WORDS = new Set(['the','and','with','this','that','from','have','been','near','there','issue','please','need','கள்','ஒரு','இந்த','அது','மற்றும்']);
 
 const DEPARTMENT_RULES: Array<{ id: string; words: string[]; label: string }> = [
-  { id: 'dept-electric', words: ['wire','spark','transformer','electric','power','current','shock','min','min kambi','மின்சாரம்','மின்மாற்றி'], label: 'Electrical safety/infrastructure terms detected.' },
+  { id: 'dept-electric', words: ['wire','spark','transformer','electric','power','current','shock','min','min kambi','மின்சாரம்','மின்கம்பி','மின்மாற்றி'], label: 'Electrical safety/infrastructure terms detected.' },
   { id: 'dept-water', words: ['water','pipe','leak','burst','sewage','drainage','thanni','kuzhai','kuzhaai','குடிநீர்','தண்ணீர்','குழாய்','கழிவுநீர்'], label: 'Water/drainage infrastructure terms detected.' },
   { id: 'dept-roads', words: ['road','pothole','pothol','tar','footpath','pavement','saalai','சாலை','பள்ளம்'], label: 'Road/public-works terms detected.' },
   { id: 'dept-streetlight', words: ['streetlight','street','lamp','dark','light','pole','vilakku','விளக்கு','இருட்டு'], label: 'Street-lighting terms detected.' },
@@ -56,7 +56,7 @@ export function routeDepartment(text: string, category?: string) {
 
 export function severityAndSla(text: string, suppliedPriority?: IntelligenceInput['priority']) {
   const haystack = normalize(text);
-  const critical = ['live wire','exposed wire','electric shock','transformer spark','major burst','life hazard','உயிர் ஆபத்து','மின்கம்பி','மின்மாற்றி'].some((x) => haystack.includes(normalize(x)));
+  const critical = ['live wire','exposed wire','electric shock','transformer spark','electric wire','sparking electric','major burst','life hazard','உயிர் ஆபத்து','மின்கம்பி','மின்மாற்றி'].some((x) => haystack.includes(normalize(x)));
   const high = ['sewage overflow','dengue','blocked road','mosquito breeding','flooding','கழிவுநீர்','டெங்கு','கொசு'].some((x) => haystack.includes(normalize(x)));
   let severity: IntelligenceResult['severity'] = suppliedPriority || 'Medium';
   let reason = 'Routine operational impact; staff verification is required.';
