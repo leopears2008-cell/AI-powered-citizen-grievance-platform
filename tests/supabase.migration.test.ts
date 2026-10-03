@@ -37,3 +37,12 @@ test('Supabase service client is server-only', async () => {
   assert.match(serverClient, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(serverClient, /createClient/);
 });
+
+
+test('civic intelligence migration adds public analytics indexes', async () => {
+  const sql = await readFile(join(root, 'supabase/migrations/005_civic_intelligence.sql'), 'utf8');
+  const normalized = sql.toLowerCase();
+  assert.match(normalized, /idx_grievances_public_district/);
+  assert.match(normalized, /idx_grievances_public_status_target/);
+  assert.match(normalized, /idx_grievances_public_geo/);
+});
