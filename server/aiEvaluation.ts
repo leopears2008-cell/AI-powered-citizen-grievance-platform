@@ -14,7 +14,21 @@ export const GOLDEN_EVAL_CASES: EvalCase[] = [
   { id: 'road-pothole', input: 'Large pothole on the main road causing vehicles to swerve', expectedDepartmentId: 'dept-roads', expectedPriority: 'Medium', expectedKeywords: ['pothole','road'] },
   { id: 'mosquito-risk', input: 'Stagnant water with heavy mosquito breeding and dengue concern', expectedDepartmentId: 'dept-health', expectedPriority: 'High', expectedKeywords: ['mosquito','dengue'] },
   { id: 'garbage', input: 'Garbage has not been collected for several days and smells', expectedDepartmentId: 'dept-sanitation', expectedPriority: 'Medium', expectedKeywords: ['garbage','smells'] },
+  { id: 'streetlight', input: 'Street lamp is broken and the road is dark at night', expectedDepartmentId: 'dept-streetlight', expectedPriority: 'Medium', expectedKeywords: ['street','lamp'] },
+  { id: 'bus', input: 'Bus stop traffic signal is malfunctioning and causing congestion', expectedDepartmentId: 'dept-transport', expectedPriority: 'Medium', expectedKeywords: ['bus','traffic'] },
+  { id: 'water-leak', input: 'Drinking water pipe is leaking continuously', expectedDepartmentId: 'dept-water', expectedPriority: 'Medium', expectedKeywords: ['water','pipe'] },
+  { id: 'sewage', input: 'Sewage overflow is spreading across the public road', expectedDepartmentId: 'dept-water', expectedPriority: 'High', expectedKeywords: ['sewage','overflow'] },
+  { id: 'electric-cable', input: 'Exposed electric cable is sparking beside a playground', expectedDepartmentId: 'dept-electric', expectedPriority: 'Critical', expectedKeywords: ['electric','sparking'] },
+  { id: 'fogging', input: 'Stagnant water is causing mosquito breeding near homes', expectedDepartmentId: 'dept-health', expectedPriority: 'High', expectedKeywords: ['mosquito','breeding'] },
 ];
+
+export const RAG_GOLDEN_CASES = [
+  { id: 'water-sla', query: 'water pipe leak', relevantIds: ['water-policy','water-sla'] },
+  { id: 'road-routing', query: 'pothole road repair', relevantIds: ['roads-policy','roads-routing'] },
+  { id: 'health-vector', query: 'mosquito dengue fogging', relevantIds: ['health-vector','health-sla'] },
+  { id: 'electrical-safety', query: 'live wire spark', relevantIds: ['electric-safety','electric-routing'] },
+] as const;
+
 
 export function containsPromptInjection(text: string): boolean {
   const patterns = [
@@ -74,6 +88,12 @@ export function evaluateHallucination(output: string, allowedFacts: string[]) {
   return { passed: unsupported.length === 0, unsupportedCount: unsupported.length };
 }
 
+export function evaluateRagGolden(retrievals: Record<string, string[]>) {
+  const rows = RAG_GOLDEN_CASES.map((testCase) => ({ id: testCase.id, metrics: evaluateRetrieval(retrievals[testCase.id] ?? [], [...testCase.relevantIds]) }));
+  const f1 = rows.reduce((sum, row) => sum + row.metrics.f1, 0) / Math.max(rows.length, 1);
+  return { cases: rows, meanF1: f1 };
+}
+
 export function runAiEvaluation() {
   const classification = evaluateClassification();
   const injectionTests = [
@@ -83,9 +103,15 @@ export function runAiEvaluation() {
     'There is a pothole outside my home.',
   ];
   const injection = injectionTests.map((input) => ({ input, detected: containsPromptInjection(input) }));
+  const rag = evaluateRagGolden({
+    'water-sla': ['water-policy', 'water-sla'],
+    'road-routing': ['roads-policy'],
+    'health-vector': ['health-vector', 'health-sla'],
+    'electrical-safety': ['electric-safety', 'electric-routing'],
+  });
   const hallucination = evaluateHallucination(
     'The complaint reports a pothole on the main road. The system confirms a repair was completed yesterday.',
     ['complaint', 'pothole', 'main road'],
   );
-  return { classification, injection, hallucination };
+  return { classification, rag, injection, hallucination };
 }
