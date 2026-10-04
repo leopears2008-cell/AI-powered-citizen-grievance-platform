@@ -43,13 +43,14 @@ textarea {
 .hero-card {
   --kb-scale: 1.05;
   --light-k: 1;
+  background: #0f172a;
   padding-top: 2.5rem;
 }
 
 @media (max-width: 640px) {
   .hero-card {
     --kb-scale: 1.025;
-    --light-k: 0.6;
+    --light-k: 0.75;
   }
 }
 
@@ -114,12 +115,12 @@ textarea {
 /* Dark transparent gradient behind the text keeps white copy readable. */
 .hero-scrim {
   background:
-    linear-gradient(180deg, rgb(15 23 42 / 0.66) 0%, rgb(15 23 42 / 0.44) 42%, rgb(15 23 42 / 0.74) 100%),
-    radial-gradient(ellipse 70% 55% at 50% 48%, rgb(15 23 42 / 0.35), transparent 75%);
+    linear-gradient(180deg, rgb(2 6 23 / 0.28) 0%, rgb(2 6 23 / 0.16) 38%, rgb(2 6 23 / 0.48) 100%),
+    linear-gradient(90deg, rgb(2 6 23 / 0.48) 0%, rgb(2 6 23 / 0.12) 58%, transparent 100%);
 }
 
 .hero-vignette {
-  background: radial-gradient(ellipse at center, transparent 55%, rgb(2 6 23 / 0.5) 100%);
+  background: radial-gradient(ellipse at center, transparent 52%, rgb(2 6 23 / 0.32) 100%);
 }
 
 /* --- Dust motes (12 elements, CSS-only) ------------------------------------ */
@@ -289,4 +290,65 @@ html[data-hero-on][data-hero-glass] .site-header .site-header-topbar {
 /* The fixed header leaves the flow, so let the hero start at the very top. */
 html[data-hero-on] main {
   padding-top: 0;
+}
+
+
+/* Mobile hero: keep the Assembly photograph clearly visible behind the civic UI. */
+@media (max-width: 640px) {
+  .hero-card {
+    border-radius: 0;
+    margin-left: -0.25rem;
+    margin-right: -0.25rem;
+    padding-top: 3.25rem;
+    padding-left: 1.15rem;
+    padding-right: 1.15rem;
+    min-height: 42rem;
+  }
+
+  .hero-par-bg {
+    opacity: 1;
+  }
+
+  .hero-kb {
+    object-position: 62% 42% !important;
+  }
+
+  .hero-scrim {
+    background:
+      linear-gradient(180deg, rgb(2 6 23 / 0.42) 0%, rgb(2 6 23 / 0.18) 32%, rgb(2 6 23 / 0.58) 100%),
+      linear-gradient(90deg, rgb(2 6 23 / 0.36) 0%, rgb(2 6 23 / 0.08) 100%);
+  }
+
+  .hero-vignette {
+    background: radial-gradient(ellipse at center, transparent 45%, rgb(2 6 23 / 0.38) 100%);
+  }
+
+  .hero-par-text {
+    text-shadow: 0 2px 18px rgb(0 0 0 / 0.45);
+  }
+}
+
+/* A second, ultra-subtle photographic layer creates the requested layered
+   "living photo" depth without adding another asset or changing layout. */
+.hero-par-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  opacity: 0.16;
+  mix-blend-mode: screen;
+  transform: translate3d(7px, -4px, 0) scale(1.01);
+  animation: hero-photo-depth 11s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes hero-photo-depth {
+  from { opacity: 0.08; transform: translate3d(5px, -3px, 0) scale(1.005); }
+  to { opacity: 0.18; transform: translate3d(-5px, 4px, 0) scale(1.015); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-par-bg::after {
+    animation: none !important;
+  }
 }
