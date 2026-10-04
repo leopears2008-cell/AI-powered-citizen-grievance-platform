@@ -34,3 +34,259 @@ textarea {
     min-height: 0;
   }
 }
+
+/* ==========================================================================
+   Cinematic hero ("living photograph")
+   Everything below animates transform / opacity / translate only.
+   ========================================================================== */
+
+.hero-card {
+  --kb-scale: 1.05;
+  --light-k: 1;
+  padding-top: 2.5rem;
+}
+
+@media (max-width: 640px) {
+  .hero-card {
+    --kb-scale: 1.025;
+    --light-k: 0.6;
+  }
+}
+
+/* Header overlay mode: only active while the hero is the first thing on the page. */
+.hero-root[data-glass] .hero-card {
+  padding-top: calc(var(--site-header-h, 0px) + 2rem);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* --- Ken Burns (slow, alternating => seamless loop, no restart jump) ------ */
+@keyframes hero-kenburns {
+  from {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(var(--kb-scale, 1.05)) translate3d(-1.2%, -0.8%, 0);
+  }
+}
+
+.hero-kb {
+  animation: hero-kenburns 18s ease-in-out infinite alternate;
+  will-change: transform;
+  transform-origin: 50% 50%;
+}
+
+/* --- Parallax layers (driven by --px / --py set from JS, no React state) -- */
+.hero-par-bg {
+  translate: calc(var(--px, 0) * -8px) calc(var(--py, 0) * -6px);
+}
+.hero-par-fg {
+  translate: calc(var(--px, 0) * 10px) calc(var(--py, 0) * 8px);
+}
+.hero-par-text {
+  translate: calc(var(--px, 0) * -3px) calc(var(--py, 0) * -2px);
+}
+.hero-par-card {
+  translate: calc(var(--px, 0) * -4px) calc(var(--py, 0) * -3px);
+}
+
+/* --- Natural sunlight ------------------------------------------------------ */
+@keyframes hero-sun {
+  from {
+    opacity: calc(0.35 * var(--light-k, 1));
+    transform: translate3d(-3%, 0, 0) scale(1);
+  }
+  to {
+    opacity: calc(0.6 * var(--light-k, 1));
+    transform: translate3d(4%, 2%, 0) scale(1.08);
+  }
+}
+
+.hero-light {
+  background:
+    radial-gradient(ellipse 60% 55% at 78% 6%, rgb(255 226 170 / 0.55), rgb(255 214 150 / 0.18) 45%, transparent 70%),
+    linear-gradient(115deg, rgb(255 200 120 / 0.1), transparent 55%);
+  opacity: calc(0.45 * var(--light-k, 1));
+  animation: hero-sun 15s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+/* Dark transparent gradient behind the text keeps white copy readable. */
+.hero-scrim {
+  background:
+    linear-gradient(180deg, rgb(15 23 42 / 0.66) 0%, rgb(15 23 42 / 0.44) 42%, rgb(15 23 42 / 0.74) 100%),
+    radial-gradient(ellipse 70% 55% at 50% 48%, rgb(15 23 42 / 0.35), transparent 75%);
+}
+
+.hero-vignette {
+  background: radial-gradient(ellipse at center, transparent 55%, rgb(2 6 23 / 0.5) 100%);
+}
+
+/* --- Dust motes (12 elements, CSS-only) ------------------------------------ */
+@keyframes hero-mote {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0);
+  }
+  20% {
+    opacity: 0.35;
+  }
+  80% {
+    opacity: 0.25;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--dx, 10px), var(--dy, -30px), 0);
+  }
+}
+
+.hero-mote {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--s);
+  height: var(--s);
+  border-radius: 9999px;
+  background: rgb(255 240 210 / 0.9);
+  box-shadow: 0 0 6px 1px rgb(255 230 180 / 0.3);
+  opacity: 0;
+  animation: hero-mote var(--t, 20s) ease-in-out var(--dl, 0s) infinite;
+  will-change: transform, opacity;
+}
+
+/* Fewer particles on phones (6 of 12). */
+@media (max-width: 640px) {
+  .hero-mote:nth-child(n + 7) {
+    display: none;
+  }
+}
+
+/* --- Entrance sequence ------------------------------------------------------ */
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hero-rise-blur {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes hero-pop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hero-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.hero-rise {
+  animation: hero-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s) both;
+}
+.hero-rise-blur {
+  animation: hero-rise-blur 1s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s) both;
+}
+.hero-pop {
+  animation: hero-pop 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s) both;
+}
+
+/* --- Assistant card float (<= 5px) ------------------------------------------ */
+@keyframes hero-float {
+  from {
+    transform: translate3d(0, -2px, 0);
+  }
+  to {
+    transform: translate3d(0, 3px, 0);
+  }
+}
+
+.hero-float {
+  animation: hero-float 5.5s ease-in-out infinite alternate;
+}
+
+/* Pause everything while the hero is scrolled out of view. */
+.hero-card[data-in-view="false"] :is(.hero-kb, .hero-light, .hero-mote, .hero-float) {
+  animation-play-state: paused;
+}
+
+/* --- Reduced motion: keep a simple fade, drop all continuous motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .hero-root .hero-kb,
+  .hero-root .hero-light,
+  .hero-root .hero-mote,
+  .hero-root .hero-float {
+    animation: none !important;
+  }
+  .hero-root .hero-mote {
+    display: none;
+  }
+  .hero-root .hero-par-bg,
+  .hero-root .hero-par-fg,
+  .hero-root .hero-par-text,
+  .hero-root .hero-par-card {
+    translate: none !important;
+  }
+  .hero-root .hero-rise,
+  .hero-root .hero-rise-blur,
+  .hero-root .hero-pop {
+    animation: hero-fade 0.5s ease-out 0s both !important;
+  }
+}
+
+/* --- Header over the hero: glass at the top, translucent + blur once scrolled.
+       Scoped to html[data-hero-on], so every other page is unchanged. -------- */
+.site-header {
+  transition: background-color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+html[data-hero-on] .site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: rgb(15 23 42 / 0.9);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+html[data-hero-on][data-hero-glass] .site-header {
+  background-color: rgb(15 23 42 / 0.35);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+html[data-hero-on][data-hero-glass] .site-header .site-header-topbar {
+  background-color: rgb(2 6 23 / 0.35);
+  border-color: transparent;
+}
+
+/* The fixed header leaves the flow, so let the hero start at the very top. */
+html[data-hero-on] main {
+  padding-top: 0;
+}
