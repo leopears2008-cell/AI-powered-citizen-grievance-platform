@@ -27,8 +27,16 @@ interface HeroSectionProps {
   onSelectCategory: (category: string) => void;
 }
 
-/** Hero photograph. Drop the file at public/hero/assembly.webp (see notes in the PR/commit). */
-const HERO_BG_SRC = '/hero/assembly.webp';
+/**
+ * Hero photograph: real Fort St. George, Chennai image from Wikimedia Commons.
+ * The previous local WebP was invalid/too small and was causing the hero image to
+ * disappear on deployed mobile browsers. Keep a local fallback so the hero never
+ * becomes an empty/dark panel if the external image is temporarily unavailable.
+ * Source: https://commons.wikimedia.org/wiki/File:Fort_St._George,_Chennai_2.jpg
+ * License: public domain (author-released).
+ */
+const HERO_BG_SRC = 'https://upload.wikimedia.org/wikipedia/commons/b/b0/Fort_St._George%2C_Chennai_2.jpg';
+const HERO_BG_FALLBACK = '/og-image.png';
 /** Optional transparent PNG/WebP of foreground trees. Leave null until the asset exists. */
 const HERO_FOREGROUND_SRC = null as string | null;
 
@@ -160,7 +168,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             decoding="async"
             fetchPriority="high"
             onError={(event) => {
-              event.currentTarget.style.display = 'none';
+              const image = event.currentTarget;
+              if (image.src !== new URL(HERO_BG_FALLBACK, window.location.href).href) {
+                image.src = HERO_BG_FALLBACK;
+              }
             }}
             className="hero-kb h-full w-full object-cover"
             style={{ objectPosition: '50% 40%' }}
