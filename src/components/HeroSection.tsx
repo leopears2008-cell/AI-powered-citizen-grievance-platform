@@ -150,10 +150,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       {/* Cinematic hero */}
       <div
         ref={cardRef}
-        className="hero-card relative isolate overflow-hidden rounded-2xl bg-indigo-900 text-white px-6 pb-8 sm:px-10 lg:px-12 shadow-xl shadow-indigo-100 border border-indigo-800 flex flex-col justify-center min-h-[34rem] lg:min-h-[40rem]"
+        className="hero-card relative isolate overflow-hidden rounded-2xl bg-slate-950 text-white px-6 pb-8 sm:px-10 lg:px-12 shadow-xl shadow-indigo-100 border border-white/10 flex flex-col justify-center min-h-[38rem] sm:min-h-[40rem] lg:min-h-[40rem]"
       >
         {/* Layer 1: photograph (parallax wrapper > Ken Burns image) */}
-        <div aria-hidden="true" className="hero-par-bg absolute -inset-[3%] pointer-events-none">
+        <div aria-hidden="true" className="hero-par-bg absolute -inset-[4%] pointer-events-none">
           <img
             src={HERO_BG_SRC}
             alt=""
