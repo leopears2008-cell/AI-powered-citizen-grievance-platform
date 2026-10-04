@@ -51,7 +51,19 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-900 flex flex-col justify-between selection:bg-indigo-600 selection:text-white overflow-hidden">
+    <div className="site-shell min-h-screen font-sans text-slate-900 flex flex-col justify-between selection:bg-indigo-600 selection:text-white overflow-hidden">
+      <div className="site-building-backdrop" aria-hidden="true">
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/b/b0/Fort_St._George%2C_Chennai_2.jpg"
+          alt=""
+          decoding="async"
+          fetchPriority="high"
+          onError={(event) => {
+            event.currentTarget.style.display = 'none';
+          }}
+        />
+        <div className="site-building-overlay" />
+      </div>
       <div aria-live="polite" aria-relevant="additions text" className="fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full">
         {toasts.map((toast) => (
           <div
@@ -94,7 +106,7 @@ const MainLayout: React.FC = () => {
 
       <Header siteTitle={siteSettings.siteTitle} siteSubtitle={siteSettings.siteSubtitle} showDirectory={siteSettings.showDirectory} showMinisters={siteSettings.showMinisters} showNews={siteSettings.showNews} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 flex flex-col space-y-8 overflow-y-auto">
+      <main className="site-main max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 flex flex-col space-y-8 overflow-y-auto">
         <Suspense fallback={<PageSkeleton label={language === 'ta' ? 'பக்கத்தை ஏற்றுகிறது…' : 'Loading page…'} />}>
           {activeTab === 'home' && (
             <div className="space-y-8 animate-in fade-in duration-300">
@@ -196,7 +208,7 @@ const MainLayout: React.FC = () => {
         </Suspense>
       </main>
 
-      <footer className="bg-white text-slate-600 text-xs border-t border-slate-200 mt-16">
+      <footer className="site-footer text-slate-700 text-xs border-t border-white/30 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div className="space-y-2 md:col-span-2">
