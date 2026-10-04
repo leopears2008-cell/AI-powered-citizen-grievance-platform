@@ -142,7 +142,7 @@ export function registerCivicFeatureRoutes(app: Express, authenticate: RequestHa
   });
 
   app.post('/api/admin/escalation-scan', authenticate, async (req,res) => {
-    const user=(req as AuthenticatedRequest).user;
+    const user=(req as unknown as AuthenticatedRequest).user;
     const db=dbOrNull();
     if (!user || user.isAnonymous || user.email_verified !== true || !db) return res.status(403).json({error:'Administrator access required.'});
     const {data:admin}=await db.from('admins').select('active').eq('id',user.uid).maybeSingle();
