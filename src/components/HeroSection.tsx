@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useHeroHeaderGlass, useHeroParallax } from '../lib/heroMotion';
 import {
   Mic,
   FileText,
@@ -17,6 +18,8 @@ import {
   Lightbulb,
   HeartPulse,
   ChevronRight,
+  Compass,
+  Bot,
 } from 'lucide-react';
 
 interface HeroSectionProps {
@@ -24,12 +27,45 @@ interface HeroSectionProps {
   onSelectCategory: (category: string) => void;
 }
 
+/** Hero photograph. Drop the file at public/hero/assembly.webp (see notes in the PR/commit). */
+const HERO_BG_SRC = '/hero/assembly.webp';
+/** Optional transparent PNG/WebP of foreground trees. Leave null until the asset exists. */
+const HERO_FOREGROUND_SRC = null as string | null;
+
+/** Deterministic pseudo-random dust motes (no layout shift, no re-render churn). */
+function makeMotes(count: number) {
+  let seed = 7;
+  const rnd = () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+  return Array.from({ length: count }, (_, id) => ({
+    id,
+    x: `${(rnd() * 92 + 4).toFixed(1)}%`,
+    y: `${(rnd() * 80 + 10).toFixed(1)}%`,
+    s: `${(rnd() * 1.6 + 1.6).toFixed(1)}px`,
+    t: `${(rnd() * 12 + 16).toFixed(1)}s`,
+    dl: `-${(rnd() * 20).toFixed(1)}s`,
+    dx: `${(rnd() * 40 - 20).toFixed(0)}px`,
+    dy: `${(rnd() * -50 - 10).toFixed(0)}px`,
+  }));
+}
+
+const MOTES = makeMotes(12);
+
+const delay = (value: string) => ({ '--d': value }) as React.CSSProperties;
+
 export const HeroSection: React.FC<HeroSectionProps> = ({
   onOpenVoiceModal,
   onSelectCategory,
 }) => {
   const { language, t, setActiveTab, setTrackId, showToast } = useApp();
   const [quickTrackInput, setQuickTrackInput] = useState('');
+  const rootRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useHeroHeaderGlass(rootRef);
+  useHeroParallax(cardRef);
 
   const handleQuickTrack = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +78,26 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     }
     setTrackId(quickTrackInput.trim().toUpperCase());
     setActiveTab('track');
+  };
+
+  /** Scrolls to the existing assistant section on the page; does not touch its logic. */
+  const openAssistant = () => {
+    const section = document.querySelector<HTMLElement>('[aria-labelledby="grievance-assistant-title"]');
+    if (!section) {
+      showToast(
+        language === 'ta' ? 'உதவியாளர் தற்போது கிடைக்கவில்லை' : 'The assistant is currently unavailable.',
+        'warning'
+      );
+      return;
+    }
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const headerHeight = document.querySelector('.site-header')?.getBoundingClientRect().height ?? 0;
+    const top = section.getBoundingClientRect().top + window.scrollY - headerHeight - 16;
+    window.scrollTo({ top: Math.max(0, top), behavior: reduce ? 'auto' : 'smooth' });
+    window.setTimeout(
+      () => section.querySelector<HTMLElement>('input, textarea')?.focus({ preventScroll: true }),
+      reduce ? 0 : 600
+    );
   };
 
   const civicDepartments = [
@@ -90,84 +146,190 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   ];
 
   return (
-    <div className="space-y-12">
-      {/* Primary Hero Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-indigo-900 text-white p-6 sm:p-10 lg:p-12 shadow-xl shadow-indigo-100 border border-indigo-800">
-        {/* Background Subtle Geometric Pattern */}
-        <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
+    <div ref={rootRef} className="hero-root space-y-12">
+      {/* Cinematic hero */}
+      <div
+        ref={cardRef}
+        className="hero-card relative isolate overflow-hidden rounded-2xl bg-indigo-900 text-white px-6 pb-8 sm:px-10 lg:px-12 shadow-xl shadow-indigo-100 border border-indigo-800 flex flex-col justify-center min-h-[34rem] lg:min-h-[40rem]"
+      >
+        {/* Layer 1: photograph (parallax wrapper > Ken Burns image) */}
+        <div aria-hidden="true" className="hero-par-bg absolute -inset-[3%] pointer-events-none">
+          <img
+            src={HERO_BG_SRC}
+            alt=""
+            decoding="async"
+            fetchPriority="high"
+            onError={(event) => {
+              event.currentTarget.style.display = 'none';
+            }}
+            className="hero-kb h-full w-full object-cover"
+            style={{ objectPosition: '50% 40%' }}
+          />
+        </div>
 
-        <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
-          {/* Badge */}
-          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-indigo-800/50 text-indigo-200 border border-indigo-700/50 text-xs font-semibold tracking-wide backdrop-blur-md">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-300 animate-pulse" />
-            <span>{t.heroBadge}</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-            <span className="text-indigo-300 font-normal">
-              {language === 'ta' ? 'நிகழ்நேர AI சேவை' : 'Tamil & English Voice Enabled'}
-            </span>
+        {/* Layer 2: optional foreground scenery */}
+        {HERO_FOREGROUND_SRC && (
+          <div aria-hidden="true" className="hero-par-fg absolute -inset-[3%] pointer-events-none">
+            <img
+              src={HERO_FOREGROUND_SRC}
+              alt=""
+              decoding="async"
+              loading="lazy"
+              className="h-full w-full object-cover object-bottom"
+            />
+          </div>
+        )}
+
+        {/* Atmosphere: sunlight, readability scrim, vignette, dust */}
+        <div aria-hidden="true" className="hero-light absolute inset-0 pointer-events-none" />
+        <div aria-hidden="true" className="hero-scrim absolute inset-0 pointer-events-none" />
+        <div aria-hidden="true" className="hero-vignette absolute inset-0 pointer-events-none" />
+        <div aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none">
+          {MOTES.map((m) => (
+            <span
+              key={m.id}
+              className="hero-mote"
+              style={
+                {
+                  '--x': m.x,
+                  '--y': m.y,
+                  '--s': m.s,
+                  '--t': m.t,
+                  '--dl': m.dl,
+                  '--dx': m.dx,
+                  '--dy': m.dy,
+                } as React.CSSProperties
+              }
+            />
+          ))}
+        </div>
+
+        {/* Layer 3: hero text / UI */}
+        <div className="hero-par-text relative z-10 w-full max-w-4xl mx-auto text-center space-y-6">
+          <div className="hero-rise" style={delay('0.2s')}>
+            <p className="inline-flex items-center gap-3 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.22em] text-amber-100/90">
+              <span aria-hidden="true" className="h-px w-6 sm:w-10 bg-amber-100/50" />
+              {language === 'ta' ? t.heroBadge : 'TAMIL NADU GOVERNMENT'}
+              <span aria-hidden="true" className="h-px w-6 sm:w-10 bg-amber-100/50" />
+            </p>
           </div>
 
-          {/* Main Title */}
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight font-sans text-white leading-tight">
-            {t.heroHeadline}
+          <h1
+            className="hero-rise-blur text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight font-sans text-white leading-[1.08] [text-shadow:0_2px_16px_rgb(0_0_0/0.45)]"
+            style={delay('0.4s')}
+          >
+            {language === 'ta' ? (
+              t.heroHeadline
+            ) : (
+              <>
+                Your Voice Matters.
+                <br />
+                <span className="text-amber-100">We Listen, We Act.</span>
+              </>
+            )}
           </h1>
 
-          {/* Subtitle */}
-          <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed font-normal">
-            {t.heroSubheadline}
+          <p
+            className="hero-rise text-sm sm:text-base lg:text-lg text-slate-100 max-w-2xl mx-auto leading-relaxed font-normal [text-shadow:0_1px_8px_rgb(0_0_0/0.4)]"
+            style={delay('0.6s')}
+          >
+            {language === 'ta'
+              ? t.heroSubheadline
+              : 'File your grievances, track status, and help build a better Tamil Nadu — together.'}
           </p>
 
           {/* Action CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            {/* Primary Voice Action Button */}
+          <div
+            className="hero-rise flex flex-col sm:flex-row items-center justify-center gap-3 pt-2"
+            style={delay('0.8s')}
+          >
             <button
-              onClick={onOpenVoiceModal}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-indigo-900 font-bold text-sm sm:text-base shadow-lg shadow-indigo-900/30 flex items-center justify-center space-x-2.5 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              type="button"
+              onClick={() => setActiveTab('file')}
+              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-indigo-900 font-bold text-sm sm:text-base shadow-lg shadow-black/25 flex items-center justify-center space-x-2.5 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
-              <Mic className="w-5 h-5 text-indigo-600 animate-pulse" />
-              <span>{t.btnSpeakComplaint}</span>
+              <FileText className="w-5 h-5 text-indigo-600" aria-hidden="true" />
+              <span>{language === 'ta' ? t.btnWriteComplaint : 'File Complaint'}</span>
             </button>
 
-            {/* Secondary Type Action Button */}
             <button
-              onClick={() => setActiveTab('file')}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-indigo-800 hover:bg-indigo-700 text-white font-bold text-sm sm:text-base border border-indigo-700 flex items-center justify-center space-x-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              type="button"
+              onClick={() => setActiveTab('directory')}
+              className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm sm:text-base border border-white/35 backdrop-blur-sm flex items-center justify-center space-x-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
-              <FileText className="w-5 h-5 text-indigo-300" />
-              <span>{t.btnWriteComplaint}</span>
+              <Compass className="w-5 h-5 text-amber-100" aria-hidden="true" />
+              <span>{language === 'ta' ? 'தமிழ்நாட்டை அறிக' : 'Explore Tamil Nadu'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenVoiceModal}
+              className="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-transparent hover:bg-white/10 text-white font-semibold text-sm sm:text-base border border-white/20 flex items-center justify-center space-x-2 transition-all"
+            >
+              <Mic className="w-5 h-5 text-indigo-200" aria-hidden="true" />
+              <span>{t.btnSpeakComplaint}</span>
             </button>
           </div>
 
           {/* Quick Track Input Bar */}
-          <div className="pt-4 max-w-xl mx-auto">
+          <div className="hero-rise pt-2 max-w-xl mx-auto" style={delay('1s')}>
             <form
               onSubmit={handleQuickTrack}
-              className="bg-indigo-800/40 p-1.5 rounded-xl border border-indigo-700 backdrop-blur-md flex items-center shadow-lg"
+              className="bg-slate-900/45 p-1.5 rounded-xl border border-white/20 backdrop-blur-md flex items-center shadow-lg"
             >
-              <Search className="w-4 h-4 text-indigo-300 ml-3 shrink-0" />
+              <Search className="w-4 h-4 text-indigo-200 ml-3 shrink-0" aria-hidden="true" />
               <input
                 type="text"
                 value={quickTrackInput}
                 onChange={(e) => setQuickTrackInput(e.target.value)}
+                aria-label={language === 'ta' ? 'புகார் எண்' : 'Grievance ID'}
                 placeholder={
                   language === 'ta'
                     ? 'புகார் எண் மூலம் நிலை அறிய (எ.கா: GRV-2026-00124)'
                     : 'Track existing grievance (e.g. GRV-2026-00124)'
                 }
-                className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm text-white placeholder-indigo-300 focus:outline-none font-mono"
+                className="w-full min-w-0 bg-transparent px-3 py-2 text-xs sm:text-sm text-white placeholder-slate-300 focus:outline-none font-mono"
               />
               <button
                 type="submit"
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm rounded-lg transition-colors shrink-0 flex items-center space-x-1"
               >
                 <span>{language === 'ta' ? 'அறிக' : 'Track'}</span>
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4" aria-hidden="true" />
               </button>
             </form>
           </div>
         </div>
 
-        <p className="relative z-10 mt-10 border-t border-indigo-800 pt-5 text-center text-xs text-indigo-200">
+        {/* Layer 4: assistant card (parallax > entrance > float) */}
+        <div className="hero-par-card relative z-10 mt-8 w-full max-w-xl mx-auto">
+          <div className="hero-pop" style={delay('1.2s')}>
+            <div className="hero-float">
+              <div className="flex items-center gap-3 rounded-2xl border border-white/20 bg-slate-900/50 backdrop-blur-md p-3 sm:p-4 text-left shadow-xl shadow-black/20">
+                <div className="w-10 h-10 shrink-0 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
+                  <Bot className="w-5 h-5" aria-hidden="true" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-white">NivaranAI Citizen Assistant</p>
+                  <p className="text-xs text-slate-200 leading-snug">
+                    {language === 'ta'
+                      ? 'புகாரை எழுத, செயல்முறையை அறிய உதவும்.'
+                      : 'Draft a complaint, learn the process, or find where to track it.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={openAssistant}
+                  className="shrink-0 rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3.5 py-2 text-xs font-bold text-white transition-colors"
+                >
+                  {language === 'ta' ? 'கேளுங்கள்' : 'Ask'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p className="relative z-10 mt-8 border-t border-white/15 pt-4 text-center text-xs text-slate-200">
           {language === 'ta'
             ? 'இது முன்-உற்பத்தி தளம். உண்மையான புகார் சேவை அல்லது செயல்பாட்டு புள்ளிவிவரங்கள் உறுதிப்படுத்தப்படவில்லை.'
             : 'Pre-production interface. No live complaint service or operational metrics are claimed.'}
@@ -258,7 +420,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
               {language === 'ta'
                 ? 'துறை, முன்னுரிமை ஆகியவற்றை AI ஆராய்ந்து உங்கள் ஒப்புதலைக் கேட்கும்.'
-                : 'Gemini AI extracts category, department & urgency priority for review.'}
+                : 'AI extracts category, department & urgency priority for review.'}
             </p>
           </div>
 
@@ -294,4 +456,3 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     </div>
   );
 };
-
