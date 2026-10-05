@@ -4,6 +4,8 @@
 
 ### 🚀 AI-Powered Citizen Grievance Platform
 
+> **Trust & compliance note:** This is a pre-production civic software project. It does not claim government ownership, legal compliance, official service status, or customer/testimonial metrics. The production operator must configure its identity, privacy contact, retention policy and applicable legal notices.
+
 <p>
   <strong>Speak it.</strong> &nbsp;→&nbsp;
   <strong>AI understands it.</strong> &nbsp;→&nbsp;
@@ -246,7 +248,7 @@ NivaranAI uses AI as an **assistive intelligence layer**.
                  👤 Confirmation
                        │
                        ▼
-                 🗄️ Firestore
+                 🗄️ Supabase PostgreSQL
 ```
 
 ---
@@ -338,7 +340,7 @@ flowchart TB
 
     subgraph Firebase["☁️ Firebase"]
         Auth["🔐 Authentication"]
-        Firestore[("🔥 Firestore")]
+        Supabase PostgreSQL[("🔥 Supabase PostgreSQL")]
     end
 
     Admin["🛡️ Administrator"]
@@ -357,10 +359,10 @@ flowchart TB
     Gemini --> Resolution
 
     React --> Auth
-    React --> Firestore
+    React --> Supabase PostgreSQL
 
     Admin --> React
-    API --> Firestore
+    API --> Supabase PostgreSQL
 ```
 
 ---
@@ -376,7 +378,7 @@ flowchart TB
 | ⚡ **Build Tool** | Vite 6 |
 | 🎨 **Styling** | Tailwind CSS |
 | 🧠 **AI** | Google Gemini |
-| 🔥 **Database** | Firebase Firestore |
+| 🔥 **Database** | Supabase PostgreSQL |
 | 🔐 **Authentication** | Firebase Authentication |
 | 🚀 **Backend** | Node.js + Express |
 | 🎙️ **Voice** | Web Speech API |
@@ -449,7 +451,7 @@ The production deployment is intentionally split:
       ↓
     Gemini API
       ↓
-    Firebase Admin / Firestore
+    Firebase Admin / Supabase PostgreSQL
 
 ## Frontend — Vercel
 
@@ -547,10 +549,10 @@ Enable:
 🔥 Anonymous Authentication (browsing only)
 🔥 Phone Authentication (OTP)
 🔥 Email/Password Authentication
-🔥 Cloud Firestore
+🔥 Cloud Supabase PostgreSQL
 ```
 
-Deploy Firestore rules:
+Deploy Supabase PostgreSQL rules:
 
 ```bash
 firebase deploy --only firestore:rules
@@ -621,7 +623,7 @@ NivaranAI separates sensitive operations from the public client.
 
 - Firebase Authentication
 - Admin authorization
-- Firestore security rules
+- Supabase PostgreSQL security rules
 - Server-side Gemini API calls
 - Rate limiting
 - Request-size limits
@@ -662,7 +664,7 @@ NivaranAI separates sensitive operations from the public client.
 
 Filing a complaint requires Firebase Authentication verification by mobile OTP or verified email. Phone sign-in uses Firebase Phone Authentication with reCAPTCHA; this app does not generate or store OTP codes. Ten-digit phone entries default to India (+91); other countries use E.164 phone format. Email registration/sign-in uses Firebase Email/Password Authentication and requires Firebase to report `emailVerified` after refreshing the user.
 
-The browser and `api.createComplaint` block unverified submissions, and `firestore.rules` also validates the matching phone-number or verified-email claim in the Firebase ID token. Anonymous sessions are limited to browsing. Contact fields are sourced from Firebase Authentication where verified; this feature does not duplicate them into a Firestore `users` collection.
+The browser and `api.createComplaint` block unverified submissions, and `firestore.rules` also validates the matching phone-number or verified-email claim in the Firebase ID token. Anonymous sessions are limited to browsing. Contact fields are sourced from Firebase Authentication where verified; this feature does not duplicate them into a Supabase PostgreSQL `users` collection.
 
 In Firebase Console, enable **Phone** and **Email/Password** providers, add localhost and approved production hosts to Authorized domains, review SMS regions/quotas, and configure verification email templates/action URLs. SMS/email delivery must be tested using the service operator's own Firebase project. Only client-safe Firebase web configuration belongs in `VITE_FIREBASE_*` settings; Firebase Admin credentials stay server-side.
 
@@ -725,7 +727,7 @@ Then display them like:
 - [x] Analytics
 - [x] Interactive map
 - [x] Firebase authentication
-- [x] Firestore database
+- [x] Supabase PostgreSQL database
 - [x] Tamil support
 
 ### 🚀 Future
