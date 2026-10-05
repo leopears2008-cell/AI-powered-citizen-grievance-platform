@@ -8,14 +8,14 @@ export const AIDemoCard: React.FC = () => {
   const ta = language === 'ta';
 
   return (
-    <section aria-labelledby="ai-demo-title" className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-6 sm:p-8 shadow-sm">
+    <section aria-labelledby="ai-demo-title" className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
       <div className="flex items-center gap-2 text-xs font-semibold text-indigo-700 mb-2">
         <Sparkles className="w-4 h-4" aria-hidden="true" />
-        <span>{ta ? 'AI எப்படி உதவுகிறது' : 'See the AI in action'}</span>
-        <span className="ml-auto text-[10px] font-normal text-slate-400">{ta ? 'மாதிரி எடுத்துக்காட்டு' : 'Sample example'}</span>
+        <span>{ta ? 'AI எப்படி உதவுகிறது' : 'How AI assists with a complaint'}</span>
+        <span className="ml-auto text-[10px] font-normal text-slate-400">{ta ? 'மாதிரி மட்டும்' : 'Example only'}</span>
       </div>
       <h2 id="ai-demo-title" className="text-xl sm:text-2xl font-black text-slate-900 mb-5">
-        {ta ? 'ஒரு வாக்கியம். AI மீதியை புரிந்துகொள்ளும்.' : 'One sentence. The AI does the sorting.'}
+        {ta ? 'புகாரை பகுப்பாய்வு செய்ய AI உதவுகிறது' : 'AI-assisted complaint analysis'}
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-stretch">
