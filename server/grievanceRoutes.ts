@@ -418,22 +418,25 @@ async function loadAccessibleRow(db: SupabaseClient, user: AuthenticatedUser, id
   return row;
 }
 
-async function listGrievances(db: SupabaseClient, citizenId?: string): Promise<Grievance[]> {
-  const pageSize = 500;
-  const rows: GrievanceRow[] = [];
-  for (let from = 0; ; from += pageSize) {
-    let query = db.from('grievances').select(SELECT_GRIEVANCE);
-    if (citizenId) query = query.eq('citizen_id', citizenId);
-    const { data, error } = await query
-      .order('created_at', { ascending: false })
-      .order('id')
-      .range(from, from + pageSize - 1);
-    if (error) fail(error);
-    const page = (data ?? []) as GrievanceRow[];
-    rows.push(...page);
-    if (page.length < pageSize) break;
-  }
-  return rows.map(toGrievance);
+async function listGrievances(
+  db: SupabaseClient,
+  citizenId: string | undefined,
+  page: number,
+  limit: number,
+): Promise<{ items: Grievance[]; total: number; hasNext: boolean }> {
+  const safePage = Math.max(1, Math.floor(page));
+  const safeLimit = Math.min(100, Math.max(1, Math.floor(limit)));
+  const from = (safePage - 1) * safeLimit;
+  let query = db.from('grievances').select(SELECT_GRIEVANCE, { count: 'exact' });
+  if (citizenId) query = query.eq('citizen_id', citizenId);
+  const { data, error, count } = await query
+    .order('created_at', { ascending: false })
+    .order('id')
+    .range(from, from + safeLimit - 1);
+  if (error) fail(error);
+  const items = ((data ?? []) as GrievanceRow[]).map(toGrievance);
+  const total = count ?? 0;
+  return { items, total, hasNext: from + items.length < total };
 }
 
 async function writeAudit(
@@ -666,10 +669,20 @@ export function registerGrievanceRoutes(app: Express, authenticate: RequestHandl
   }));
 
   // Admins receive every grievance; everyone else only their own.
-  app.get('/api/grievances', authenticate, handle(async (_req, user, res) => {
+  app.get('/api/grievances', authenticate, handle(async (req, user, res) => {
     const db = requireDb();
     const admin = await isAdmin(user);
-    res.json(await listGrievances(db, admin ? undefined : user.uid));
+    const page = Number(req.query.page ?? 1);
+    const limit = Number(req.query.limit ?? 50);
+    if (!Number.isFinite(page) || !Number.isFinite(limit) || page < 1 || limit < 1 || limit > 100) {
+      throw new HttpError(400, 'Invalid pagination parameters.');
+    }
+    const result = await listGrievances(db, admin ? undefined : user.uid, page, limit);
+    res.setHeader('X-Total-Count', String(result.total));
+    res.setHeader('X-Page', String(Math.floor(page)));
+    res.setHeader('X-Limit', String(Math.floor(limit)));
+    res.setHeader('X-Has-Next', String(result.hasNext));
+    res.json(result.items);
   }));
 
   app.get('/api/grievances/:id', authenticate, handle(async (req, user, res) => {
