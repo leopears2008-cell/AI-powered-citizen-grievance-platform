@@ -70,19 +70,7 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="site-shell min-h-screen font-sans text-slate-900 flex flex-col justify-between selection:bg-blue-700 selection:text-white overflow-hidden">
-      <div className="site-building-backdrop" aria-hidden="true">
-        <img
-          src="https://upload.wikimedia.org/wikipedia/commons/b/b0/Fort_St._George%2C_Chennai_2.jpg"
-          alt=""
-          decoding="async"
-          fetchPriority="high"
-          onError={(event) => {
-            event.currentTarget.style.display = 'none';
-          }}
-        />
-        <div className="site-building-overlay" />
-      </div>
+    <div className="site-shell min-h-screen font-sans text-slate-900 flex flex-col justify-between selection:bg-slate-200 selection:text-slate-950">
       <div aria-live="polite" aria-relevant="additions text" className="fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full">
         {toasts.map((toast) => (
           <div
@@ -128,7 +116,7 @@ const MainLayout: React.FC = () => {
       <main className="site-main max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 flex flex-col space-y-8 overflow-y-auto">
         <Suspense fallback={<PageSkeleton label={language === 'ta' ? 'பக்கத்தை ஏற்றுகிறது…' : 'Loading page…'} />}>
           {activeTab === 'home' && (
-            <div className="space-y-8 animate-in fade-in duration-300">
+            <div className="space-y-8">
               {siteSettings.announcement && (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900" role="status">
                   {siteSettings.announcement}
@@ -158,7 +146,7 @@ const MainLayout: React.FC = () => {
           )}
 
           {activeTab === 'file' && (
-            <div className="animate-in fade-in duration-300">
+            <div>
               {authLoading ? (
                 <div role="status" className="py-16 text-center text-sm text-slate-600">{language === 'ta' ? 'அங்கீகாரத்தைச் சரிபார்க்கிறது…' : 'Checking your account…'}</div>
               ) : isCitizenVerified ? (
