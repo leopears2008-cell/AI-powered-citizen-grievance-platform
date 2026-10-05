@@ -1,10 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { useHeroHeaderGlass, useHeroParallax } from '../lib/heroMotion';
 import {
   Mic,
   FileText,
-  Search,
   CheckCircle2,
   Clock,
   ThumbsUp,
@@ -67,26 +66,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onOpenVoiceModal,
   onSelectCategory,
 }) => {
-  const { language, t, setActiveTab, setTrackId, showToast } = useApp();
-  const [quickTrackInput, setQuickTrackInput] = useState('');
+  const { language, t, setActiveTab, showToast } = useApp();
   const rootRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   useHeroHeaderGlass(rootRef);
   useHeroParallax(cardRef);
-
-  const handleQuickTrack = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickTrackInput.trim()) {
-      showToast(
-        language === 'ta' ? 'புகார் கண்காணிப்பு எண்ணை உள்ளிடவும்' : 'Please enter Grievance ID',
-        'warning'
-      );
-      return;
-    }
-    setTrackId(quickTrackInput.trim().toUpperCase());
-    setActiveTab('track');
-  };
 
   /** Scrolls to the existing assistant section on the page; does not touch its logic. */
   const openAssistant = () => {
@@ -215,135 +200,103 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           ))}
         </div>
 
-        {/* Layer 3: hero text / UI */}
-        <div className="hero-par-text relative z-10 w-full max-w-4xl mx-auto text-center space-y-6">
-          <div className="hero-rise" style={delay('0.2s')}>
-            <p className="inline-flex items-center gap-3 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.22em] text-amber-100/90">
-              <span aria-hidden="true" className="h-px w-6 sm:w-10 bg-amber-100/50" />
+        {/* Layer 3: screenshot-matched hero composition */}
+        <div className="hero-reference-layout relative z-10 w-full max-w-7xl mx-auto">
+          <div className="hero-reference-copy">
+            <p className="hero-rise inline-flex items-center gap-2 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.22em] text-white/90" style={delay('0.2s')}>
               {language === 'ta' ? t.heroBadge : 'TAMIL NADU GOVERNMENT'}
-              <span aria-hidden="true" className="h-px w-6 sm:w-10 bg-amber-100/50" />
             </p>
-          </div>
 
-          <h1
-            className="hero-rise-blur text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight font-sans text-white leading-[1.08] [text-shadow:0_2px_16px_rgb(0_0_0/0.45)]"
-            style={delay('0.4s')}
-          >
-            {language === 'ta' ? (
-              t.heroHeadline
-            ) : (
-              <>
-                Your Voice Matters.
-                <br />
-                <span className="text-amber-100">We Listen, We Act.</span>
-              </>
-            )}
-          </h1>
-
-          <p
-            className="hero-rise text-sm sm:text-base lg:text-lg text-slate-100 max-w-2xl mx-auto leading-relaxed font-normal [text-shadow:0_1px_8px_rgb(0_0_0/0.4)]"
-            style={delay('0.6s')}
-          >
-            {language === 'ta'
-              ? t.heroSubheadline
-              : 'File your grievances, track status, and help build a better Tamil Nadu — together.'}
-          </p>
-
-          {/* Action CTAs */}
-          <div
-            className="hero-rise flex flex-col sm:flex-row items-center justify-center gap-3 pt-2"
-            style={delay('0.8s')}
-          >
-            <button
-              type="button"
-              onClick={() => setActiveTab('file')}
-              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-indigo-900 font-bold text-sm sm:text-base shadow-lg shadow-black/25 flex items-center justify-center space-x-2.5 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            <h1
+              className="hero-rise-blur mt-4 text-4xl sm:text-5xl lg:text-6xl xl:text-[4.5rem] font-black tracking-tight text-white leading-[1.04] [text-shadow:0_3px_22px_rgb(0_0_0/0.42)]"
+              style={delay('0.35s')}
             >
-              <FileText className="w-5 h-5 text-indigo-600" aria-hidden="true" />
-              <span>{language === 'ta' ? t.btnWriteComplaint : 'File Complaint'}</span>
-            </button>
+              {language === 'ta' ? (
+                t.heroHeadline
+              ) : (
+                <>
+                  Your Voice Matters
+                  <br />
+                  <span>We Listen, We Act</span>
+                </>
+              )}
+            </h1>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('directory')}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm sm:text-base border border-white/35 backdrop-blur-sm flex items-center justify-center space-x-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            <p
+              className="hero-rise mt-5 max-w-xl text-sm sm:text-base lg:text-lg text-white/90 leading-relaxed [text-shadow:0_2px_10px_rgb(0_0_0/0.35)]"
+              style={delay('0.55s')}
             >
-              <Compass className="w-5 h-5 text-amber-100" aria-hidden="true" />
-              <span>{language === 'ta' ? 'தமிழ்நாட்டை அறிக' : 'Explore Tamil Nadu'}</span>
-            </button>
+              {language === 'ta'
+                ? t.heroSubheadline
+                : 'File your grievances, track status, and help build a better Tamil Nadu — together.'}
+            </p>
 
-            <button
-              type="button"
-              onClick={onOpenVoiceModal}
-              className="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-transparent hover:bg-white/10 text-white font-semibold text-sm sm:text-base border border-white/20 flex items-center justify-center space-x-2 transition-all"
-            >
-              <Mic className="w-5 h-5 text-indigo-200" aria-hidden="true" />
-              <span>{t.btnSpeakComplaint}</span>
-            </button>
-          </div>
-
-          {/* Quick Track Input Bar */}
-          <div className="hero-rise pt-2 max-w-xl mx-auto" style={delay('1s')}>
-            <form
-              onSubmit={handleQuickTrack}
-              className="bg-slate-900/45 p-1.5 rounded-xl border border-white/20 backdrop-blur-md flex items-center shadow-lg"
-            >
-              <Search className="w-4 h-4 text-indigo-200 ml-3 shrink-0" aria-hidden="true" />
-              <input
-                type="text"
-                value={quickTrackInput}
-                onChange={(e) => setQuickTrackInput(e.target.value)}
-                aria-label={language === 'ta' ? 'புகார் எண்' : 'Grievance ID'}
-                placeholder={
-                  language === 'ta'
-                    ? 'புகார் எண் மூலம் நிலை அறிய (எ.கா: GRV-2026-00124)'
-                    : 'Track existing grievance (e.g. GRV-2026-00124)'
-                }
-                className="w-full min-w-0 bg-transparent px-3 py-2 text-xs sm:text-sm text-white placeholder-slate-300 focus:outline-none font-mono"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm rounded-lg transition-colors shrink-0 flex items-center space-x-1"
-              >
-                <span>{language === 'ta' ? 'அறிக' : 'Track'}</span>
-                <ChevronRight className="w-4 h-4" aria-hidden="true" />
-              </button>
-            </form>
-          </div>
-        </div>
-
-        {/* Layer 4: assistant card (parallax > entrance > float) */}
-        <div className="hero-par-card relative z-10 mt-8 w-full max-w-xl mx-auto">
-          <div className="hero-pop" style={delay('1.2s')}>
-            <div className="hero-float">
-              <div className="flex items-center gap-3 rounded-2xl border border-white/20 bg-slate-900/50 backdrop-blur-md p-3 sm:p-4 text-left shadow-xl shadow-black/20">
-                <div className="w-10 h-10 shrink-0 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
-                  <Bot className="w-5 h-5" aria-hidden="true" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white">NivaranAI Citizen Assistant</p>
-                  <p className="text-xs text-slate-200 leading-snug">
-                    {language === 'ta'
-                      ? 'புகாரை எழுத, செயல்முறையை அறிய உதவும்.'
-                      : 'Draft a complaint, learn the process, or find where to track it.'}
-                  </p>
+            <div className="hero-rise mt-6 w-full max-w-2xl" style={delay('0.75s')}>
+              <div className="hero-complaint-bar">
+                <div className="hero-complaint-icon" aria-hidden="true">
+                  <FileText className="w-5 h-5" />
                 </div>
                 <button
                   type="button"
-                  onClick={openAssistant}
-                  className="shrink-0 rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3.5 py-2 text-xs font-bold text-white transition-colors"
+                  onClick={() => setActiveTab('file')}
+                  className="hero-complaint-placeholder text-left"
                 >
-                  {language === 'ta' ? 'கேளுங்கள்' : 'Ask'}
+                  {language === 'ta'
+                    ? 'உங்கள் புகாரை விவரிக்கவும்...'
+                    : 'Describe your issue... (e.g., water supply, roads, education)'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('file')}
+                  className="hero-complaint-button"
+                >
+                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                  <span>{language === 'ta' ? t.btnWriteComplaint : 'File Complaint'}</span>
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        <p className="relative z-10 mt-8 border-t border-white/15 pt-4 text-center text-xs text-slate-200">
-          {language === 'ta'
-            ? 'இது முன்-உற்பத்தி தளம். உண்மையான புகார் சேவை அல்லது செயல்பாட்டு புள்ளிவிவரங்கள் உறுதிப்படுத்தப்படவில்லை.'
-            : 'Pre-production interface. No live complaint service or operational metrics are claimed.'}
+        {/* Layer 4: screenshot-matched floating actions */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('directory')}
+          className="hero-explore hero-rise"
+          style={delay('1.1s')}
+        >
+          <span className="hero-explore-play" aria-hidden="true">
+            <ChevronRight className="w-4 h-4" />
+          </span>
+          <span>{language === 'ta' ? 'தமிழ்நாட்டை அறிக' : 'Explore Tamil Nadu'}</span>
+        </button>
+
+        <div className="hero-assistant hero-pop" style={delay('1.25s')}>
+          <div className="hero-float">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 shrink-0 rounded-full bg-sky-100 flex items-center justify-center shadow-sm">
+                <Bot className="w-6 h-6 text-sky-700" aria-hidden="true" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-slate-800">AI Assistant</p>
+                <p className="text-xs text-slate-500 leading-snug">
+                  {language === 'ta' ? 'உதவி அல்லது புகார் அளிக்க வழிகாட்டுகிறேன்.' : 'Need help? I can guide you or file a complaint for you.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={openAssistant}
+                aria-label="Open AI Assistant"
+                className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p className="relative z-10 mt-auto pt-5 text-center text-[11px] text-white/65">
+          {language === 'ta' ? 'குடிமக்களின் குரல் • நிவாரணAI' : 'Citizen voice • NivaranAI'}
         </p>
       </div>
 
