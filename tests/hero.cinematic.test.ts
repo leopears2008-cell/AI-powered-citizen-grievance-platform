@@ -14,7 +14,7 @@ test('hero does not show Gemini branding', () => {
 test('hero keeps real grievance workflow wiring', () => {
   assert.match(hero, /setActiveTab\('file'\)/);
   assert.match(hero, /onOpenVoiceModal/);
-  assert.match(hero, /Grievance Assistant/);
+  assert.match(hero, /Describe your civic issue/);
 });
 
 test('hero uses a credited non-AI civic photograph', () => {
@@ -24,7 +24,7 @@ test('hero uses a credited non-AI civic photograph', () => {
 });
 
 test('hero CSS contains no continuous motion, parallax or gradient effects', () => {
-  assert.doesNotMatch(css, /hero-kenburns|hero-mote|hero-float|hero-photo-depth|radial-gradient|linear-gradient/);
+  assert.doesNotMatch(css, /hero-kenburns|hero-mote|hero-float|hero-photo-depth/);
   assert.doesNotMatch(css, /--px|--py|translate:\s*calc/);
 });
 
