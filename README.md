@@ -338,10 +338,11 @@ flowchart TB
         Resolution["Resolution Assistant"]
     end
 
-    subgraph Firebase["☁️ Firebase"]
+    subgraph AuthLayer["☁️ Firebase Authentication"]
         Auth["🔐 Authentication"]
-        Supabase PostgreSQL[("🔥 Supabase PostgreSQL")]
     end
+
+    Supabase[("🗄️ Supabase PostgreSQL")]
 
     Admin["🛡️ Administrator"]
 
@@ -359,10 +360,10 @@ flowchart TB
     Gemini --> Resolution
 
     React --> Auth
-    React --> Supabase PostgreSQL
+    React --> Supabase
 
     Admin --> React
-    API --> Supabase PostgreSQL
+    API --> Supabase
 ```
 
 ---
