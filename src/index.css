@@ -42,12 +42,44 @@ textarea {
 }
 
 /* --------------------------------------------------------------------------
-   Civic site backdrop
+   Global civic building background
+   Applied to every route/view, not just the home hero.
    -------------------------------------------------------------------------- */
 .site-shell {
   position: relative;
   isolation: isolate;
-  background: #f8fafc;
+  background: #e8eef5;
+  min-height: 100vh;
+}
+
+.site-global-background {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background-image:
+    linear-gradient(
+      180deg,
+      rgb(248 250 252 / 0.84) 0%,
+      rgb(248 250 252 / 0.76) 42%,
+      rgb(248 250 252 / 0.86) 100%
+    ),
+    url('https://upload.wikimedia.org/wikipedia/commons/b/b0/Fort_St._George%2C_Chennai_2.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: saturate(0.82) contrast(0.98);
+  transform: translateZ(0) scale(1.03);
+  will-change: transform;
+}
+
+.site-global-background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgb(255 255 255 / 0.18), transparent 55%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.24));
 }
 
 .site-main {
@@ -55,10 +87,14 @@ textarea {
   z-index: 1;
 }
 
+.site-main > * {
+  position: relative;
+}
+
 .site-footer {
   position: relative;
   z-index: 1;
-  background: rgb(255 255 255 / 0.94);
+  background: rgb(255 255 255 / 0.90);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
