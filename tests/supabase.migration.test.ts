@@ -46,3 +46,16 @@ test('civic intelligence migration adds public analytics indexes', async () => {
   assert.match(normalized, /idx_grievances_public_status_target/);
   assert.match(normalized, /idx_grievances_public_geo/);
 });
+
+
+test('notifications and analytics migrations provide persistent, bounded server-side workflows', async () => {
+  const notifications = (await readFile(join(root, 'supabase/migrations/006_notifications.sql'), 'utf8')).toLowerCase();
+  assert.match(notifications, /create table if not exists public\.notifications/);
+  assert.match(notifications, /notifications_select_own/);
+  assert.match(notifications, /notifications_mark_own/);
+
+  const analytics = (await readFile(join(root, 'supabase/migrations/007_admin_analytics.sql'), 'utf8')).toLowerCase();
+  assert.match(analytics, /get_admin_grievance_analytics/);
+  assert.match(analytics, /generate_series/);
+  assert.match(analytics, /average_resolution_hours/);
+});
