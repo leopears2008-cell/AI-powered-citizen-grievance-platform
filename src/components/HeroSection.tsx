@@ -90,7 +90,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               const image = event.currentTarget;
               if (!image.src.endsWith(HERO_BG_FALLBACK)) image.src = HERO_BG_FALLBACK;
             }}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover hero-bg-image"
             style={{ objectPosition: '50% 42%' }}
           />
         </div>
@@ -114,7 +114,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               )}
             </h1>
 
-            <p className="mt-5 max-w-xl text-sm sm:text-base lg:text-lg text-white/90 leading-relaxed ">
+            <p className="mt-5 max-w-xl text-sm sm:text-base lg:text-lg text-slate-600 leading-relaxed ">
               {language === 'ta'
                 ? t.heroSubheadline
                 : 'Submit a complaint with evidence, review the AI classification, and track the recorded status updates.'}
@@ -168,7 +168,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         <p className="relative z-10 mt-auto pt-5 text-center text-[11px] text-slate-500">
           {language === 'ta'
             ? 'புகைப்படம்: Fort St. George, Chennai — Wikimedia Commons'
-            : 'Photo: Fort St. George, Chennai — Wikimedia Commons (public domain)'}
+            : 'Photo: Fort St. George, Chennai'}
         </p>
       </section>
 
