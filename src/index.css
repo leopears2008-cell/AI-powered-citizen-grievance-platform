@@ -24,10 +24,76 @@ textarea {
   }
 }
 
-/* Respect users who prefer less motion. The UI intentionally uses no
-   continuous/parallax/cursor animation; this also protects future additions. */
+/* Respect users who prefer less motion. */
 @media (prefers-reduced-motion: reduce) {
   .hero-bg-image {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Civic site backdrop
+   -------------------------------------------------------------------------- */
+.site-shell {
+  position: relative;
+  isolation: isolate;
+  background: #f8fafc;
+}
+
+.site-main {
+  position: relative;
+  z-index: 1;
+}
+
+.site-footer {
+  position: relative;
+  z-index: 1;
+  background: rgb(255 255 255 / 0.94);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.site-header {
+  background-color: rgb(15 23 42 / 0.96) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Hero — full-width civic building composition
+   -------------------------------------------------------------------------- */
+.hero-card {
+  min-height: 42rem;
+  border-radius: 0;
+  padding-top: 4rem;
+  padding-bottom: 1.5rem;
+  background: #dbeafe;
+  border: 0;
+}
+
+.hero-root[data-glass] .hero-card {
+  padding-top: calc(var(--site-header-h, 0px) + 2rem);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.hero-par-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #dbeafe;
+}
+
+.hero-bg-image {
   width: 108%;
   height: 108%;
   object-fit: cover;
@@ -55,8 +121,15 @@ textarea {
 .hero-scrim {
   display: block;
   background:
-    linear-gradient(90deg, rgb(255 255 255 / 0.92) 0%, rgb(255 255 255 / 0.82) 28%, rgb(255 255 255 / 0.28) 54%, rgb(255 255 255 / 0) 72%),
-    linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02));
+    linear-gradient(
+      90deg,
+      rgb(255 255 255 / 0.94) 0%,
+      rgb(255 255 255 / 0.86) 25%,
+      rgb(255 255 255 / 0.48) 47%,
+      rgb(255 255 255 / 0.12) 67%,
+      rgb(255 255 255 / 0) 78%
+    ),
+    linear-gradient(180deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.02));
 }
 
 .hero-reference-layout {
@@ -219,7 +292,13 @@ textarea {
 
   .hero-scrim {
     background:
-      linear-gradient(180deg, rgb(255 255 255 / 0.9) 0%, rgb(255 255 255 / 0.78) 42%, rgb(255 255 255 / 0.22) 78%, rgb(255 255 255 / 0.08) 100%);
+      linear-gradient(
+        180deg,
+        rgb(255 255 255 / 0.92) 0%,
+        rgb(255 255 255 / 0.82) 42%,
+        rgb(255 255 255 / 0.28) 78%,
+        rgb(255 255 255 / 0.08) 100%
+      );
   }
 
   .hero-bg-image {
