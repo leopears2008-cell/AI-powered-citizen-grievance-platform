@@ -52,7 +52,7 @@ test('notifications and analytics migrations provide persistent, bounded server-
   const notifications = (await readFile(join(root, 'supabase/migrations/006_notifications.sql'), 'utf8')).toLowerCase();
   assert.match(notifications, /create table if not exists public\.notifications/);
   assert.match(notifications, /revoke all on public\.notifications from anon, authenticated/);
-  assert.match(notifications, /Firebase Authentication is the application's identity provider/);
+  assert.match(notifications, /firebase authentication is the application's identity provider/);
 
   const analytics = (await readFile(join(root, 'supabase/migrations/007_admin_analytics.sql'), 'utf8')).toLowerCase();
   assert.match(analytics, /get_admin_grievance_analytics/);
