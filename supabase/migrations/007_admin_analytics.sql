@@ -52,8 +52,7 @@ summary as (
       )::numeric,
       1
     ) as average_resolution_hours,
-    round(coalesce(avg(feedback_rating) filter (where feedback_rating is not null), 0)::numeric, 2) as citizen_satisfaction_score,
-    round(coalesce(avg(feedback_rating), 0)::numeric, 1) as citizen_satisfaction_score
+    round(coalesce(avg(feedback_rating) filter (where feedback_rating is not null), 0)::numeric, 1) as citizen_satisfaction_score
   from base
 ),
 categories as (
