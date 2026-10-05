@@ -71,6 +71,7 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className="site-shell min-h-screen font-sans text-slate-900 flex flex-col justify-between selection:bg-slate-200 selection:text-slate-950">
+      <div aria-hidden="true" className="site-global-background" />
       <div aria-live="polite" aria-relevant="additions text" className="fixed top-20 right-4 z-50 flex flex-col space-y-2 pointer-events-none max-w-sm w-full">
         {toasts.map((toast) => (
           <div
