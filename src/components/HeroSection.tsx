@@ -34,7 +34,7 @@ interface HeroSectionProps {
  * Source: https://commons.wikimedia.org/wiki/File:Fort_St._George,_Chennai_2.jpg
  * License: public domain (author-released).
  */
-const HERO_BG_SRC = 'https://upload.wikimedia.org/wikipedia/commons/b/b0/Fort_St._George%2C_Chennai_2.jpg';
+const HERO_BG_SRC = 'https://i0.wp.com/www.tusktravel.com/blog/wp-content/uploads/2023/07/Secretariat-inside-Fort-St-George-Chennai.jpg?resize=1024%2C463&ssl=1';
 const HERO_BG_FALLBACK = '/og-image.png';
 /** Optional transparent PNG/WebP of foreground trees. Leave null until the asset exists. */
 const HERO_FOREGROUND_SRC = null as string | null;
