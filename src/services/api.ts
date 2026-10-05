@@ -294,13 +294,12 @@ export const api = {
   },
 
   async getNotifications(): Promise<NotificationItem[]> {
-    // Notifications are intentionally disabled until a persistent, access-controlled
-    // notification store is configured for production.
-    return [];
+    return request<NotificationItem[]>('/api/notifications');
   },
 
-  async markNotificationRead(_id: string) {
-    return;
+  async markNotificationRead(id: string) {
+    if (!/^[0-9a-f-]{20,80}$/i.test(id)) throw new Error('Invalid notification identifier.');
+    return request<NotificationItem>(`/api/notifications/${encodeURIComponent(id)}/read`, { method: 'PATCH' });
   },
 
   async getSiteSettings(): Promise<import('../types').SiteSettings> {
