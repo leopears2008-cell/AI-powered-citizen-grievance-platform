@@ -186,6 +186,10 @@ Administrators can manage the complete grievance lifecycle.
 - Review grievance history
 - Export grievance data
 
+### 📰 Live Tamil Nadu News
+
+The platform includes a backend-cached live Tamil Nadu news feed powered by **FreeNewsAPI.ai**. It requires no API key or signup; the backend filters India coverage and exposes a normalized response to the frontend.
+
 ### 📊 Analytics
 
 ```text
