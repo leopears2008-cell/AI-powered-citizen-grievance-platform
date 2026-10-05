@@ -43,31 +43,7 @@ textarea {
 .site-shell {
   position: relative;
   isolation: isolate;
-  background: #e2e8f0;
-}
-
-.site-building-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  overflow: hidden;
-  pointer-events: none;
-  background: #e2e8f0;
-}
-
-.site-building-backdrop img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-  object-position: center 42%;
-  filter: saturate(0.96) contrast(0.98);
-}
-
-.site-building-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgb(248 250 252 / 0.58);
+  background: #f8fafc;
 }
 
 .site-main {
@@ -91,11 +67,12 @@ textarea {
    Hero
    -------------------------------------------------------------------------- */
 .hero-card {
-  min-height: min(54rem, calc(100svh - 1rem));
-  border-radius: 0.9rem;
-  padding-top: 6.5rem;
+  min-height: 34rem;
+  border-radius: 0;
+  padding-top: 3.5rem;
   padding-bottom: 2rem;
-  background: #0f172a;
+  background: #172033;
+  border: 1px solid #263449;
 }
 
 .hero-root[data-glass] .hero-card {
@@ -114,7 +91,7 @@ textarea {
 }
 
 .hero-reference-layout {
-  min-height: 34rem;
+  min-height: 27rem;
   display: flex;
   align-items: center;
 }
@@ -240,16 +217,12 @@ textarea {
 }
 
 @media (max-width: 640px) {
-  .site-building-backdrop img {
-    object-position: center 44%;
-  }
-
   .hero-card {
-    min-height: 45rem;
+    min-height: 38rem;
     margin-left: -0.25rem;
     margin-right: -0.25rem;
     border-radius: 0;
-    padding: 5.5rem 1.1rem 1.25rem;
+    padding: 4rem 1.1rem 1.25rem;
   }
 
   .hero-reference-layout {
