@@ -452,7 +452,7 @@ The production deployment is intentionally split:
       ↓
     Gemini API
       ↓
-    Firebase Admin / Supabase PostgreSQL
+    Firebase Authentication / Supabase PostgreSQL + Storage
 
 ## Frontend — Vercel
 
@@ -465,30 +465,28 @@ Set these Vercel environment variables:
     VITE_FIREBASE_STORAGE_BUCKET=<Firebase storage bucket>
     VITE_FIREBASE_MESSAGING_SENDER_ID=<Firebase sender id>
     VITE_FIREBASE_APP_ID=<Firebase app id>
-    VITE_FIRESTORE_DATABASE_ID=<optional database id>
 
-VITE_* values are browser-visible configuration. Never put the Firebase Admin service-account JSON or Gemini API key in a VITE_* variable.
+VITE_* values are browser-visible configuration. Never put the Firebase Admin service-account JSON, Supabase service-role key, or Gemini API key in a VITE_* variable.
 
 Vercel uses vercel.json and runs:
 
-    npm run build:client
+    bun run build:client
 
 ## Backend — Render
 
-This repository includes render.yaml. Create a Render Web Service from the repository, or use the Blueprint configuration.
+This repository includes render.yaml. Create a Render Web Service from the repository, or use the Blueprint configuration. Bun is the repository's verified package manager because the committed bun.lock is used by CI.
 
 Set these server-only variables:
 
     GEMINI_API_KEY=<Gemini API key>
     FIREBASE_SERVICE_ACCOUNT_JSON=<Firebase Admin service-account JSON>
-    FIRESTORE_DATABASE_ID=<optional database id>
     ADMIN_EMAILS=<comma-separated verified admin emails>
     CORS_ORIGINS=https://<your-vercel-domain>
 
 The backend runs:
 
-    npm run build:server
-    npm start
+    bun run build:server
+    bun start
 
 Health check:
 
@@ -518,7 +516,7 @@ cd AI-powered-citizen-grievance-platform
 ## 2️⃣ Install Dependencies
 
 ```bash
-npm install
+bun install
 ```
 
 ## 3️⃣ Configure Environment Variables
@@ -579,7 +577,7 @@ http://localhost:3000
 |---|---|
 | `npm run dev` | Start development server |
 | `npm run build` | Production build |
-| `npm start` | Start production server |
+| `bun start` | Start production server |
 | `npm run lint` | Check TypeScript |
 | `npm run provision-admin -- <email>` | Create admin access |
 
