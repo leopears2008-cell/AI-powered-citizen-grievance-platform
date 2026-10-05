@@ -163,24 +163,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           />
         </div>
 
-        {/* Indian national flag accent: kept as part of the hero composition. */}
-        <div
-          aria-hidden="true"
-          className="absolute z-[5] top-[9%] right-[18%] sm:right-[20%] lg:right-[22%] pointer-events-none drop-shadow-[0_3px_8px_rgb(0_0_0/0.28)]"
-        >
-          <svg viewBox="0 0 150 150" width="150" height="150" className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32">
-            <path d="M28 138V18" stroke="white" strokeWidth="3" strokeLinecap="round" />
-            <path d="M30 22 C62 12 82 34 122 23 L122 72 C82 83 62 61 30 72 Z" fill="white" />
-            <path d="M30 22 C62 12 82 34 122 23 L122 39 C82 50 62 28 30 38 Z" fill="#FF9933" />
-            <path d="M30 55 C62 45 82 67 122 56 L122 72 C82 83 62 61 30 72 Z" fill="#138808" />
-            <circle cx="76" cy="47" r="8" fill="none" stroke="#000080" strokeWidth="2" />
-            <circle cx="76" cy="47" r="2.2" fill="#000080" />
-            <g stroke="#000080" strokeWidth="1">
-              <path d="M76 37V57M66 47H86M69 40L83 54M83 40L69 54" />
-            </g>
-          </svg>
-        </div>
-
         {/* Layer 2: optional foreground scenery */}
         {HERO_FOREGROUND_SRC && (
           <div aria-hidden="true" className="hero-par-fg absolute -inset-[3%] pointer-events-none">
