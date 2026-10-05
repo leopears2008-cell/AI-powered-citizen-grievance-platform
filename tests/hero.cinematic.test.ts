@@ -11,38 +11,25 @@ test('hero does not show Gemini branding', () => {
   assert.doesNotMatch(hero, /gemini/i);
 });
 
-test('hero keeps real workflow wiring', () => {
+test('hero keeps real grievance workflow wiring', () => {
   assert.match(hero, /setActiveTab\('file'\)/);
   assert.match(hero, /onOpenVoiceModal/);
-  assert.match(hero, /NivaranAI Citizen Assistant/);
+  assert.match(hero, /Grievance Assistant/);
 });
 
-test('particle count stays within the 8-15 budget', () => {
-  const match = hero.match(/makeMotes\((\d+)\)/);
-  assert.ok(match, 'makeMotes(count) call not found');
-  const count = Number(match[1]);
-  assert.ok(count >= 8 && count <= 15, `unexpected particle count ${count}`);
+test('hero uses a credited non-AI civic photograph', () => {
+  assert.match(hero, /upload\.wikimedia\.org/);
+  assert.match(hero, /public domain/i);
+  assert.doesNotMatch(hero, /makeMotes|hero-kenburns|useHeroParallax/);
 });
 
-test('Ken Burns runs 15-20s, ends near 1.05 and alternates (seamless loop)', () => {
-  const duration = css.match(/animation:\s*hero-kenburns\s+(\d+)s[^;]*alternate/);
-  assert.ok(duration, 'hero-kenburns alternate animation not found');
-  assert.ok(Number(duration[1]) >= 15 && Number(duration[1]) <= 20);
-  assert.match(css, /--kb-scale:\s*1\.05/);
-  assert.match(css, /--kb-scale:\s*1\.025/);
+test('hero CSS contains no continuous motion, parallax or gradient effects', () => {
+  assert.doesNotMatch(css, /hero-kenburns|hero-mote|hero-float|hero-photo-depth|radial-gradient|linear-gradient/);
+  assert.doesNotMatch(css, /--px|--py|translate:\s*calc/);
 });
 
-test('reduced motion disables continuous hero animation and parallax', () => {
-  const block = css.slice(css.indexOf('Reduced motion: keep a simple fade'));
-  for (const cls of ['.hero-kb', '.hero-light', '.hero-mote', '.hero-float', '.hero-par-bg']) {
-    assert.ok(block.includes(cls), `${cls} missing from reduced-motion block`);
-  }
-  assert.match(block, /animation:\s*none\s*!important/);
-});
-
-test('parallax hook avoids React state and gates on mouse / fine pointer', () => {
-  const hook = read('src/lib/heroMotion.ts');
-  assert.doesNotMatch(hook, /useState/);
-  assert.match(hook, /pointerType !== 'mouse'/);
-  assert.match(hook, /prefers-reduced-motion/);
+test('hero buttons use standard rectangular controls instead of pill-shaped buttons', () => {
+  const buttonBlock = css.slice(css.indexOf('.hero-complaint-button'));
+  assert.doesNotMatch(buttonBlock, /border-radius:\s*9999?px/);
+  assert.match(buttonBlock, /border-radius:\s*0\.65rem/);
 });
