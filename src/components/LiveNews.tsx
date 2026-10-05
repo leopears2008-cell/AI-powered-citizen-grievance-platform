@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ExternalLink, Newspaper, RefreshCw, Search, Radio } from 'lucide-react';
-import { fetchLiveNews, googleNewsUrl, type LiveNewsArticle } from '../services/news';
+import { fetchLiveNews, type LiveNewsArticle } from '../services/news';
 
 interface LiveNewsProps {
   initialQuery?: string;
@@ -17,8 +17,6 @@ export const LiveNews: React.FC<LiveNewsProps> = ({
   const [articles, setArticles] = useState<LiveNewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshNonce, setRefreshNonce] = useState(0);
-
-  const externalNewsUrl = useMemo(() => googleNewsUrl(query), [query]);
 
   useEffect(() => {
     setQuery(initialQuery);
@@ -58,7 +56,7 @@ export const LiveNews: React.FC<LiveNewsProps> = ({
               <div>
                 <h2 className="text-xl font-bold text-slate-900">{title}</h2>
                 <p className="text-[11px] text-slate-500">
-                  Google News live feed · refreshes on demand
+                  FreeNewsAPI.ai live feed · refreshes on demand
                 </p>
               </div>
             </div>
@@ -75,14 +73,6 @@ export const LiveNews: React.FC<LiveNewsProps> = ({
                 {preset}
               </button>
             ))}
-            <a
-              href={externalNewsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-            >
-              More live coverage <ExternalLink className="w-3 h-3" />
-            </a>
           </div>
         </div>
 
@@ -126,7 +116,7 @@ export const LiveNews: React.FC<LiveNewsProps> = ({
             Search: <span className="font-semibold text-slate-800">{query}</span>
           </div>
           <div className="text-[10px] text-slate-400">
-            Live coverage is provided through Google News. Wikipedia remains separate for MLA profile metadata.
+            Live coverage is provided through FreeNewsAPI.ai. Wikipedia remains separate for MLA profile metadata.
           </div>
         </div>
       </div>
@@ -158,7 +148,7 @@ export const LiveNews: React.FC<LiveNewsProps> = ({
               )}
               <div className="p-5">
                 <div className="text-[10px] uppercase tracking-wide font-bold text-red-600 mb-2">
-                  Wikinews
+                  FreeNewsAPI.ai
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 leading-snug">{article.title}</h3>
                 {article.extract && (
