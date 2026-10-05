@@ -79,7 +79,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
   return (
     <div className="hero-root space-y-8">
-      <section className="hero-card relative isolate overflow-hidden rounded-2xl bg-slate-950 text-white px-6 pb-8 sm:px-10 lg:px-12 shadow-xl border border-white/10 flex flex-col justify-center">
+      <section className="hero-card relative isolate overflow-hidden rounded-2xl bg-slate-950 text-slate-900 px-6 pb-8 sm:px-10 lg:px-12 shadow-xl border border-white/10 flex flex-col justify-center">
         <div aria-hidden="true" className="hero-par-bg absolute inset-0 pointer-events-none">
           <img
             src={HERO_BG_SRC}
@@ -98,11 +98,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
         <div className="hero-reference-layout relative z-10 w-full max-w-7xl mx-auto">
           <div className="hero-reference-copy">
-            <p className="inline-flex items-center gap-2 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.18em] text-white/90">
-              {language === 'ta' ? t.heroBadge : 'TAMIL NADU CIVIC SERVICES'}
+            <p className="inline-flex items-center gap-2 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+              {language === 'ta' ? t.heroBadge : 'CITIZEN GRIEVANCE SERVICE'}
             </p>
 
-            <h1 className="mt-4 text-4xl sm:text-5xl lg:text-6xl xl:text-[4.25rem] font-black tracking-tight text-white leading-[1.05] [text-shadow:0_3px_22px_rgb(0_0_0/0.45)]">
+            <h1 className="mt-4 text-4xl sm:text-5xl lg:text-6xl xl:text-[4.25rem] font-black tracking-tight text-slate-950 leading-[1.05] ">
               {language === 'ta' ? (
                 t.heroHeadline
               ) : (
@@ -114,7 +114,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               )}
             </h1>
 
-            <p className="mt-5 max-w-xl text-sm sm:text-base lg:text-lg text-white/90 leading-relaxed [text-shadow:0_2px_10px_rgb(0_0_0/0.4)]">
+            <p className="mt-5 max-w-xl text-sm sm:text-base lg:text-lg text-white/90 leading-relaxed ">
               {language === 'ta'
                 ? t.heroSubheadline
                 : 'Submit a complaint with evidence, review the AI classification, and track the recorded status updates.'}
@@ -165,7 +165,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </div>
         </div>
 
-        <p className="relative z-10 mt-auto pt-5 text-center text-[11px] text-white/80">
+        <p className="relative z-10 mt-auto pt-5 text-center text-[11px] text-slate-500">
           {language === 'ta'
             ? 'புகைப்படம்: Fort St. George, Chennai — Wikimedia Commons'
             : 'Photo: Fort St. George, Chennai — Wikimedia Commons (public domain)'}
