@@ -470,7 +470,7 @@ VITE_* values are browser-visible configuration. Never put the Firebase Admin se
 
 Vercel uses vercel.json and runs:
 
-    bun run build:client
+    npm run build:client
 
 ## Backend — Render
 
@@ -486,7 +486,7 @@ Set these server-only variables:
 The backend runs:
 
     bun run build:server
-    bun start
+    npm start
 
 Health check:
 
@@ -516,7 +516,7 @@ cd AI-powered-citizen-grievance-platform
 ## 2️⃣ Install Dependencies
 
 ```bash
-bun install
+npm install
 ```
 
 ## 3️⃣ Configure Environment Variables
@@ -548,13 +548,13 @@ Enable:
 🔥 Anonymous Authentication (browsing only)
 🔥 Phone Authentication (OTP)
 🔥 Email/Password Authentication
-🔥 Cloud Supabase PostgreSQL
+🔥 Supabase PostgreSQL
 ```
 
 Deploy Supabase PostgreSQL rules:
 
 ```bash
-firebase deploy --only firestore:rules
+Supabase migrations (via the Supabase CLI or deployment pipeline)
 ```
 
 ## 5️⃣ Run the Application
@@ -577,7 +577,7 @@ http://localhost:3000
 |---|---|
 | `npm run dev` | Start development server |
 | `npm run build` | Production build |
-| `bun start` | Start production server |
+| `npm start` | Start production server |
 | `npm run lint` | Check TypeScript |
 | `npm run provision-admin -- <email>` | Create admin access |
 
