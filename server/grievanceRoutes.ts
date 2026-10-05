@@ -842,6 +842,17 @@ export function registerGrievanceRoutes(app: Express, authenticate: RequestHandl
     if (historyError) fail(historyError);
 
     await writeAudit(db, user, 'STATUS_UPDATE', `Updated ${id} to ${status}`, id);
+    const citizenId = current.citizen_id;
+    if (citizenId) {
+      const isResolution = status === 'Resolved';
+      await createNotification(db, citizenId, id, {
+        title: isResolution ? 'Resolution submitted' : `Grievance status: ${status}`,
+        title_ta: isResolution ? 'தீர்வு சமர்ப்பிக்கப்பட்டது' : `புகார் நிலை: ${status}`,
+        message: isResolution ? 'A resolution has been recorded. Please review the evidence and confirm whether the issue was resolved.' : `Your grievance status is now ${status}.`,
+        message_ta: isResolution ? 'தீர்வு பதிவு செய்யப்பட்டுள்ளது. ஆதாரத்தைப் பார்த்து பிரச்சினை தீர்ந்ததா என்பதை உறுதிப்படுத்தவும்.' : `உங்கள் புகாரின் நிலை இப்போது ${status}.`,
+        type: isResolution ? 'resolution' : 'status_update',
+      });
+    }
     res.json(await loadGrievance(db, id));
   }, { admin: true }));
 
@@ -883,6 +894,16 @@ export function registerGrievanceRoutes(app: Express, authenticate: RequestHandl
     if (historyError) fail(historyError);
 
     await writeAudit(db, user, 'OFFICER_ASSIGNMENT', `Assigned ${id} to officer ${officerId}`, id);
+    const assigned = await fetchGrievanceRow(db, id);
+    if (assigned?.citizen_id) {
+      await createNotification(db, assigned.citizen_id, id, {
+        title: 'Officer assigned',
+        title_ta: 'அதிகாரி நியமிக்கப்பட்டார்',
+        message: `Your grievance has been assigned to ${officer.name}.`,
+        message_ta: `${officer.name} உங்கள் புகாருக்கு நியமிக்கப்பட்டுள்ளார்.`,
+        type: 'assignment',
+      });
+    }
     res.json(await loadGrievance(db, id));
   }, { admin: true }));
 
