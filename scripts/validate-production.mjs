@@ -12,7 +12,7 @@ if (production) {
     distributedRateLimit: Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN),
     malwareScanning: Boolean(process.env.CLAMAV_SCAN_URL),
     privateEvidenceBucket: Boolean(process.env.GRIEVANCE_STORAGE_BUCKET),
-    licensedNews: process.env.NEWS_PROVIDER === 'newsapi' && Boolean(process.env.NEWS_API_KEY),
+    liveNewsProvider: process.env.NEWS_PROVIDER === 'freenewsapi',
     centralizedAlerts: Boolean(process.env.OBSERVABILITY_WEBHOOK_URL),
   };
   const failed = Object.entries(hardening).filter(([, ok]) => !ok).map(([name]) => name);
