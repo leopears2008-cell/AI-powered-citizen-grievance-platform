@@ -11,7 +11,6 @@ import {
   Lightbulb,
   HeartPulse,
   ChevronRight,
-  Bot,
 } from 'lucide-react';
 
 interface HeroSectionProps {
@@ -79,7 +78,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   ];
 
   return (
-    <div className="hero-root space-y-10">
+    <div className="hero-root space-y-8">
       <section className="hero-card relative isolate overflow-hidden rounded-2xl bg-slate-950 text-white px-6 pb-8 sm:px-10 lg:px-12 shadow-xl border border-white/10 flex flex-col justify-center">
         <div aria-hidden="true" className="hero-par-bg absolute inset-0 pointer-events-none">
           <img
@@ -166,30 +165,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </div>
         </div>
 
-        <div className="hero-assistant">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 shrink-0 rounded-lg bg-sky-100 flex items-center justify-center shadow-sm">
-              <Bot className="w-6 h-6 text-sky-700" aria-hidden="true" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-slate-800">Grievance Assistant</p>
-              <p className="text-xs text-slate-500 leading-snug">
-                {language === 'ta'
-                  ? 'புகார் எழுதவும் அல்லது சரியான பக்கத்திற்குச் செல்லவும் உதவுகிறேன்.'
-                  : 'Get help drafting a grievance or navigating the service.'}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setActiveTab('home')}
-              aria-label="Open grievance assistant"
-              className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-slate-700 hover:bg-slate-100 focus-visible:outline"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
         <p className="relative z-10 mt-auto pt-5 text-center text-[11px] text-white/80">
           {language === 'ta'
             ? 'புகைப்படம்: Fort St. George, Chennai — Wikimedia Commons'
@@ -197,7 +172,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         </p>
       </section>
 
-      <section aria-labelledby="civic-services-title">
+      <section aria-labelledby="civic-services-title" className="bg-white border border-slate-200 p-6 sm:p-8">
         <div className="mb-6">
           <h2 id="civic-services-title" className="text-xl sm:text-2xl font-black text-slate-900">
             {language === 'ta' ? 'குடிமக்கள் சேவை வகைகள்' : 'Civic service categories'}
@@ -220,21 +195,21 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   onSelectCategory(dept.category);
                   setActiveTab('file');
                 }}
-                className="bg-white p-5 rounded-xl border border-slate-200 hover:border-indigo-200 shadow-sm hover:shadow-md transition-colors text-left group flex flex-col justify-between"
+                className="bg-white p-5 rounded-lg border border-slate-200 hover:border-slate-400 shadow-sm transition-colors text-left group flex flex-col justify-between"
               >
                 <span className="flex items-start gap-3.5">
                   <span className={`p-3 rounded-lg border ${dept.color}`}>
                     <Icon className="w-6 h-6" aria-hidden="true" />
                   </span>
                   <span>
-                    <span className="block font-bold text-slate-900 text-sm group-hover:text-indigo-700">
+                    <span className="block font-bold text-slate-900 text-sm group-hover:text-slate-900">
                       {dept.title}
                     </span>
                     <span className="block text-xs text-slate-600 mt-1">{dept.desc}</span>
                   </span>
                 </span>
                 <span className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
-                  <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-md">
+                  <span className="text-[11px] font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-md">
                     {language === 'ta' ? 'புகார் அளிக்க' : 'File complaint'}
                   </span>
                   <ChevronRight className="w-4 h-4 text-slate-500" aria-hidden="true" />
