@@ -105,6 +105,22 @@ export function registerCivicFeatureRoutes(app: Express, authenticate: RequestHa
     } catch { return res.status(503).json({error:'Public transparency data is temporarily unavailable.'}); }
   });
 
+  app.get('/api/admin/analytics', authenticate, async (req,res) => {
+    const user=(req as unknown as AuthenticatedRequest).user;
+    const db=dbOrNull();
+    if (!user || user.isAnonymous || user.email_verified !== true || !db) return res.status(403).json({error:'Administrator access required.'});
+    const {data:admin,error:adminError}=await db.from('admins').select('active').eq('id',user.uid).maybeSingle();
+    if (adminError || admin?.active !== true) return res.status(403).json({error:'Administrator access required.'});
+    try {
+      const {data,error}=await db.rpc('get_admin_grievance_analytics');
+      if (error) throw error;
+      return res.json(data);
+    } catch (error) {
+      console.error(JSON.stringify({event:'admin_analytics_failed',code:error && typeof error==='object' && 'code' in error ? String((error as {code?:unknown}).code) : 'unknown'}));
+      return res.status(503).json({error:'Analytics are temporarily unavailable.'});
+    }
+  });
+
   app.post('/api/ai/complaint-quality', authenticate, async (req,res) => {
     const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
     const category = typeof req.body?.category === 'string' ? req.body.category : undefined;
