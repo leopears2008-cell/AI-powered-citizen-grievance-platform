@@ -39,6 +39,25 @@ const MainLayout: React.FC = () => {
   const [initialVoiceTranscript, setInitialVoiceTranscript] = useState('');
   const [initialVoiceLang, setInitialVoiceLang] = useState('Tamil');
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
+  const [showStorageNotice, setShowStorageNotice] = useState(false);
+
+  React.useEffect(() => {
+    try {
+      setShowStorageNotice(localStorage.getItem('nivaranai.storage-notice.v1') !== 'accepted');
+    } catch {
+      // Privacy controls must never prevent the grievance service from rendering.
+      setShowStorageNotice(false);
+    }
+  }, []);
+
+  const acceptStorageNotice = () => {
+    try {
+      localStorage.setItem('nivaranai.storage-notice.v1', 'accepted');
+    } catch {
+      // Storage may be blocked; the notice can still be dismissed for this session.
+    }
+    setShowStorageNotice(false);
+  };
 
   React.useEffect(() => {
     api.getSiteSettings().then(setSiteSettings).catch(() => setSiteSettings(DEFAULT_SITE_SETTINGS));
@@ -51,7 +70,7 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="site-shell min-h-screen font-sans text-slate-900 flex flex-col justify-between selection:bg-indigo-600 selection:text-white overflow-hidden">
+    <div className="site-shell min-h-screen font-sans text-slate-900 flex flex-col justify-between selection:bg-blue-700 selection:text-white overflow-hidden">
       <div className="site-building-backdrop" aria-hidden="true">
         <img
           src="https://upload.wikimedia.org/wikipedia/commons/b/b0/Fort_St._George%2C_Chennai_2.jpg"
@@ -202,7 +221,7 @@ const MainLayout: React.FC = () => {
             </div>
           )}
 
-          {(activeTab === 'privacy' || activeTab === 'terms' || activeTab === 'cookies') && (
+          {(activeTab === 'privacy' || activeTab === 'terms' || activeTab === 'cookies' || activeTab === 'refund') && (
             <LegalPage type={activeTab} />
           )}
         </Suspense>
@@ -249,6 +268,7 @@ const MainLayout: React.FC = () => {
             <button onClick={() => setActiveTab('privacy')} className="hover:text-slate-900 underline underline-offset-2">Privacy Policy</button>
             <button onClick={() => setActiveTab('terms')} className="hover:text-slate-900 underline underline-offset-2">Terms</button>
             <button onClick={() => setActiveTab('cookies')} className="hover:text-slate-900 underline underline-offset-2">Cookie Policy</button>
+            <button onClick={() => setActiveTab('refund')} className="hover:text-slate-900 underline underline-offset-2">Refund Policy</button>
           </nav>
 
           <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center text-[10px] text-slate-400 font-medium uppercase tracking-widest gap-2">
@@ -257,6 +277,35 @@ const MainLayout: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {showStorageNotice && (
+        <aside
+          role="dialog"
+          aria-label="Browser storage notice"
+          className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-50 rounded-xl border border-slate-300 bg-white p-4 shadow-2xl"
+        >
+          <p className="text-sm font-bold text-slate-900">Privacy & browser storage</p>
+          <p className="mt-1 text-xs leading-5 text-slate-600">
+            This service uses essential browser storage for authentication. No advertising or optional analytics trackers are configured. Read the Cookie Policy for details.
+          </p>
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={acceptStorageNotice}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-700 focus-visible:outline"
+            >
+              Continue
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowStorageNotice(false); setActiveTab('cookies'); }}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 focus-visible:outline"
+            >
+              Cookie Policy
+            </button>
+          </div>
+        </aside>
+      )}
     </div>
   );
 };
