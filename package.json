@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "node --import tsx --test tests/supabase.migration.test.ts tests/wikimedia.test.ts tests/news.test.ts tests/tnMinisters.test.ts tests/grievance.chatbot.test.ts tests/site.settings.test.ts tests/ai.evaluation.test.ts tests/grievance.intelligence.test.ts tests/e2e.workflow.test.ts tests/production.hardening.test.ts tests/civic.features.test.ts tests/hero.cinematic.test.ts",
+    "test": "node --import tsx --test tests/supabase.migration.test.ts tests/news.test.ts tests/tnMinisters.test.ts tests/grievance.chatbot.test.ts tests/site.settings.test.ts tests/ai.evaluation.test.ts tests/grievance.intelligence.test.ts tests/e2e.workflow.test.ts tests/production.hardening.test.ts tests/civic.features.test.ts tests/hero.cinematic.test.ts",
     "provision-admin": "node scripts/provision-admin.mjs",
     "migrate:firestore-to-supabase": "node scripts/migrate-firestore-to-supabase.mjs",
     "build:client": "vite build --configLoader runner",
@@ -36,7 +36,6 @@
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",
     "@types/express": "^4.17.21",
-    "bun-types": "^1.2.0",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
