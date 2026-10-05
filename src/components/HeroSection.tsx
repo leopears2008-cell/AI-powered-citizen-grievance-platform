@@ -165,11 +165,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </div>
         </div>
 
-        <p className="relative z-10 mt-auto pt-5 text-center text-[11px] text-slate-500">
-          {language === 'ta'
-            ? 'புகைப்படம்: Fort St. George, Chennai — Wikimedia Commons'
-            : 'Photo: Fort St. George, Chennai'}
-        </p>
+        <p className="relative z-10 mt-auto pt-5 text-right text-[10px] text-slate-600/80">
+        {language === 'ta' ? 'படம்: Fort St. George, Chennai' : 'Fort St. George, Chennai'}
+      </p>
       </section>
 
       <section aria-labelledby="civic-services-title" className="bg-white border border-slate-200 p-6 sm:p-8">
