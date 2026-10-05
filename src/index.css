@@ -71,8 +71,8 @@ textarea {
   border-radius: 0;
   padding-top: 3.5rem;
   padding-bottom: 2rem;
-  background: #172033;
-  border: 1px solid #263449;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
 }
 
 .hero-root[data-glass] .hero-card {
@@ -83,11 +83,26 @@ textarea {
 
 .hero-par-bg {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 38%;
+  overflow: hidden;
+  border-left: 1px solid #e2e8f0;
+  background: #e2e8f0;
+}
+
+.hero-par-bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  filter: saturate(0.82) contrast(0.98);
 }
 
 .hero-scrim {
-  background: rgb(2 6 23 / 0.48);
+  display: none;
 }
 
 .hero-reference-layout {
@@ -97,8 +112,9 @@ textarea {
 }
 
 .hero-reference-copy {
-  width: min(52rem, 68%);
+  width: 60%;
   text-align: left;
+  padding-right: 3rem;
   padding-left: clamp(0rem, 2vw, 1.5rem);
 }
 
@@ -207,8 +223,15 @@ textarea {
   }
 
   .hero-reference-copy {
-    width: min(100%, 45rem);
+    width: 100%;
     padding-left: 0;
+    padding-right: 0;
+  }
+
+  .hero-par-bg {
+    position: absolute;
+    width: 36%;
+    opacity: 0.88;
   }
 
   .hero-assistant {
@@ -234,8 +257,18 @@ textarea {
     width: 100%;
   }
 
+  .hero-par-bg {
+    position: absolute;
+    inset: auto 0 0 0;
+    width: 100%;
+    height: 12rem;
+    opacity: 0.18;
+    border-left: 0;
+    border-top: 1px solid #e2e8f0;
+  }
+
   .hero-reference-copy h1 {
-    font-size: clamp(2.35rem, 11vw, 3.4rem);
+    font-size: clamp(2.2rem, 10vw, 3.2rem);
   }
 
   .hero-complaint-bar {
