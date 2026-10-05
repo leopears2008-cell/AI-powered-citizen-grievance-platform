@@ -49,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({ siteTitle = 'NivaranAI', siteSub
 
   return (
     <header className="site-header sticky top-0 z-40 bg-slate-900 text-white border-b border-slate-800 shadow-lg shrink-0">
-      <div className="h-1 w-full bg-linear-to-r from-orange-500 via-white to-emerald-600" />
+      <div className="h-1 w-full bg-slate-700" aria-hidden="true" />
 
       <div className="site-header-topbar bg-slate-950 text-slate-300 text-xs py-1.5 px-4 sm:px-8 flex justify-between items-center border-b border-slate-800">
         <div className="flex items-center space-x-3">
