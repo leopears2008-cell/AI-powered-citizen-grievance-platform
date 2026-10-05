@@ -27,6 +27,11 @@ textarea {
 /* Respect users who prefer less motion. The UI intentionally uses no
    continuous/parallax/cursor animation; this also protects future additions. */
 @media (prefers-reduced-motion: reduce) {
+  .hero-bg-image {
+    animation: none !important;
+    transform: none !important;
+  }
+
   *,
   *::before,
   *::after {
@@ -92,13 +97,33 @@ textarea {
   background: #e2e8f0;
 }
 
-.hero-par-bg img {
-  width: 100%;
-  height: 100%;
+.hero-par-bg {
+  overflow: hidden;
+}
+
+.hero-bg-image {
+  width: 108%;
+  height: 108%;
   object-fit: cover;
   object-position: center;
   display: block;
-  filter: saturate(0.82) contrast(0.98);
+  filter: saturate(0.86) contrast(0.98);
+  transform: translate3d(-2%, -1%, 0) scale(1.02);
+  transform-origin: center center;
+  animation: civic-hero-drift 18s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes civic-hero-drift {
+  0% {
+    transform: translate3d(-2%, -1%, 0) scale(1.02);
+  }
+  50% {
+    transform: translate3d(0%, -2%, 0) scale(1.045);
+  }
+  100% {
+    transform: translate3d(2%, 0%, 0) scale(1.06);
+  }
 }
 
 .hero-scrim {
@@ -119,7 +144,7 @@ textarea {
 }
 
 .hero-reference-copy h1 span {
-  color: #fff;
+  color: #1f4f80;
 }
 
 .hero-complaint-bar {
@@ -231,7 +256,7 @@ textarea {
   .hero-par-bg {
     position: absolute;
     width: 36%;
-    opacity: 0.88;
+    opacity: 0.9;
   }
 
   .hero-assistant {
@@ -265,6 +290,10 @@ textarea {
     opacity: 0.18;
     border-left: 0;
     border-top: 1px solid #e2e8f0;
+  }
+
+  .hero-bg-image {
+    animation-duration: 24s;
   }
 
   .hero-reference-copy h1 {
