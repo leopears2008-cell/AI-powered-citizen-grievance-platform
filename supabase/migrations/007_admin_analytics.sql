@@ -19,6 +19,17 @@ with base as (
     feedback_rating
   from public.grievances
 ),
+timeline as (
+  select
+    to_char(day::date, 'YYYY-MM-DD') as day,
+    coalesce((select count(*) from base where created_at >= day and created_at < day + interval '1 day'), 0)::int as submitted,
+    coalesce((select count(*) from base where resolved_at >= day and resolved_at < day + interval '1 day'), 0)::int as resolved
+  from generate_series(
+    date_trunc('month', now()) - interval '5 months',
+    date_trunc('month', now()),
+    interval '1 month'
+  ) as day
+),
 summary as (
   select
     count(*)::int as total,
@@ -41,6 +52,7 @@ summary as (
       )::numeric,
       1
     ) as average_resolution_hours,
+    round(coalesce(avg(feedback_rating) filter (where feedback_rating is not null), 0)::numeric, 2) as citizen_satisfaction_score,
     round(coalesce(avg(feedback_rating), 0)::numeric, 1) as citizen_satisfaction_score
   from base
 ),
