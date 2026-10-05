@@ -3,6 +3,7 @@ import type { Express, Request, RequestHandler, Response } from 'express';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   AuditLog,
+  NotificationItem,
   Department,
   Grievance,
   GrievanceStatus,
@@ -142,6 +143,18 @@ interface AuditLogRow {
   action: string;
   details: string;
   grievance_id: string | null;
+}
+
+interface NotificationRow {
+  id: string;
+  grievance_id: string;
+  title: string;
+  title_ta: string;
+  message: string;
+  message_ta: string;
+  type: NotificationItem['type'];
+  read: boolean;
+  created_at: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -443,6 +456,43 @@ async function writeAudit(
   if (error) fail(error);
 }
 
+async function createNotification(
+  db: SupabaseClient,
+  userId: string,
+  grievanceId: string,
+  payload: Omit<NotificationRow, 'id' | 'user_id' | 'grievance_id' | 'created_at' | 'read'>,
+): Promise<void> {
+  const { error } = await db.from('notifications').insert({
+    id: randomUUID(),
+    user_id: userId,
+    grievance_id: grievanceId,
+    title: payload.title.slice(0, 160),
+    title_ta: payload.title_ta.slice(0, 160),
+    message: payload.message.slice(0, 1000),
+    message_ta: payload.message_ta.slice(0, 1000),
+    type: payload.type,
+    read: false,
+  });
+  if (error) {
+    // Notification delivery must never make a successful grievance workflow fail.
+    console.error(JSON.stringify({ event: 'notification_write_failed', code: error.code ?? 'unknown' }));
+  }
+}
+
+function toNotification(row: NotificationRow): NotificationItem {
+  return {
+    id: row.id,
+    grievanceId: row.grievance_id,
+    title: row.title,
+    titleTa: row.title_ta,
+    message: row.message,
+    messageTa: row.message_ta,
+    type: row.type,
+    read: row.read,
+    createdAt: toIso(row.created_at),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Input validation (replaces the validation that lived in firestore.rules)
 // ---------------------------------------------------------------------------
@@ -719,6 +769,13 @@ export function registerGrievanceRoutes(app: Express, authenticate: RequestHandl
       }
     }
 
+    await createNotification(db, user.uid, id, {
+      title: 'Grievance submitted',
+      title_ta: 'புகார் பதிவு செய்யப்பட்டது',
+      message: `Your grievance ${id} has been registered successfully.`,
+      message_ta: `உங்கள் புகார் ${id} வெற்றிகரமாக பதிவு செய்யப்பட்டது.`,
+      type: 'status_update',
+    });
     res.status(201).json(await loadGrievance(db, id));
   }));
 
@@ -848,6 +905,32 @@ export function registerGrievanceRoutes(app: Express, authenticate: RequestHandl
     }).eq('id', id);
     if (error) fail(error);
     res.json(await loadGrievance(db, id));
+  }));
+
+  app.get('/api/notifications', authenticate, handle(async (_req, user, res) => {
+    const db = requireDb();
+    const { data, error } = await db.from('notifications')
+      .select('id,grievance_id,title,title_ta,message,message_ta,type,read,created_at')
+      .eq('user_id', user.uid)
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) fail(error);
+    res.json(((data ?? []) as NotificationRow[]).map(toNotification));
+  }));
+
+  app.patch('/api/notifications/:id/read', authenticate, handle(async (req, user, res) => {
+    const db = requireDb();
+    const id = req.params.id;
+    if (typeof id !== 'string' || !/^[0-9a-f-]{20,80}$/i.test(id)) throw new HttpError(400, 'Invalid notification identifier.');
+    const { data, error } = await db.from('notifications')
+      .update({ read: true })
+      .eq('id', id)
+      .eq('user_id', user.uid)
+      .select('id,grievance_id,title,title_ta,message,message_ta,type,read,created_at')
+      .maybeSingle();
+    if (error) fail(error);
+    if (!data) throw new HttpError(404, 'Notification not found.');
+    res.json(toNotification(data as NotificationRow));
   }));
 
   app.get('/api/admin/departments', authenticate, handle(async (_req, _user, res) => {
