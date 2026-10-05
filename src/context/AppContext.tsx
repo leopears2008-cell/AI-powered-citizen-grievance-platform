@@ -14,7 +14,7 @@ import {
 } from 'firebase/auth';
 
 export type AppLanguage = 'en' | 'ta';
-export type AppTab = 'home' | 'file' | 'track' | 'history' | 'admin' | 'analytics' | 'directory' | 'ministers' | 'news' | 'privacy' | 'terms' | 'cookies';
+export type AppTab = 'home' | 'file' | 'track' | 'history' | 'admin' | 'analytics' | 'directory' | 'ministers' | 'news' | 'privacy' | 'terms' | 'cookies' | 'refund';
 
 interface ToastInfo {
   id: string;
