@@ -45,87 +45,48 @@ async function fetchWithRetry(url: string, init: RequestInit, retries = 2): Prom
   throw lastError instanceof Error ? lastError : new Error('News provider request failed.');
 }
 
-async function fetchNewsApi(query: string, limit: number): Promise<NewsArticle[]> {
-  const key = process.env.NEWS_API_KEY;
-  if (!key) throw new Error('NEWS_API_KEY is required for NEWS_PROVIDER=newsapi.');
-
+async function fetchFreeNewsApi(query: string, limit: number): Promise<NewsArticle[]> {
   const params = new URLSearchParams({
     q: query,
-    language: 'en',
-    sortBy: 'publishedAt',
-    pageSize: String(limit),
+    country: 'IN',
+    date: '24h',
+    sort: 'date',
+    size: String(limit),
   });
 
-  const response = await fetchWithRetry('https://newsapi.org/v2/everything?' + params.toString(), {
-    headers: {
-      Accept: 'application/json',
-      'X-Api-Key': key,
-      'User-Agent': 'NivaranAI/1.0 licensed-news-service',
+  const response = await fetchWithRetry(
+    'https://freenewsapi.ai/v1/search?' + params.toString(),
+    {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'NivaranAI/1.0 civic-news-service (+https://github.com/leopears2008-cell/AI-powered-citizen-grievance-platform)',
+        'X-Agent': 'agent_name=NivaranAI; version=1.0; software=Node.js; purpose=Tamil Nadu civic live news',
+      },
     },
-  });
+  );
 
-  if (!response.ok) throw new Error(`Licensed news provider returned HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`FreeNewsAPI.ai returned HTTP ${response.status}`);
 
   const body = await response.json() as {
-    status?: string;
-    articles?: Array<{
+    results?: Array<{
       title?: string;
       url?: string;
       description?: string;
-      source?: { name?: string };
-      publishedAt?: string;
+      host?: string;
+      sitename?: string;
+      published_at?: string;
     }>;
   };
 
-  if (body.status !== 'ok' || !Array.isArray(body.articles)) {
-    throw new Error('Licensed news provider returned an invalid response.');
-  }
+  if (!Array.isArray(body.results)) throw new Error('FreeNewsAPI.ai returned an invalid response.');
 
-  return dedupe(body.articles.map((article) => ({
+  return dedupe(body.results.map((article) => ({
     title: clean(article.title, 300),
     url: clean(article.url, 2000),
     extract: clean(article.description, 600),
-    source: clean(article.source?.name || 'Licensed News API', 200),
-    publishedAt: clean(article.publishedAt, 100) || undefined,
+    source: clean(article.sitename || article.host || 'FreeNewsAPI.ai', 200),
+    publishedAt: clean(article.published_at, 100) || undefined,
   })), limit);
-}
-
-async function fetchGoogleRss(query: string, limit: number): Promise<NewsArticle[]> {
-  const params = new URLSearchParams({ q: query, hl: 'en-IN', gl: 'IN', ceid: 'IN:en' });
-  const response = await fetchWithRetry(`https://news.google.com/rss/search?${params.toString()}`, {
-    headers: {
-      Accept: 'application/rss+xml, application/xml;q=0.9, text/xml;q=0.8',
-      'User-Agent': 'NivaranAI/1.0 civic-news-service',
-    },
-  });
-
-  if (!response.ok) throw new Error(`Google News RSS returned HTTP ${response.status}`);
-  const xml = await response.text();
-  if (xml.length > 2_000_000) throw new Error('News provider response is too large.');
-
-  const items = xml.match(/<item\b[^>]*>[\s\S]*?<\/item>/gi) ?? [];
-  const articles: NewsArticle[] = [];
-
-  for (const item of items) {
-    if (articles.length >= limit) break;
-    const tag = (name: string) => clean(
-      item.match(new RegExp('<' + name + '\\b[^>]*>([\\s\\S]*?)</' + name + '>', 'i'))?.[1],
-      2000,
-    ).replace(/<!\[CDATA\[|\]\]>/g, '');
-
-    const title = tag('title');
-    const url = tag('link');
-    if (!title || !validUrl(url)) continue;
-    articles.push({
-      title,
-      url,
-      extract: tag('description').slice(0, 600),
-      source: tag('source') || 'Google News',
-      publishedAt: tag('pubDate') || undefined,
-    });
-  }
-
-  return dedupe(articles, limit);
 }
 
 export async function fetchNews(query: string, limit: number) {
@@ -133,23 +94,17 @@ export async function fetchNews(query: string, limit: number) {
   const safeLimit = Math.min(Math.max(Math.floor(limit), 1), 20);
   if (!safeQuery) return { provider: 'none', articles: [] as NewsArticle[] };
 
-  const provider = (process.env.NEWS_PROVIDER || (process.env.NODE_ENV === 'production' ? 'newsapi' : 'google-rss')).toLowerCase();
-  const cacheKey = `${provider}:${safeQuery.toLowerCase()}:${safeLimit}`;
+  const cacheKey = `freenewsapi:${safeQuery.toLowerCase()}:${safeLimit}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
-    return { provider: provider === 'newsapi' ? 'NewsAPI' : 'Google News RSS', articles: cached.articles };
+    return { provider: 'FreeNewsAPI.ai', articles: cached.articles };
   }
 
-  const articles = provider === 'newsapi'
-    ? await fetchNewsApi(safeQuery, safeLimit)
-    : provider === 'google-rss'
-      ? await fetchGoogleRss(safeQuery, safeLimit)
-      : (() => { throw new Error('Unsupported NEWS_PROVIDER. Use newsapi or google-rss.'); })();
-
+  const articles = await fetchFreeNewsApi(safeQuery, safeLimit);
   cache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, articles });
   if (cache.size > 100) cache.delete(cache.keys().next().value as string);
 
-  return { provider: provider === 'newsapi' ? 'NewsAPI' : 'Google News RSS', articles };
+  return { provider: 'FreeNewsAPI.ai', articles };
 }
 
 export function clearNewsCacheForTests() {
