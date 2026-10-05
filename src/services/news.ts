@@ -1,9 +1,8 @@
 /**
- * Google News RSS-backed civic news helpers.
+ * FreeNewsAPI.ai-backed civic news helpers.
  *
- * Live news is fetched by the backend so the browser does not depend directly
- * on a third-party RSS endpoint. Wikipedia/Wikimedia remains a separate source
- * for MLA profile metadata and is intentionally not used for live news.
+ * Live news is fetched by the backend through FreeNewsAPI.ai so the browser does not
+ * depend directly on a third-party news service.
  */
 
 export interface LiveNewsArticle {
@@ -17,9 +16,6 @@ export interface LiveNewsArticle {
 const NEWS_TTL_MS = 60 * 1000;
 const API_BASE = (import.meta.env?.VITE_API_URL || '').replace(/\/$/, '');
 const newsCache = new Map<string, { expiresAt: number; value: LiveNewsArticle[] }>();
-
-export const googleNewsUrl = (query: string): string =>
-  `https://news.google.com/search?q=${encodeURIComponent(query)}&hl=en-IN&gl=IN&ceid=IN%3Aen`;
 
 export const newsApiUrl = (query: string, limit = 12): string => {
   const params = new URLSearchParams({ q: query, limit: String(Math.min(Math.max(limit, 1), 20)) });
