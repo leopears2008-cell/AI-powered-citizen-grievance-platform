@@ -97,12 +97,15 @@ export const api = {
 
   async getComplaints(params?: {
     search?: string; category?: string; status?: string; priority?: string;
-    departmentId?: string; officerId?: string;
+    departmentId?: string; officerId?: string; page?: number; limit?: number;
   }): Promise<Grievance[]> {
     const user = auth.currentUser;
     if (!user) return [];
     // The backend returns every grievance for administrators and only the caller's own otherwise.
-    let results = await request<Grievance[]>('/api/grievances');
+    const page = Math.max(1, Math.floor(params?.page ?? 1));
+    const limit = Math.min(100, Math.max(1, Math.floor(params?.limit ?? 50)));
+    const query = new URLSearchParams({ page: String(page), limit: String(limit) });
+    let results = await request<Grievance[]>(`/api/grievances?${query.toString()}`);
 
     if (params) {
       if (params.category) results = results.filter(r => r.category === params.category);
