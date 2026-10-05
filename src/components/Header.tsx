@@ -85,10 +85,10 @@ export const Header: React.FC<HeaderProps> = ({ siteTitle = 'NivaranAI', siteSub
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-18">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center min-h-[4.75rem] py-2">
           <div
-            className="flex items-center space-x-3 cursor-pointer group"
+            className="site-brand flex items-center gap-3 cursor-pointer group min-w-0"
             onClick={() => setActiveTab('home')}
             role="button"
             tabIndex={0}
@@ -97,19 +97,16 @@ export const Header: React.FC<HeaderProps> = ({ siteTitle = 'NivaranAI', siteSub
             }}
             aria-label="Go to home"
           >
-            <div className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center overflow-hidden rounded-lg bg-white/95 p-0.5 shadow-sm">
+            <div className="site-brand-logo shrink-0">
               <img
                 src="/logo.webp"
                 alt="NivaranAI Public Grievance Redressal Platform"
                 className="h-full w-full object-contain"
               />
             </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="text-xl font-semibold tracking-tight text-white font-sans">
-                  {siteTitle} <span className="text-indigo-400 text-sm font-normal">| {siteSubtitle}</span>
-                </span>
-              </div>
+            <div className="site-brand-copy min-w-0">
+              <div className="site-brand-title" title={siteTitle}>{siteTitle}</div>
+              <div className="site-brand-subtitle" title={siteSubtitle}>{siteSubtitle}</div>
             </div>
           </div>
 
