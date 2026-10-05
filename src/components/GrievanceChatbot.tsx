@@ -109,7 +109,7 @@ export const GrievanceChatbot: React.FC<GrievanceChatbotProps> = ({ onStartCompl
 
   return (
     <section aria-labelledby="grievance-assistant-title" className="rounded-2xl border border-indigo-100 bg-white shadow-sm overflow-hidden">
-      <div className="p-5 sm:p-7 bg-gradient-to-r from-indigo-50 via-white to-sky-50 border-b border-indigo-100">
+      <div className="p-5 sm:p-7 bg-slate-50 border-b border-slate-200">
         <div className="flex items-start gap-3">
           <div className="w-11 h-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
             <Bot className="w-6 h-6" aria-hidden="true" />
@@ -119,7 +119,7 @@ export const GrievanceChatbot: React.FC<GrievanceChatbotProps> = ({ onStartCompl
               <h2 id="grievance-assistant-title" className="text-lg sm:text-xl font-black text-slate-900">Citizen Grievance AI Assistant</h2>
               
             </div>
-            <p className="mt-1 text-xs sm:text-sm text-slate-500">Write complaints clearly, understand the process, and get guided to the right page.</p>
+            <p className="mt-1 text-xs sm:text-sm text-slate-600">Draft a complaint, understand the process, or open the official grievance form.</p>
           </div>
           <button
             type="button"
