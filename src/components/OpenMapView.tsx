@@ -86,7 +86,7 @@ export const OpenMapView: React.FC = () => {
           </h2>
           <p className="mt-1 text-xs text-slate-400">
             {language === 'ta'
-              ? 'மாவட்ட அளவிலான மொத்தத் தரவு மட்டும். தனிப்பட்ட முகவரிகள் காட்டப்படாது.'
+              ? 'மொத்த பகுதித் தரவு மட்டும்; தனிப்பட்ட முகவரிகள் காட்டப்படாது.'
               : 'District-level aggregated activity only. Individual citizen addresses are never shown.'}
           </p>
         </div>

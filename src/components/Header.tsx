@@ -183,7 +183,7 @@ export const Header: React.FC<HeaderProps> = ({ siteTitle = 'NivaranAI', siteSub
               aria-label="Open Tamil Nadu ministers directory"
             >
               <Contact className="w-4 h-4" />
-              <span>{language === 'ta' ? 'தமிழ்நாட்டு அமைச்சர்கள்' : 'TN Ministers'}</span>
+              <span>{language === 'ta' ? 'தமிழ்நாடு அமைச்சர்கள்' : 'TN Ministers'}</span>
             </button>}
 
             {showNews && <button
@@ -196,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({ siteTitle = 'NivaranAI', siteSub
               aria-label="Open live news"
             >
               <Newspaper className="w-4 h-4" />
-              <span>{language === 'ta' ? 'நேரலி செய்திகள்' : 'Live News'}</span>
+              <span>{language === 'ta' ? 'நேரலை செய்திகள்' : 'Live News'}</span>
             </button>}
 
             {isAdmin && (
@@ -338,14 +338,14 @@ export const Header: React.FC<HeaderProps> = ({ siteTitle = 'NivaranAI', siteSub
             </button>}
             {showMinisters && <button onClick={() => closeMobileAndOpen('ministers')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-indigo-700 bg-indigo-50 flex items-center gap-2">
               <Contact className="w-4 h-4" />
-              {language === 'ta' ? 'தமிழ்நாட்டு அமைச்சர்கள்' : 'TN Ministers'}
+              {language === 'ta' ? 'தமிழ்நாடு அமைச்சர்கள்' : 'TN Ministers'}
             </button>}
             {showNews && <button
               onClick={() => closeMobileAndOpen('news')}
               className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-red-700 bg-red-50 flex items-center gap-2"
             >
               <Newspaper className="w-4 h-4" />
-              {language === 'ta' ? 'நேரலி செய்திகள்' : 'Live News'}
+              {language === 'ta' ? 'நேரலை செய்திகள்' : 'Live News'}
             </button>}
             <button
               onClick={() => closeMobileAndOpen('map')}
@@ -353,7 +353,7 @@ export const Header: React.FC<HeaderProps> = ({ siteTitle = 'NivaranAI', siteSub
               aria-label="Open map"
             >
               <MapIcon className="w-4 h-4" />
-              {language === 'ta' ? 'வரைபடம் திறக்க' : 'Open Map'}
+              {language === 'ta' ? 'வரைபடத்தைத் திற' : 'Open Map'}
             </button>
             <button onClick={() => closeMobileAndOpen('admin')} className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-indigo-700 bg-indigo-50">
               Admin Dashboard
