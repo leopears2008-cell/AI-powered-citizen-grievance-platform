@@ -21,6 +21,7 @@ const AnalyticsView = lazy(() => import('./components/AnalyticsView').then((modu
 const MLADirectory = lazy(() => import('./components/MLADirectory').then((module) => ({ default: module.MLADirectory })));
 const TNMinistersDirectory = lazy(() => import('./components/TNMinistersDirectory').then((module) => ({ default: module.TNMinistersDirectory })));
 const LiveNews = lazy(() => import('./components/LiveNews').then((module) => ({ default: module.LiveNews })));
+const OpenMapView = lazy(() => import('./components/OpenMapView').then((module) => ({ default: module.OpenMapView })));
 import {
   CheckCircle2,
   AlertCircle,
@@ -189,6 +190,12 @@ const MainLayout: React.FC = () => {
           {activeTab === 'news' && (
             <div className="animate-in fade-in duration-300">
               <LiveNews />
+            </div>
+          )}
+
+          {activeTab === 'map' && (
+            <div className="animate-in fade-in duration-300">
+              <OpenMapView />
             </div>
           )}
 
