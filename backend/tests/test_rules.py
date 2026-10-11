@@ -1,5 +1,3 @@
-import itertools
-
 from app.services import intelligence as ai
 from app.services.workflow import Status, can_transition, officer_can_transition
 
