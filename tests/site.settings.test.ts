@@ -20,7 +20,7 @@ test('admin website settings are protected and persisted by the server', async (
     readFile('server/grievanceRoutes.ts', 'utf8'),
     readFile('src/services/api.ts', 'utf8'),
     readFile('src/components/AdminSettings.tsx', 'utf8'),
-    readFile('supabase/migrations/003_site_settings.sql', 'utf8'),
+    readFile('supabase/migrations/0031_site_settings.sql', 'utf8'),
   ]);
   assert.match(routes, /\/api\/site-settings/);
   assert.match(routes, /site_settings/);
