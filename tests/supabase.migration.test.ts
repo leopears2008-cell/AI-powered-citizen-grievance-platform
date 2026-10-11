@@ -59,3 +59,18 @@ test('notifications and analytics migrations provide persistent, bounded server-
   assert.match(analytics, /generate_series/);
   assert.match(analytics, /average_resolution_hours/);
 });
+
+
+test('Supabase migration versions are unique and strictly ordered', async () => {
+  const { readdir } = await import('node:fs/promises');
+  const migrationDir = join(root, 'supabase/migrations');
+  const files = (await readdir(migrationDir)).filter((name) => name.endsWith('.sql')).sort();
+  const versions = files.map((name) => name.split('_', 1)[0]);
+
+  assert.ok(files.length > 0, 'at least one migration must exist');
+  assert.equal(new Set(versions).size, versions.length, 'migration version prefixes must be unique');
+
+  for (const version of versions) {
+    assert.match(version, /^\d+$/, `invalid migration version prefix: ${version}`);
+  }
+});
