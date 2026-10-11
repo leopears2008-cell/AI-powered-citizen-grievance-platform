@@ -48,7 +48,7 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -922,4 +922,7 @@ async function startServer() {
   });
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
+});
