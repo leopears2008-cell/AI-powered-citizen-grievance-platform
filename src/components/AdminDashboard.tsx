@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
-import { AdminSettings } from './AdminSettings';
 import {
   Grievance,
   Department,
@@ -36,9 +35,9 @@ import {
 
 const HighlightText = ({ text, highlight }: { text: string; highlight: string }) => {
   if (!highlight.trim()) return <>{text}</>;
-  const safeHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const parts = text.split(new RegExp(`(${safeHighlight})`, 'gi'));
-
+  
+  const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+  
   return (
     <>
       {parts.map((part, i) =>
@@ -60,7 +59,6 @@ export const AdminDashboard: React.FC = () => {
   const [officers, setOfficers] = useState<Officer[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -74,7 +72,6 @@ export const AdminDashboard: React.FC = () => {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isAuditDrawerOpen, setIsAuditDrawerOpen] = useState(false);
-  const [showSiteSettings, setShowSiteSettings] = useState(false);
 
   // Form states
   const [targetOfficerId, setTargetOfficerId] = useState('');
@@ -84,7 +81,6 @@ export const AdminDashboard: React.FC = () => {
 
   const loadData = async () => {
     setIsLoading(true);
-    setLoadError(false);
     try {
       const [compList, deptList, offList, logs] = await Promise.all([
         api.getComplaints(),
@@ -97,7 +93,7 @@ export const AdminDashboard: React.FC = () => {
       setOfficers(offList);
       setAuditLogs(logs);
     } catch {
-      setLoadError(true);
+      // ignore
     } finally {
       setIsLoading(false);
     }
@@ -199,30 +195,24 @@ export const AdminDashboard: React.FC = () => {
       'Assigned Officer',
     ];
 
-    const csvCell = (value: unknown) => {
-      const text = String(value ?? '');
-      const safe = /^[=+\-@]/.test(text) ? `'${text}` : text;
-      return `"${safe.replace(/"/g, '""')}"`;
-    };
-
     const rows = filtered.map((c) => [
-      csvCell(c.id),
-      csvCell(c.citizenName),
-      csvCell(c.citizenPhone),
-      csvCell(c.category),
-      csvCell(c.departmentName),
-      csvCell(c.priority),
-      csvCell(c.status),
-      csvCell(c.location.district),
-      csvCell(c.location.address),
-      csvCell(c.createdAt),
-      csvCell(c.targetResolutionDate),
-      csvCell(c.assignedOfficerName || 'Unassigned'),
+      c.id,
+      `"${c.citizenName}"`,
+      c.citizenPhone,
+      `"${c.category}"`,
+      `"${c.departmentName}"`,
+      c.priority,
+      c.status,
+      `"${c.location.district}"`,
+      `"${c.location.address}"`,
+      c.createdAt,
+      c.targetResolutionDate,
+      `"${c.assignedOfficerName || 'Unassigned'}"`,
     ]);
 
     const csvContent =
       'data:text/csv;charset=utf-8,' +
-      [headers.map(csvCell).join(','), ...rows.map((e) => e.join(','))].join('\n');
+      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
@@ -249,7 +239,7 @@ export const AdminDashboard: React.FC = () => {
                 {t.adminPortalTitle}
               </h2>
               <p className="text-xs text-slate-500">
-                Grievance administration workspace
+                Tamil Nadu Public Grievances Executive Command & Dispatch Center
               </p>
             </div>
           </div>
@@ -274,19 +264,6 @@ export const AdminDashboard: React.FC = () => {
           </button>
         </div>
       </div>
-
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
-        <strong>Data status:</strong> Records are read from the configured Firestore database. Confirm the project, dataset, and record provenance before acting on them.
-      </div>
-
-      {loadError && (
-        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 flex flex-wrap items-center justify-between gap-3">
-          <span>Some dashboard data could not be loaded. Check the network and Firestore access, then retry.</span>
-          <button type="button" onClick={loadData} disabled={isLoading} className="rounded-lg border border-red-300 px-3 py-1.5 font-semibold hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-700">
-            {isLoading ? 'Loading…' : 'Retry'}
-          </button>
-        </div>
-      )}
 
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">

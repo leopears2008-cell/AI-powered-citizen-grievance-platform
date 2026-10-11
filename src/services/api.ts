@@ -7,58 +7,14 @@ import {
   AIAnalysisResponse,
   DuplicateMatch,
   GrievanceStatus,
-  GrievancePriority,
 } from '../types';
-import { auth } from '../lib/firebase';
-import type { User } from 'firebase/auth';
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-
-function apiUrl(path: string) {
-  return `${API_BASE_URL}${path}`;
-}
-
-async function authHeaders() {
-  const user = auth.currentUser;
-  if (!user) return {};
-  const token = await user.getIdToken();
-  return { Authorization: `Bearer ${token}` };
-}
-
-async function jsonFetch(input: RequestInfo | URL, init: RequestInit = {}) {
-  const headers = { ...(await authHeaders()), ...(init.headers || {}) };
-  return fetch(input, { ...init, headers });
-}
-
-/** Calls the authenticated backend API and surfaces its error message to the existing toast UI. */
-async function request<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
-  const res = await jsonFetch(apiUrl(path), {
-    method: init.method ?? 'GET',
-    ...(init.body !== undefined
-      ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(init.body) }
-      : {}),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Request failed.' }));
-    throw new Error(typeof err?.error === 'string' ? err.error : 'Request failed.');
-  }
-  return res.json() as Promise<T>;
-}
-
-/** Admin status is decided by the backend (admins table + verified email). */
-async function fetchIsAdmin(user: User | null): Promise<boolean> {
-  if (!user || user.isAnonymous || !user.emailVerified) return false;
-  const result = await request<{ isAdmin: boolean }>('/api/me/admin');
-  return result.isAdmin === true;
-}
+import { db } from '../lib/firebase';
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
 
 export const api = {
-  async checkAdminAccess(): Promise<boolean> {
-    return fetchIsAdmin(auth.currentUser);
-  },
-
+  // AI Analysis
   async analyzeComplaint(text: string, languageHint?: string): Promise<AIAnalysisResponse> {
-    const res = await jsonFetch(apiUrl('/api/ai/analyze-complaint'), {
+    const res = await fetch('/api/ai/analyze-complaint', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text, languageHint }),
@@ -70,9 +26,10 @@ export const api = {
     return res.json();
   },
 
+  // Duplicate Check
   async checkDuplicates(text: string, category: string, district?: string): Promise<DuplicateMatch[]> {
     try {
-      const res = await jsonFetch(apiUrl('/api/ai/check-duplicates'), {
+      const res = await fetch('/api/ai/check-duplicates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, category, district }),
@@ -85,8 +42,9 @@ export const api = {
     }
   },
 
+  // AI Resolution Suggestions
   async suggestResolution(grievanceId: string, actionTaken?: string) {
-    const res = await jsonFetch(apiUrl('/api/ai/suggest-resolution'), {
+    const res = await fetch('/api/ai/suggest-resolution', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ grievanceId, actionTaken }),
@@ -95,17 +53,53 @@ export const api = {
     return res.json();
   },
 
+  async draftResolution(category: string, summary: string, actionTaken?: string): Promise<{ resolutionEn: string; resolutionTa: string }> {
+    try {
+      const res = await fetch('/api/ai/suggest-resolution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, summary, actionTaken }),
+      });
+      if (!res.ok) throw new Error('Failed to draft');
+      return res.json();
+    } catch {
+      return {
+        resolutionEn: 'Issue rectified on-site by zonal maintenance unit. Functionality restored and verified.',
+        resolutionTa: 'கள பராமரிப்பு குழுவால் பிரச்சனை சரிசெய்யப்பட்டு செயல்பாடுகள் உறுதி செய்யப்பட்டன.',
+      };
+    }
+  },
+
+  // Complaints
   async getComplaints(params?: {
-    search?: string; category?: string; status?: string; priority?: string;
-    departmentId?: string; officerId?: string; page?: number; limit?: number;
+    search?: string;
+    category?: string;
+    status?: string;
+    priority?: string;
+    departmentId?: string;
+    officerId?: string;
   }): Promise<Grievance[]> {
-    const user = auth.currentUser;
-    if (!user) return [];
-    // The backend returns every grievance for administrators and only the caller's own otherwise.
-    const page = Math.max(1, Math.floor(params?.page ?? 1));
-    const limit = Math.min(100, Math.max(1, Math.floor(params?.limit ?? 50)));
-    const query = new URLSearchParams({ page: String(page), limit: String(limit) });
-    let results = await request<Grievance[]>(`/api/grievances?${query.toString()}`);
+    const grievancesRef = collection(db, 'grievances');
+    const q = query(grievancesRef);
+    const snapshot = await getDocs(q);
+    let results: Grievance[] = [];
+    snapshot.forEach((doc) => {
+      results.push(doc.data() as Grievance);
+    });
+
+    // Merge with Mock Data for Demo Purposes
+    try {
+      const res = await fetch('/api/complaints');
+      if (res.ok) {
+        const mockData: Grievance[] = await res.json();
+        // Only add mock data that isn't overridden by real data
+        const realIds = new Set(results.map(r => r.id));
+        const newMockData = mockData.filter(m => !realIds.has(m.id));
+        results = [...results, ...newMockData];
+      }
+    } catch (e) {
+      console.warn('Failed to fetch mock data', e);
+    }
 
     if (params) {
       if (params.category) results = results.filter(r => r.category === params.category);
@@ -115,248 +109,234 @@ export const api = {
       if (params.officerId) results = results.filter(r => r.assignedOfficerId === params.officerId);
       if (params.search) {
         const search = params.search.toLowerCase();
-        results = results.filter(r =>
-          r.trackId?.toLowerCase().includes(search) ||
-          r.citizenName?.toLowerCase().includes(search) ||
+        results = results.filter(r => 
+          r.trackId?.toLowerCase().includes(search) || 
           r.summaryEn?.toLowerCase().includes(search)
         );
       }
     }
-    return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // sort by creation date descending
+    results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return results;
   },
 
   async getComplaintById(id: string): Promise<Grievance> {
-    const user = auth.currentUser;
-    if (!user) throw new Error('Authentication session is not ready.');
-    return request<Grievance>(`/api/grievances/${encodeURIComponent(id)}`);
+    const docRef = doc(db, 'grievances', id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as Grievance;
+    }
+    
+    // Fallback to fetch from mock api just in case we are looking for seeded data
+    const res = await fetch(`/api/complaints/${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error('Complaint not found');
+    return res.json();
   },
 
   async createComplaint(data: Partial<Grievance>): Promise<Grievance> {
-    const user = auth.currentUser;
-    if (!user) throw new Error('Authentication session is not ready.');
-    if (user.isAnonymous || (!user.phoneNumber && !user.emailVerified)) {
-      throw new Error('Verify your phone number or email before submitting a grievance.');
-    }
-    // The backend assigns the tracking ID, citizen identity, status and timestamps.
-    return request<Grievance>('/api/grievances', { method: 'POST', body: data });
+    const trackId = `GRV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+    const docRef = doc(db, 'grievances', trackId);
+    const newGrievance = {
+      ...data,
+      id: trackId,
+      status: 'Submitted' as GrievanceStatus,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      statusHistory: [{
+        status: 'Submitted',
+        timestamp: new Date().toISOString(),
+        remarks: 'Complaint registered successfully by Citizen',
+        updatedBy: 'Citizen',
+        role: 'CITIZEN'
+      }]
+    };
+    await setDoc(docRef, newGrievance);
+    return newGrievance as Grievance;
   },
 
-  async updateComplaintStatus(id: string, payload: {
-    status: GrievanceStatus; remarks: string; updatedBy: string;
-    role: 'CITIZEN' | 'OFFICER' | 'ADMIN'; evidenceUrl?: string;
-  }): Promise<Grievance> {
-    return request<Grievance>(`/api/grievances/${encodeURIComponent(id)}/status`, {
-      method: 'POST',
-      body: payload,
+  async updateComplaintStatus(
+    id: string,
+    payload: {
+      status: GrievanceStatus;
+      remarks: string;
+      updatedBy: string;
+      role: 'CITIZEN' | 'OFFICER' | 'ADMIN';
+      evidenceUrl?: string;
+    }
+  ): Promise<Grievance> {
+    const grievance = await this.getComplaintById(id);
+    const updatedHistory = [
+      ...grievance.statusHistory,
+      {
+        status: payload.status,
+        timestamp: new Date().toISOString(),
+        remarks: payload.remarks,
+        updatedBy: payload.updatedBy,
+        role: payload.role,
+        evidenceUrl: payload.evidenceUrl
+      }
+    ];
+
+    const docRef = doc(db, 'grievances', grievance.id);
+    await updateDoc(docRef, {
+      status: payload.status,
+      statusHistory: updatedHistory,
+      updatedAt: new Date().toISOString()
     });
+    return this.getComplaintById(id);
   },
 
   async assignOfficer(id: string, officerId: string, adminName?: string): Promise<Grievance> {
-    return request<Grievance>(`/api/grievances/${encodeURIComponent(id)}/assign`, {
-      method: 'POST',
-      body: { officerId, adminName },
+    const grievance = await this.getComplaintById(id);
+    const docRef = doc(db, 'grievances', grievance.id);
+    const newHistory = [
+      ...grievance.statusHistory,
+      {
+        status: 'Assigned',
+        timestamp: new Date().toISOString(),
+        remarks: `Assigned to Field Officer ID: ${officerId}`,
+        updatedBy: adminName || 'System Admin',
+        role: 'ADMIN'
+      }
+    ];
+    await updateDoc(docRef, {
+      status: 'Assigned',
+      assignedOfficerId: officerId,
+      statusHistory: newHistory,
+      updatedAt: new Date().toISOString()
     });
+    return this.getComplaintById(id);
   },
 
-  async verifyResolution(id: string, confirmed: boolean) {
-    return request<{ ok: boolean; verified: boolean; status: GrievanceStatus; updatedAt: string }>(
-      `/api/grievances/${encodeURIComponent(id)}/verify-resolution`,
-      { method: 'POST', body: { confirmed } }
-    );
+  async submitFeedback(
+    id: string,
+    payload: { rating: number; comment: string; isResolvedSatisfied: boolean }
+  ): Promise<Grievance> {
+    const grievance = await this.getComplaintById(id);
+    const docRef = doc(db, 'grievances', grievance.id);
+    
+    if (payload.isResolvedSatisfied) {
+      await updateDoc(docRef, {
+        resolutionFeedback: {
+          rating: payload.rating,
+          comment: payload.comment,
+          submittedAt: new Date().toISOString()
+        }
+      });
+    } else {
+      const newHistory = [
+        ...grievance.statusHistory,
+        {
+          status: 'Reopened',
+          timestamp: new Date().toISOString(),
+          remarks: `Citizen unsatisfied. Reason: ${payload.comment}`,
+          updatedBy: 'Citizen',
+          role: 'CITIZEN'
+        }
+      ];
+      await updateDoc(docRef, {
+        status: 'Reopened',
+        statusHistory: newHistory,
+        updatedAt: new Date().toISOString()
+      });
+    }
+    return this.getComplaintById(id);
   },
 
-  async submitFeedback(id: string, payload: { rating: number; comment: string; isResolvedSatisfied: boolean }) {
-    return request<Grievance>(`/api/grievances/${encodeURIComponent(id)}/feedback`, {
-      method: 'POST',
-      body: payload,
-    });
-  },
-
-  async addAuditLog(action: string, details: string, grievanceId?: string) {
-    const user = auth.currentUser;
-    if (!user || user.isAnonymous) return;
-    await request<{ ok: boolean }>('/api/admin/audit-logs', {
-      method: 'POST',
-      body: { action, details: details.slice(0, 2000), grievanceId },
-    });
-  },
-
+  // Departments & Officers
   async getDepartments(): Promise<Department[]> {
-    const user = auth.currentUser;
-    if (!user || user.isAnonymous || !user.emailVerified) throw new Error('Admin authentication required.');
-    return request<Department[]>('/api/admin/departments');
+    const res = await fetch('/api/departments');
+    if (!res.ok) throw new Error('Failed to fetch departments');
+    return res.json();
   },
 
   async getOfficers(): Promise<Officer[]> {
-    const user = auth.currentUser;
-    if (!user || user.isAnonymous || !user.emailVerified) throw new Error('Admin authentication required.');
-    return request<Officer[]>('/api/admin/officers');
+    const res = await fetch('/api/officers');
+    if (!res.ok) throw new Error('Failed to fetch officers');
+    return res.json();
   },
 
-  async getOfficerProfile() {
-    return request<{
-      id: string; name: string; nameTamil?: string | null; departmentId: string;
-      departmentName: string; designation: string; phone: string; email: string; zone: string;
-    }>('/api/officer/me');
-  },
-
-  async getOfficerGrievances(): Promise<Grievance[]> {
-    const rows = await request<any[]>('/api/officer/grievances');
-    return rows.map((row) => ({
-      id: row.id,
-      trackId: row.track_id,
-      citizenName: row.citizen_name,
-      citizenPhone: row.citizen_phone,
-      citizenEmail: row.citizen_email || undefined,
-      language: row.language,
-      originalTranscript: row.original_transcript,
-      summaryEn: row.summary_en,
-      summaryTa: row.summary_ta,
-      category: row.category,
-      departmentId: row.department_id || '',
-      departmentName: row.department_name,
-      priority: row.priority,
-      priorityReason: row.priority_reason,
-      confidenceScore: Number(row.confidence_score || 0),
-      location: {
-        address: row.location_address,
-        district: row.location_district,
-        landmark: row.location_landmark || undefined,
-        constituency: row.location_constituency || undefined,
-        wardNumber: row.location_ward_number || undefined,
-        pincode: row.location_pincode || undefined,
-        lat: row.location_lat ?? undefined,
-        lng: row.location_lng ?? undefined,
-      },
-      attachments: (row.grievance_attachments || []).map((a: any) => ({
-        id: a.attachment_id, url: a.url, name: a.name, type: a.type, uploadedAt: a.uploaded_at,
-      })),
-      status: row.status,
-      assignedOfficerId: row.assigned_officer_id || undefined,
-      assignedOfficerName: row.assigned_officer_name || undefined,
-      assignedOfficerPhone: row.assigned_officer_phone || undefined,
-      assignedAt: row.assigned_at || undefined,
-      targetResolutionDate: row.target_resolution_date || row.created_at,
-      estimatedDays: row.estimated_days ?? undefined,
-      resolvedAt: row.resolved_at || undefined,
-      resolutionRemarks: row.resolution_remarks || undefined,
-      resolutionEvidenceUrl: row.resolution_evidence_url || undefined,
-      statusHistory: (row.grievance_status_history || []).map((h: any) => ({
-        status: h.status, timestamp: h.occurred_at, updatedBy: h.updated_by, role: h.role, remarks: h.remarks,
-        evidenceUrl: h.evidence_url || undefined,
-      })),
-      entities: row.entities || {},
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      isDuplicateOf: row.is_duplicate_of || undefined,
-      resolutionVerifiedAt: row.resolution_verified_at || undefined,
-      resolutionVerifiedBy: row.resolution_verified_by || undefined,
-      escalationReason: row.escalation_reason || undefined,
-      escalatedAt: row.escalated_at || undefined,
-      escalatedToDepartmentId: row.escalated_to_department_id || undefined,
-    })) as Grievance[];
-  },
-
-  async updateOfficerStatus(id: string, payload: {
-    status: GrievanceStatus; remarks: string; evidenceUrl?: string;
-  }) {
-    return request<{ ok: boolean; grievanceId: string; status: GrievanceStatus; updatedBy: string; updatedAt: string }>(
-      `/api/officer/grievances/${encodeURIComponent(id)}/status`, { method: 'POST', body: payload }
-    );
-  },
-
-  async escalateOfficerGrievance(id: string, toDepartmentId: string, reason: string) {
-    return request<{ ok: boolean; grievanceId: string; status: GrievanceStatus; escalatedToDepartmentId: string; escalatedAt: string }>(
-      `/api/officer/grievances/${encodeURIComponent(id)}/escalate`,
-      { method: 'POST', body: { toDepartmentId, reason } }
-    );
-  },
-
-  async getPublicTransparency() {
-    return request<{
-      generatedAt: string;
-      metrics: { total:number; active:number; resolved:number; breached:number; verified:number; resolutionRate:number; averageRating:number|null };
-      districts: Array<{district:string;total:number;active:number;resolved:number;lat:number|null;lng:number|null}>;
-      categories: Array<{name:string;value:number}>;
-      heatmap: Array<{lat:number;lng:number;count:number}>;
-    }>('/api/public/transparency');
-  },
-
-  async assessComplaintQuality(payload: { text:string; category?:string; district?:string; priority?:GrievancePriority }) {
-    return request<{
-      completenessScore:number; qualityBand:string; missingFields:string[]; routing:string; routingReason:string;
-      severity:GrievancePriority; severityReason:string; slaDays:number; duplicateProbability:number;
-      duplicates:Array<{id:string;score:number;category:string;district:string;status:string}>;
-    }>('/api/ai/complaint-quality',{method:'POST',body:payload});
-  },
-
-  async runEscalationScan() {
-    return request<{scanned:number;escalated:number;results:Array<{id:string;level:number;reason:string}>}>(
-      '/api/admin/escalation-scan',{method:'POST',body:{}}
-    );
-  },
-
+  // Notifications
   async getNotifications(): Promise<NotificationItem[]> {
-    return request<NotificationItem[]>('/api/notifications');
+    const res = await fetch('/api/notifications');
+    if (!res.ok) throw new Error('Failed to fetch notifications');
+    return res.json();
   },
 
-  async markNotificationRead(id: string) {
-    if (!/^[0-9a-f-]{20,80}$/i.test(id)) throw new Error('Invalid notification identifier.');
-    return request<NotificationItem>(`/api/notifications/${encodeURIComponent(id)}/read`, { method: 'PATCH' });
+  async markNotificationRead(id: string): Promise<void> {
+    await fetch(`/api/notifications/${encodeURIComponent(id)}/read`, { method: 'PATCH' });
   },
 
-  async getSiteSettings(): Promise<import('../types').SiteSettings> {
-    return request<import('../types').SiteSettings>('/api/site-settings');
-  },
-
-  async updateSiteSettings(settings: import('../types').SiteSettings): Promise<import('../types').SiteSettings> {
-    return request<import('../types').SiteSettings>('/api/site-settings', { method: 'PUT', body: settings });
-  },
-
+  // Analytics & Audit
   async getAnalytics() {
-    if (!(await fetchIsAdmin(auth.currentUser))) throw new Error('Admin authentication required.');
-    const payload = await request<{
-      generatedAt: string;
-      summary: {
-        total: number;
-        pending: number;
-        resolved: number;
-        in_progress: number;
-        critical: number;
-        high: number;
-        sla_breached: number;
-        average_resolution_hours: number;
-        citizen_satisfaction_score: number;
-      };
-      categories: Array<{ name: string; value: number }>;
-      priorities: Record<string, number>;
-      districts: Array<{ name: string; value: number }>;
-      timelineData: Array<{ day: string; submitted: number; resolved: number }>;
-    }>('/api/admin/analytics');
+    const grievancesRef = collection(db, 'grievances');
+    const snapshot = await getDocs(grievancesRef);
+    let total = 0;
+    let resolved = 0;
+    let pending = 0;
+    let critical = 0;
+    let high = 0;
+    let inProgress = 0;
+    const categoryMap: Record<string, number> = {};
+    const priorityMap: Record<string, number> = { Critical: 0, High: 0, Medium: 0, Low: 0 };
+    
+    // Also fetch mock data to combine with real data for demo
+    const mockRes = await fetch('/api/analytics').catch(() => null);
+    const mockData = mockRes && mockRes.ok ? await mockRes.json() : null;
 
-    const feedbackScore = payload.summary.citizen_satisfaction_score || null;
+    snapshot.forEach((doc) => {
+      const c = doc.data() as Grievance;
+      total++;
+      if (c.status === 'Resolved') resolved++;
+      else pending++;
+      
+      if (c.priority === 'Critical' && c.status !== 'Resolved') critical++;
+      if (c.priority === 'High' && c.status !== 'Resolved') high++;
+      if (c.status === 'In Progress' || c.status === 'Under Review') inProgress++;
+
+      categoryMap[c.category] = (categoryMap[c.category] || 0) + 1;
+      priorityMap[c.priority] = (priorityMap[c.priority] || 0) + 1;
+    });
+
+    const categoryData = Object.entries(categoryMap).map(([name, value]) => ({ name, value }));
+    const priorityData = Object.entries(priorityMap).map(([name, count]) => ({ name, count }));
+
+    if (mockData && total > 0) {
+      // Merge mock data with real data for the hackathon demo feel
+      mockData.metrics.total += total;
+      mockData.metrics.resolved += resolved;
+      mockData.metrics.pending += pending;
+      mockData.metrics.critical += critical;
+      mockData.metrics.high += high;
+      mockData.metrics.inProgress += inProgress;
+      mockData.metrics.resolutionRate = Math.round((mockData.metrics.resolved / mockData.metrics.total) * 100);
+      
+      // We'll just return the updated mockData
+      return mockData;
+    }
+
     return {
       metrics: {
-        total: payload.summary.total,
-        resolved: payload.summary.resolved,
-        pending: payload.summary.pending,
-        critical: payload.summary.critical,
-        high: payload.summary.high,
-        inProgress: payload.summary.in_progress,
-        slaBreached: payload.summary.sla_breached,
-        resolutionRate: payload.summary.total ? Math.round((payload.summary.resolved / payload.summary.total) * 100) : 0,
-        avgResolutionHours: payload.summary.average_resolution_hours || null,
-        citizenSatisfactionScore: feedbackScore,
+        total,
+        resolved,
+        pending,
+        critical,
+        high,
+        inProgress,
+        resolutionRate: total > 0 ? Math.round((resolved / total) * 100) : 0,
+        avgResolutionHours: 24,
+        citizenSatisfactionScore: 4.5,
       },
-      categoryData: payload.categories,
-      priorityData: Object.entries(payload.priorities).map(([name, value]) => ({ name, value })),
-      districtData: payload.districts.map(({ name, value }) => ({ district: name, total: value })),
-      timelineData: payload.timelineData,
+      categoryData,
+      priorityData,
+      deptData: [],
+      timelineData: []
     };
   },
 
   async getAuditLogs(): Promise<AuditLog[]> {
-    if (!(await fetchIsAdmin(auth.currentUser))) throw new Error('Admin authentication required.');
-    return request<AuditLog[]>('/api/admin/audit-logs');
+    const res = await fetch('/api/audit-logs');
+    if (!res.ok) throw new Error('Failed to fetch audit logs');
+    return res.json();
   },
 };

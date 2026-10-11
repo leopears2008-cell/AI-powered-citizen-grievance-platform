@@ -66,7 +66,6 @@ export interface Grievance {
   id: string; // Document ID
   trackId: string; // GRV-2026-XXXXX
   citizenId?: string; // Firebase Auth UID
-  verificationMethod?: 'phone' | 'email';
   citizenName: string;
   citizenPhone: string;
   citizenEmail?: string;
@@ -103,7 +102,6 @@ export interface Grievance {
   assignedOfficerPhone?: string;
   assignedAt?: string;
   targetResolutionDate: string;
-  estimatedDays?: number;
   resolvedAt?: string;
   resolutionRemarks?: string;
   resolutionEvidenceUrl?: string;
@@ -178,20 +176,4 @@ export interface AuditLog {
   action: string;
   details: string;
   grievanceId?: string;
-}
-
-
-export interface SiteSettings {
-  id: string;
-  siteTitle: string;
-  siteSubtitle: string;
-  announcement: string;
-  chatbotEnabled: boolean;
-  showHero: boolean;
-  showAIDemo: boolean;
-  showMap: boolean;
-  showFAQ: boolean;
-  showDirectory: boolean;
-  showMinisters: boolean;
-  showNews: boolean;
 }
