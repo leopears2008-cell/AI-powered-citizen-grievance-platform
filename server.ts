@@ -52,6 +52,11 @@ const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '10mb' }));
 
+// Health check (used by Render/Railway)
+app.get('/healthz', (_req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // Helper: Add Audit Log
 function addAuditLog(
   userId: string,
@@ -910,10 +915,18 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    // Vite emits the client bundle to dist/client (see vite.config.ts).
+    // dist/ itself also holds server.cjs, so it must not be served directly.
+    const clientPath = path.join(process.cwd(), 'dist', 'client');
+    app.use(express.static(clientPath));
+
+    // Unknown API routes must return JSON, never the SPA HTML.
+    app.use('/api', (_req, res) => {
+      res.status(404).json({ error: 'API route not found' });
+    });
+
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(clientPath, 'index.html'));
     });
   }
 
