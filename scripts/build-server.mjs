@@ -11,8 +11,9 @@ const esbuild = path.join(projectRoot, 'node_modules', 'esbuild', 'bin', 'esbuil
 await mkdir(outputDirectory, { recursive: true });
 await rm(outputFile, { force: true });
 
-execFileSync(process.execPath, [
-  esbuild,
+// esbuild/bin/esbuild is a native executable, not a JavaScript file.
+// Invoke it directly instead of asking Node.js to parse its binary contents.
+execFileSync(esbuild, [
   path.join(projectRoot, 'server.ts'),
   '--bundle',
   '--platform=node',
