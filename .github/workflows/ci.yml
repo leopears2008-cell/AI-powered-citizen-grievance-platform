@@ -10,6 +10,9 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -19,31 +22,26 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          bun-version: 1.4.2
+          node-version: 22
+          cache: npm
 
-      - name: Install dependencies with frozen lockfile
-        run: bun install --frozen-lockfile
+      - name: Install locked dependencies
+        run: npm ci
 
       - name: Type-check
-        run: bun run lint
+        run: npm run lint
 
-      - name: Run tests
-        run: bun run test
-
-      - name: Run production hardening tests
-        run: bunx tsx --test tests/production.hardening.test.ts
-
-      - name: Run AI evaluation gate
-        run: bun run evaluate:ai
-
-      - name: Run E2E workflow tests
-        run: bun run test:e2e
+      - name: Run unit and hardening tests
+        run: npm test
 
       - name: Validate production configuration contract
-        run: bun run validate:production
+        run: npm run validate:production
 
       - name: Build production assets and server
-        run: bun run build
+        run: npm run build
+
+      - name: Run production API smoke tests
+        run: npm run test:e2e

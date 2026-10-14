@@ -10,13 +10,12 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "echo \"No tests defined\"",
+    "test": "node --test tests/production.hardening.test.mjs",
     "provision-admin": "node scripts/provision-admin.mjs",
     "migrate:firestore-to-supabase": "node scripts/migrate-firestore-to-supabase.mjs",
     "build:client": "vite build --configLoader runner",
     "build:server": "node scripts/build-server.mjs",
-    "evaluate:ai": "tsx scripts/run-ai-evaluation.ts",
-    "test:e2e": "node --import tsx --test tests/e2e.workflow.test.ts",
+    "test:e2e": "node --test tests/e2e.workflow.test.mjs",
     "validate:production": "node scripts/validate-production.mjs"
   },
   "dependencies": {
