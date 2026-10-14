@@ -58,3 +58,12 @@ const ministers: TNMinisterProfile[] = [
 
 export const getAllTNMinisters = (): TNMinisterProfile[] => ministers;
 
+export const getMinisterParties = (): string[] =>
+  ['All Parties', ...Array.from(new Set(ministers.map((minister) => minister.party))).sort()];
+
+export const getMinisterSourceInfo = () => ({
+  sourceName: 'Tamil Nadu Lok Bhavan releases, 16 May and 21 May 2026',
+  sourceUrl: SOURCE_URL,
+  rosterSize: ministers.length,
+  verificationNote: 'Portfolio allocations can change by subsequent government orders. Unknown biography fields are intentionally null.',
+});
