@@ -11,6 +11,7 @@ import { OfficerPortal } from './components/OfficerPortal';
 import { AnalyticsView } from './components/AnalyticsView';
 import { MLADirectory } from './components/MLADirectory';
 import { InteractiveMap } from './components/InteractiveMap';
+import { CivicServicesHub } from './components/CivicServicesHub';
 import {
   Phone,
   ShieldCheck,
@@ -91,6 +92,7 @@ const MainLayout: React.FC = () => {
               }}
             />
             <InteractiveMap />
+            <CivicServicesHub />
           </div>
         )}
 

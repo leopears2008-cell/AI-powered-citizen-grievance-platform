@@ -13,6 +13,11 @@ create table if not exists public.site_settings (
   show_directory boolean not null default true,
   show_ministers boolean not null default true,
   show_news boolean not null default true,
+  emergency_mode boolean not null default false,
+  emergency_title text not null default 'Emergency Civic Response Mode',
+  emergency_message text not null default '',
+  emergency_sla_minutes integer not null default 120 check (emergency_sla_minutes between 15 and 1440),
+  updated_by text,
   updated_at timestamptz not null default now()
 );
 
