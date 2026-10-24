@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { getAvailableDistricts, getConstituenciesForDistrict, getMLAForConstituency, getAllMLAs } from '../data/mlaProfiles';
-import { Search, MapPin, Phone, Mail, Building2, User } from 'lucide-react';
+import { Search, MapPin, User } from 'lucide-react';
 
 export const MLADirectory: React.FC = () => {
   const { language } = useApp();
