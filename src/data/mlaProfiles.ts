@@ -70,23 +70,13 @@ export const getAllMLAs = (): MLAProfile[] => {
 
 export const getConstituenciesForDistrict = (district: string): string[] => {
   if (district === 'All Districts') {
-    const all: string[] = [];
-    Object.keys(mlaMap).forEach(d => {
-      const hq = mlaMap[d]?.constituency;
-      if (hq) all.push(hq);
-      all.push(...defaultConstituencies.map(c => `${d} ${c}`).filter(c => c !== hq));
-    });
-    return all.sort();
+    return Object.values(mlaMap).map((profile) => profile.constituency).filter((value): value is string => Boolean(value)).sort();
   }
 
   const hq = mlaMap[district]?.constituency;
-  if (!hq) return defaultConstituencies.map(c => `${district} ${c}`);
+  if (!hq) return [];
   
-  // Return the main HQ constituency, plus a few generic ones for selection
-  return [
-    hq,
-    ...defaultConstituencies.map(c => `${district} ${c}`).filter(c => c !== hq)
-  ];
+  // Only return constituencies explicitly present in the dataset. Never invent generic seats.
 };
 
 export const getMLAForConstituency = (district: string, constituency: string): MLAProfile => {
@@ -98,29 +88,27 @@ export const getMLAForConstituency = (district: string, constituency: string): M
         return getMLAForConstituency(d, constituency);
       }
     }
-    // Fallback
-    return getMLAForConstituency('Chennai', constituency);
+    return { name: 'Unverified representative', constituency, district: '', phone: '', email: '', party: '', avatar: '' };
   }
 
   const hq = mlaMap[district];
   const isHQ = hq?.constituency === constituency;
   
-  const name = isHQ ? hq.name! : `Thiru. Representative (${constituency})`;
-  const party = isHQ ? hq.party! : 'IND';
+  const name = isHQ ? hq.name! : 'Unverified representative';
+  const party = isHQ ? hq.party! : '';
 
   return {
     name,
     constituency,
     district,
-    phone: '+91 94440 00000',
-    email: `mla.${constituency.toLowerCase().replace(/[^a-z0-9]/g, '')}@tn.gov.in`,
+    phone: isHQ ? '' : '',
+    email: isHQ ? '' : '',
     party,
-    officeAddress: `Constituency MLA Office, Main Road, ${constituency}, ${district} District, Tamil Nadu.`,
-    avatar: 'https://ui-avatars.com/api/?name=' + encodeURIComponent(name) + '&background=e0e7ff&color=3730a3&bold=true'
+    avatar: ''
   };
 };
 
 export const getMLAForDistrict = (district: string): MLAProfile => {
-  const hq = mlaMap[district] || { name: 'Constituency MLA', constituency: district, party: 'Rep' };
+  const hq = mlaMap[district] || { name: 'Unverified representative', constituency: district, party: '' };
   return getMLAForConstituency(district, hq.constituency!);
 };
