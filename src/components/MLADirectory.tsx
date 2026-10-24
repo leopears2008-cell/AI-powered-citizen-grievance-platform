@@ -37,10 +37,15 @@ export const MLADirectory: React.FC = () => {
         <h2 className="text-xl font-bold text-slate-900 mb-2">
           {language === 'ta' ? 'சட்டமன்ற உறுப்பினர் கையேடு' : 'MLA Directory'}
         </h2>
-        <p className="text-sm text-slate-500 mb-8">
+        <p className="text-sm text-slate-500 mb-3">
           {language === 'ta'
-            ? 'உங்கள் மாவட்டத்தையும் தொகுதியையும் தேர்ந்தெடுத்து உங்கள் சட்டமன்ற உறுப்பினரின் விவரங்களை அறியவும்.'
-            : 'Search across all constituencies or filter by district to find your representative.'}
+            ? 'மாவட்டம் மற்றும் தொகுதி அடிப்படையில் பதிவுகளைத் தேடுங்கள்.'
+            : 'Search the currently available constituency records.'}
+        </p>
+        <p className="mb-8 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="note">
+          {language === 'ta'
+            ? 'அதிகாரப்பூர்வ ஆதாரத்துடன் சரிபார்க்கப்படும் வரை தொடர்பு விவரங்கள் காட்டப்படாது. பதிவுகளை அதிகாரப்பூர்வ அரசு ஆதாரத்தில் உறுதிப்படுத்தவும்.'
+            : 'Contact details are intentionally withheld unless verified from an official source. Names and constituencies should be checked against current official records before relying on them.'}
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
@@ -83,11 +88,11 @@ export const MLADirectory: React.FC = () => {
             displayedMLAs.map((mla, idx) => (
               <div key={`${mla.constituency}-${idx}`} className="bg-indigo-50/40 border border-indigo-100 p-5 rounded-2xl flex flex-col h-full hover:shadow-md transition-shadow">
                 <div className="flex items-start space-x-4 mb-4">
-                  <img
-                    src={mla.avatar}
-                    alt="MLA Avatar"
-                    className="w-16 h-16 rounded-full border-2 border-indigo-200 shadow-sm shrink-0 bg-white"
-                  />
+                  {mla.avatar ? (
+                    <img src={mla.avatar} alt="" className="w-16 h-16 rounded-full border-2 border-indigo-200 shadow-sm shrink-0 bg-white" />
+                  ) : (
+                    <div aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-xs text-slate-500">Unverified</div>
+                  )}
                   <div>
                     <h3 className="text-lg font-bold text-indigo-950 leading-tight mb-1">
                       {mla.name} <span className="text-xs text-indigo-700 font-medium bg-indigo-100 px-1.5 py-0.5 rounded">({mla.party})</span>
@@ -103,22 +108,14 @@ export const MLADirectory: React.FC = () => {
                 </div>
                 
                 <div className="flex flex-col gap-2 mt-auto pt-4 border-t border-indigo-100/50">
-                  <div className="flex gap-2">
-                    <a
-                      href={`tel:${mla.phone}`}
-                      className="flex-1 flex items-center justify-center space-x-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded-lg shadow-sm transition-colors"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>{language === 'ta' ? 'அழைக்க' : 'Call'}</span>
-                    </a>
-                    <a
-                      href={`mailto:${mla.email}`}
-                      className="flex-1 flex items-center justify-center space-x-1.5 text-xs font-semibold text-indigo-700 bg-white hover:bg-slate-50 px-3 py-2 rounded-lg border border-indigo-200 shadow-sm transition-colors"
-                    >
-                      <Mail className="w-3.5 h-3.5" />
-                      <span>{language === 'ta' ? 'மின்னஞ்சல்' : 'Email'}</span>
-                    </a>
-                  </div>
+                  {mla.phone || mla.email ? (
+                    <div className="flex gap-2">
+                      {mla.phone && <a href={`tel:${mla.phone}`} className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-center text-xs font-semibold text-white hover:bg-indigo-700">{language === 'ta' ? 'அழைக்க' : 'Call'}</a>}
+                      {mla.email && <a href={`mailto:${mla.email}`} className="flex-1 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-center text-xs font-semibold text-indigo-700 hover:bg-slate-50">{language === 'ta' ? 'மின்னஞ்சல்' : 'Email'}</a>}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500">{language === 'ta' ? 'சரிபார்க்கப்பட்ட தொடர்பு விவரம் கிடைக்கவில்லை.' : 'No verified contact details available.'}</p>
+                  )}
                 </div>
               </div>
             ))
