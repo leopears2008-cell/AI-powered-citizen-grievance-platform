@@ -884,7 +884,7 @@ app.get('/api/analytics', (req, res) => {
       critical,
       high,
       inProgress,
-      resolutionRate: total > 0 ? Math.round((resolved / total) * 100) : 0,
+      resolutionRate: total > 0 ? Math.round((resolved / total) * 100) : null,
       avgResolutionHours: null,
       citizenSatisfactionScore: null,
     },
