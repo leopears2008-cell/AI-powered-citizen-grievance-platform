@@ -63,10 +63,7 @@ export const api = {
       if (!res.ok) throw new Error('Failed to draft');
       return res.json();
     } catch {
-      return {
-        resolutionEn: 'Issue rectified on-site by zonal maintenance unit. Functionality restored and verified.',
-        resolutionTa: 'கள பராமரிப்பு குழுவால் பிரச்சனை சரிசெய்யப்பட்டு செயல்பாடுகள் உறுதி செய்யப்பட்டன.',
-      };
+      throw new Error('Resolution suggestion service is unavailable. No resolution was fabricated.');
     }
   },
 
