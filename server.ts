@@ -874,16 +874,7 @@ app.get('/api/analytics', (req, res) => {
     pending: d.pendingCount,
   }));
 
-  // Daily timeline (last 7 days simulated trend)
-  const timelineData = [
-    { day: 'Mon', submitted: 18, resolved: 14 },
-    { day: 'Tue', submitted: 24, resolved: 21 },
-    { day: 'Wed', submitted: 32, resolved: 28 },
-    { day: 'Thu', submitted: 29, resolved: 26 },
-    { day: 'Fri', submitted: 41, resolved: 35 },
-    { day: 'Sat', submitted: 22, resolved: 20 },
-    { day: 'Today', submitted: total, resolved },
-  ];
+  const timelineData: Array<{ day: string; submitted: number; resolved: number }> = [];
 
   res.json({
     metrics: {
@@ -894,8 +885,8 @@ app.get('/api/analytics', (req, res) => {
       high,
       inProgress,
       resolutionRate: total > 0 ? Math.round((resolved / total) * 100) : 0,
-      avgResolutionHours: 28.4,
-      citizenSatisfactionScore: 4.8,
+      avgResolutionHours: null,
+      citizenSatisfactionScore: null,
     },
     categoryData,
     priorityData,
