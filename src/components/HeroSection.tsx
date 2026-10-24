@@ -151,7 +151,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 onChange={(e) => setQuickTrackInput(e.target.value)}
                 placeholder={
                   language === 'ta'
-                    ? 'புகார் எண் மூலம் நிலை அறிய (எ.கா: GRV-2026-00124)'
+                    ? 'புகார் கண்காணிப்பு எண்ணை உள்ளிடவும்'
                     : 'Enter your grievance tracking ID'
                 }
                 className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm text-white placeholder-indigo-300 focus:outline-none font-mono"
