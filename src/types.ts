@@ -58,7 +58,7 @@ export interface Department {
   totalGrievances: number;
   pendingCount: number;
   resolvedCount: number;
-  slaDays: number;
+  slaDays: number | null;
   iconName: string;
 }
 
