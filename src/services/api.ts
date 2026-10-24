@@ -87,20 +87,6 @@ export const api = {
       results.push(doc.data() as Grievance);
     });
 
-    // Merge with Mock Data for Demo Purposes
-    try {
-      const res = await fetch('/api/complaints');
-      if (res.ok) {
-        const mockData: Grievance[] = await res.json();
-        // Only add mock data that isn't overridden by real data
-        const realIds = new Set(results.map(r => r.id));
-        const newMockData = mockData.filter(m => !realIds.has(m.id));
-        results = [...results, ...newMockData];
-      }
-    } catch (e) {
-      console.warn('Failed to fetch mock data', e);
-    }
-
     if (params) {
       if (params.category) results = results.filter(r => r.category === params.category);
       if (params.status) results = results.filter(r => r.status === params.status);
@@ -127,10 +113,7 @@ export const api = {
       return docSnap.data() as Grievance;
     }
     
-    // Fallback to fetch from mock api just in case we are looking for seeded data
-    const res = await fetch(`/api/complaints/${encodeURIComponent(id)}`);
-    if (!res.ok) throw new Error('Complaint not found');
-    return res.json();
+    throw new Error('Complaint not found in the live database');
   },
 
   async createComplaint(data: Partial<Grievance>): Promise<Grievance> {
@@ -279,41 +262,20 @@ export const api = {
     let inProgress = 0;
     const categoryMap: Record<string, number> = {};
     const priorityMap: Record<string, number> = { Critical: 0, High: 0, Medium: 0, Low: 0 };
-    
-    // Also fetch mock data to combine with real data for demo
-    const mockRes = await fetch('/api/analytics').catch(() => null);
-    const mockData = mockRes && mockRes.ok ? await mockRes.json() : null;
 
-    snapshot.forEach((doc) => {
-      const c = doc.data() as Grievance;
+    snapshot.forEach((document) => {
+      const grievance = document.data() as Grievance;
       total++;
-      if (c.status === 'Resolved') resolved++;
+      if (grievance.status === 'Resolved') resolved++;
       else pending++;
-      
-      if (c.priority === 'Critical' && c.status !== 'Resolved') critical++;
-      if (c.priority === 'High' && c.status !== 'Resolved') high++;
-      if (c.status === 'In Progress' || c.status === 'Under Review') inProgress++;
 
-      categoryMap[c.category] = (categoryMap[c.category] || 0) + 1;
-      priorityMap[c.priority] = (priorityMap[c.priority] || 0) + 1;
+      if (grievance.priority === 'Critical' && grievance.status !== 'Resolved') critical++;
+      if (grievance.priority === 'High' && grievance.status !== 'Resolved') high++;
+      if (grievance.status === 'In Progress' || grievance.status === 'Under Review') inProgress++;
+
+      categoryMap[grievance.category] = (categoryMap[grievance.category] || 0) + 1;
+      if (grievance.priority in priorityMap) priorityMap[grievance.priority]++;
     });
-
-    const categoryData = Object.entries(categoryMap).map(([name, value]) => ({ name, value }));
-    const priorityData = Object.entries(priorityMap).map(([name, count]) => ({ name, count }));
-
-    if (mockData && total > 0) {
-      // Merge mock data with real data for the hackathon demo feel
-      mockData.metrics.total += total;
-      mockData.metrics.resolved += resolved;
-      mockData.metrics.pending += pending;
-      mockData.metrics.critical += critical;
-      mockData.metrics.high += high;
-      mockData.metrics.inProgress += inProgress;
-      mockData.metrics.resolutionRate = Math.round((mockData.metrics.resolved / mockData.metrics.total) * 100);
-      
-      // We'll just return the updated mockData
-      return mockData;
-    }
 
     return {
       metrics: {
@@ -323,14 +285,14 @@ export const api = {
         critical,
         high,
         inProgress,
-        resolutionRate: total > 0 ? Math.round((resolved / total) * 100) : 0,
-        avgResolutionHours: 24,
-        citizenSatisfactionScore: 4.5,
+        resolutionRate: total > 0 ? Math.round((resolved / total) * 100) : null,
+        avgResolutionHours: null,
+        citizenSatisfactionScore: null,
       },
-      categoryData,
-      priorityData,
+      categoryData: Object.entries(categoryMap).map(([name, value]) => ({ name, value })),
+      priorityData: Object.entries(priorityMap).map(([name, count]) => ({ name, count })),
       deptData: [],
-      timelineData: []
+      timelineData: [],
     };
   },
 
