@@ -1,297 +1,133 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { BarChart3, AlertCircle, RefreshCw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  AreaChart,
-  Area,
-  Legend,
-} from 'recharts';
-import {
-  BarChart3,
-  TrendingUp,
-  Clock,
-  ThumbsUp,
-  Sparkles,
-  ShieldCheck,
-  Building2,
-  MapPin,
-  Calendar,
-} from 'lucide-react';
+
+type Analytics = {
+  metrics: {
+    total: number;
+    resolved: number;
+    pending: number;
+    critical: number;
+    high: number;
+    inProgress: number;
+    resolutionRate: number | null;
+    avgResolutionHours: number | null;
+    citizenSatisfactionScore: number | null;
+  };
+  categoryData: Array<{ name: string; value: number }>;
+  priorityData: Array<{ name: string; count: number }>;
+};
 
 export const AnalyticsView: React.FC = () => {
-  const { language, t } = useApp();
-  const [stats, setStats] = useState<any>(null);
+  const { language } = useApp();
+  const [stats, setStats] = useState<Analytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const loadAnalytics = async () => {
+    setIsLoading(true);
+    setError(false);
+    try {
+      const result = await api.getAnalytics() as Analytics;
+      setStats(result);
+    } catch {
+      setStats(null);
+      setError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        const data = await api.getAnalytics();
-        setStats(data);
-      } catch {
-        // ignore
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchAnalytics();
+    void loadAnalytics();
   }, []);
 
-  // Department distribution chart data
-  const deptData = [
-    { name: 'Street Light', complaints: 320, resolved: 302, color: '#f59e0b' },
-    { name: 'Water Supply', complaints: 280, resolved: 254, color: '#3b82f6' },
-    { name: 'Roads & Potholes', complaints: 245, resolved: 210, color: '#f97316' },
-    { name: 'Sanitation', complaints: 210, resolved: 195, color: '#10b981' },
-    { name: 'Electricity', complaints: 140, resolved: 130, color: '#eab308' },
-    { name: 'Public Health', complaints: 95, resolved: 88, color: '#ec4899' },
-  ];
-
-  // Priority Donut data
-  const priorityData = [
-    { name: 'Critical 🔴', value: 15, color: '#dc2626' },
-    { name: 'High 🟠', value: 30, color: '#f97316' },
-    { name: 'Medium 🟡', value: 42, color: '#eab308' },
-    { name: 'Low 🟢', value: 13, color: '#10b981' },
-  ];
-
-  // Weekly Trendline Data
-  const trendData = [
-    { day: 'Mon', inflow: 45, resolved: 42 },
-    { day: 'Tue', inflow: 52, resolved: 48 },
-    { day: 'Wed', inflow: 68, resolved: 60 },
-    { day: 'Thu', inflow: 74, resolved: 71 },
-    { day: 'Fri', inflow: 58, resolved: 65 },
-    { day: 'Sat', inflow: 35, resolved: 40 },
-    { day: 'Sun', inflow: 28, resolved: 30 },
-  ];
-
-  // District distribution
-  const districtPerformance = [
-    { district: 'Chennai', total: 480, avgHours: '24.2h', rate: '97.2%' },
-    { district: 'Madurai', total: 240, avgHours: '29.5h', rate: '95.8%' },
-    { district: 'Coimbatore', total: 310, avgHours: '22.8h', rate: '98.1%' },
-    { district: 'Tiruchirappalli', total: 175, avgHours: '31.0h', rate: '94.6%' },
-    { district: 'Salem', total: 135, avgHours: '26.4h', rate: '96.3%' },
+  const metrics = stats?.metrics;
+  const cards = [
+    { label: 'Total grievances', value: metrics?.total },
+    { label: 'Resolved grievances', value: metrics?.resolved },
+    { label: 'Pending grievances', value: metrics?.pending },
+    { label: 'In progress', value: metrics?.inProgress },
+    { label: 'Critical open cases', value: metrics?.critical },
+    { label: 'High-priority open cases', value: metrics?.high },
+    { label: 'Resolution rate', value: metrics?.resolutionRate == null ? null : `${metrics.resolutionRate}%` },
+    { label: 'Average resolution time', value: metrics?.avgResolutionHours == null ? null : `${metrics.avgResolutionHours} hours` },
+    { label: 'Citizen satisfaction', value: metrics?.citizenSatisfactionScore == null ? null : `${metrics.citizenSatisfactionScore}/5` },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div>
-          <div className="flex items-center space-x-2">
-            <span className="p-2 bg-indigo-600 text-white rounded-xl">
-              <BarChart3 className="w-5 h-5" />
-            </span>
+    <main className="mx-auto max-w-7xl space-y-6">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="rounded-xl bg-indigo-600 p-3 text-white"><BarChart3 className="h-5 w-5" aria-hidden="true" /></span>
             <div>
-              <h2 className="text-xl font-black text-slate-900 font-sans">
-                {language === 'ta'
-                  ? 'பொதுமக்கள் குறைதீர்ப்பு பகுப்பாய்வு மையம்'
-                  : 'Public Grievance Redressal Analytics'}
+              <h2 className="text-xl font-bold text-slate-900">
+                {language === 'ta' ? 'குறைதீர்ப்பு புள்ளிவிவரங்கள்' : 'Grievance Analytics'}
               </h2>
-              <p className="text-xs text-slate-500">
-                Real-time civic intelligence, SLA compliance, and predictive trend tracking
+              <p className="mt-1 text-sm text-slate-600">
+                {language === 'ta' ? 'தரவுத்தளத்தில் உள்ள பதிவுகளிலிருந்து கணக்கிடப்பட்டது.' : 'Calculated from records currently stored in the connected database.'}
               </p>
             </div>
           </div>
+          <button type="button" onClick={() => void loadAnalytics()} disabled={isLoading}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-600 disabled:opacity-60">
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
+            {language === 'ta' ? 'புதுப்பிக்க' : 'Refresh'}
+          </button>
         </div>
+      </section>
 
-        <div className="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Live Data Feed (TN State Portal)</span>
-        </div>
-      </div>
-
-      {/* Top 4 Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-          <span className="text-[11px] font-bold text-slate-500 uppercase">SLA Compliance Rate</span>
-          <p className="text-2xl font-bold text-emerald-600 font-mono">96.4%</p>
-          <p className="text-[11px] text-slate-400">Within targeted resolution timeline</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-          <span className="text-[11px] font-bold text-slate-500 uppercase">Avg Redressal Speed</span>
-          <p className="text-2xl font-bold text-indigo-600 font-mono">26.8 Hours</p>
-          <p className="text-[11px] text-slate-400">-12.4% faster than state benchmark</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-          <span className="text-[11px] font-bold text-slate-500 uppercase">AI NLP Accuracy</span>
-          <p className="text-2xl font-bold text-indigo-600 font-mono">98.7%</p>
-          <p className="text-[11px] text-slate-400">Tamil & English automatic classification</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-          <span className="text-[11px] font-bold text-slate-500 uppercase">Citizen Satisfaction</span>
-          <p className="text-2xl font-bold text-amber-500 font-mono">4.8 / 5.0 ⭐</p>
-          <p className="text-[11px] text-slate-400">Based on 890+ verified closures</p>
-        </div>
-      </div>
-
-      {/* Charts Grid: Bar Chart + Donut Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Department Volume Bar Chart (7 cols) */}
-        <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-sm font-bold text-slate-900">
-              Department Grievances vs Resolutions
-            </h3>
-            <span className="text-[10px] text-slate-400 font-semibold">Monthly Snapshot</span>
-          </div>
-
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={deptData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0f172a',
-                    color: '#fff',
-                    borderRadius: '8px',
-                    fontSize: '11px',
-                  }}
-                />
-                <Legend wrapperStyle={{ fontSize: '11px' }} />
-                <Bar dataKey="complaints" name="Total Filed" fill="#4f46e5" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="resolved" name="Resolved" fill="#10b981" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Priority Mix Donut Chart (5 cols) */}
-        <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-sm font-bold text-slate-900">Priority Urgency Breakdown</h3>
-            <span className="text-[10px] text-slate-400 font-semibold">AI Classified</span>
-          </div>
-
-          <div className="h-64 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={priorityData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
-                  paddingAngle={4}
-                  dataKey="value"
-                >
-                  {priorityData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0f172a',
-                    color: '#fff',
-                    borderRadius: '8px',
-                    fontSize: '11px',
-                  }}
-                />
-                <Legend wrapperStyle={{ fontSize: '11px' }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Area Chart: Inflow vs Redressal Velocity */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <div className="flex justify-between items-center">
+      {error && (
+        <div role="alert" className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
           <div>
-            <h3 className="text-sm font-bold text-slate-900">
-              Weekly Grievance Inflow vs Resolution Trendline
-            </h3>
-            <p className="text-xs text-slate-500">
-              Continuous intake velocity across all municipal zones
-            </p>
+            <p className="font-semibold">{language === 'ta' ? 'தரவை ஏற்ற முடியவில்லை' : 'Unable to load live analytics'}</p>
+            <p className="mt-1 text-sm">{language === 'ta' ? 'இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.' : 'Check the database connection and try again. No demo statistics are shown.'}</p>
           </div>
-          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-            +18% Speed Boost
-          </span>
         </div>
+      )}
 
-        <div className="h-60 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#0f172a',
-                  color: '#fff',
-                  borderRadius: '8px',
-                  fontSize: '11px',
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: '11px' }} />
-              <Area
-                type="monotone"
-                dataKey="inflow"
-                name="Grievances Received"
-                stroke="#4f46e5"
-                fill="#e0e7ff"
-              />
-              <Area
-                type="monotone"
-                dataKey="resolved"
-                name="Grievances Resolved"
-                stroke="#10b981"
-                fill="#d1fae5"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+      <section aria-label="Grievance metrics" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {cards.map((card) => (
+          <article key={card.label} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-sm font-medium text-slate-600">{card.label}</p>
+            <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">
+              {isLoading ? '…' : card.value == null ? 'Not available' : card.value}
+            </p>
+          </article>
+        ))}
+      </section>
+
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="font-bold text-slate-900">{language === 'ta' ? 'வகை வாரியான புகார்கள்' : 'Grievances by category'}</h3>
+          {!isLoading && !error && (!stats?.categoryData?.length) && (
+            <p className="mt-3 text-sm text-slate-600">{language === 'ta' ? 'இன்னும் புகார் பதிவுகள் இல்லை.' : 'No grievance records are available yet.'}</p>
+          )}
+          <ul className="mt-3 divide-y divide-slate-100">
+            {stats?.categoryData?.map((item) => (
+              <li key={item.name} className="flex items-center justify-between gap-4 py-2 text-sm">
+                <span className="text-slate-700">{item.name}</span><span className="font-semibold tabular-nums text-slate-900">{item.value}</span>
+              </li>
+            ))}
+          </ul>
         </div>
-      </div>
-
-      {/* District League Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-4">
-        <h3 className="text-sm font-bold text-slate-900">District SLA Performance Benchmarks</h3>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase">
-                <th className="py-2.5 px-3">District</th>
-                <th className="py-2.5 px-3">Total Registered</th>
-                <th className="py-2.5 px-3">Avg Resolution Time</th>
-                <th className="py-2.5 px-3 text-right">SLA Success Rate</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {districtPerformance.map((d, i) => (
-                <tr key={i} className="hover:bg-slate-50">
-                  <td className="py-3 px-3 font-bold text-slate-900 flex items-center space-x-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>{d.district}</span>
-                  </td>
-                  <td className="py-3 px-3 font-mono font-semibold text-slate-700">{d.total}</td>
-                  <td className="py-3 px-3 font-mono font-semibold text-slate-700">{d.avgHours}</td>
-                  <td className="py-3 px-3 text-right">
-                    <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      {d.rate}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="font-bold text-slate-900">{language === 'ta' ? 'முன்னுரிமை வாரியான புகார்கள்' : 'Grievances by priority'}</h3>
+          {!isLoading && !error && (!stats?.priorityData?.some((item) => item.count > 0)) && (
+            <p className="mt-3 text-sm text-slate-600">{language === 'ta' ? 'இன்னும் முன்னுரிமைத் தரவு இல்லை.' : 'No priority data is available yet.'}</p>
+          )}
+          <ul className="mt-3 divide-y divide-slate-100">
+            {stats?.priorityData?.filter((item) => item.count > 0).map((item) => (
+              <li key={item.name} className="flex items-center justify-between gap-4 py-2 text-sm">
+                <span className="text-slate-700">{item.name}</span><span className="font-semibold tabular-nums text-slate-900">{item.count}</span>
+              </li>
+            ))}
+          </ul>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 };
