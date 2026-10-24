@@ -12,7 +12,7 @@ export const INITIAL_DEPARTMENTS: Department[] = [
     totalGrievances: 0,
     pendingCount: 0,
     resolvedCount: 0,
-    slaDays: 3,
+    slaDays: null,
     iconName: 'Droplets',
   },
   {
@@ -26,7 +26,7 @@ export const INITIAL_DEPARTMENTS: Department[] = [
     totalGrievances: 0,
     pendingCount: 0,
     resolvedCount: 0,
-    slaDays: 2,
+    slaDays: null,
     iconName: 'Zap',
   },
   {
@@ -40,7 +40,7 @@ export const INITIAL_DEPARTMENTS: Department[] = [
     totalGrievances: 0,
     pendingCount: 0,
     resolvedCount: 0,
-    slaDays: 5,
+    slaDays: null,
     iconName: 'Construction',
   },
   {
@@ -54,7 +54,7 @@ export const INITIAL_DEPARTMENTS: Department[] = [
     totalGrievances: 0,
     pendingCount: 0,
     resolvedCount: 0,
-    slaDays: 2,
+    slaDays: null,
     iconName: 'Trash2',
   },
   {
@@ -68,7 +68,7 @@ export const INITIAL_DEPARTMENTS: Department[] = [
     totalGrievances: 0,
     pendingCount: 0,
     resolvedCount: 0,
-    slaDays: 3,
+    slaDays: null,
     iconName: 'Lightbulb',
   },
   {
@@ -82,7 +82,7 @@ export const INITIAL_DEPARTMENTS: Department[] = [
     totalGrievances: 0,
     pendingCount: 0,
     resolvedCount: 0,
-    slaDays: 2,
+    slaDays: null,
     iconName: 'HeartPulse',
   },
   {
@@ -96,7 +96,7 @@ export const INITIAL_DEPARTMENTS: Department[] = [
     totalGrievances: 0,
     pendingCount: 0,
     resolvedCount: 0,
-    slaDays: 4,
+    slaDays: null,
     iconName: 'Bus',
   },
 ];
