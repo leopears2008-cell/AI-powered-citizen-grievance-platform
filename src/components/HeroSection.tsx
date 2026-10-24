@@ -152,7 +152,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 placeholder={
                   language === 'ta'
                     ? 'புகார் எண் மூலம் நிலை அறிய (எ.கா: GRV-2026-00124)'
-                    : 'Track existing grievance (e.g. GRV-2026-00124)'
+                    : 'Enter your grievance tracking ID'
                 }
                 className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm text-white placeholder-indigo-300 focus:outline-none font-mono"
               />
