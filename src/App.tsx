@@ -4,7 +4,7 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { HomeLanding } from './components/HomeLanding';
 import { VoiceInputModal } from './components/VoiceInputModal';
-import { GrievanceForm } from './components/GrievanceForm';
+import { FileComplaintFlow } from './components/FileComplaintFlow';
 import { CitizenTracker } from './components/CitizenTracker';
 import { CitizenHistory } from './components/CitizenHistory';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -76,7 +76,7 @@ const MainLayout: React.FC = () => {
 
         {activeTab === 'file' && (
           <div className="animate-in fade-in duration-300">
-            <GrievanceForm
+            <FileComplaintFlow
               initialTranscript={initialVoiceTranscript}
               initialLanguage={initialVoiceLang}
               onOpenVoiceModal={() => setIsVoiceModalOpen(true)}

@@ -35,12 +35,15 @@ interface GrievanceFormProps {
   initialTranscript?: string;
   initialLanguage?: string;
   onOpenVoiceModal: () => void;
+  /** Mobile number already verified by OTP (locked, read-only in the form). */
+  verifiedMobile?: string;
 }
 
 export const GrievanceForm: React.FC<GrievanceFormProps> = ({
   initialTranscript = '',
   initialLanguage = 'Tamil',
   onOpenVoiceModal,
+  verifiedMobile,
 }) => {
   const { language, t, navigateToTrack, showToast, triggerRefresh, user } = useApp();
 
@@ -53,10 +56,10 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
     initialLanguage === 'English' ? 'English' : 'Tamil'
   );
 
-  // Citizen details
-  const [citizenName, setCitizenName] = useState('Sundararajan M.');
-  const [citizenPhone, setCitizenPhone] = useState('+91 98401 55920');
-  const [citizenEmail, setCitizenEmail] = useState('sundar.m@tncitizen.in');
+  // Citizen details (phone is locked to the OTP-verified number)
+  const [citizenName, setCitizenName] = useState('');
+  const [citizenPhone, setCitizenPhone] = useState(verifiedMobile || '');
+  const [citizenEmail, setCitizenEmail] = useState('');
 
   // Location details
   const [district, setDistrict] = useState('Chennai');
@@ -170,10 +173,17 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
 
   // Step 1 -> Step 2: Trigger AI Analysis
   const handleStartAnalysis = async () => {
+    if (!citizenName.trim()) {
+      showToast(
+        language === 'ta' ? 'தயவுசெய்து உங்கள் முழு பெயரை உள்ளிடவும்' : 'Please enter your full name',
+        'warning'
+      );
+      return;
+    }
     if (!complaintText.trim()) {
       showToast(
         language === 'ta'
-          ? 'தயவுசெய்து புகாரின் விவரத்தை குரல் அல்லது எழுத்து மூலம் பதிவு செய்யவும்'
+          ? 'தயவுசெய்யிது புகாரின் விவரத்தை குரல் அல்லது எழுத்து மூலம் பதிவு செய்யவும்'
           : 'Please enter or speak your complaint description first',
         'warning'
       );
@@ -300,28 +310,28 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
         <div className="grid grid-cols-4 gap-2 text-center text-xs font-semibold">
           <div
             className={`p-2 rounded-xl transition-all ${
-              step === 1 ? 'bg-blue-800 text-white shadow-xs' : step > 1 ? 'bg-emerald-50 text-emerald-800' : 'text-slate-400 bg-slate-50'
+              step === 1 ? 'bg-navy text-white shadow-xs' : step > 1 ? 'bg-emerald-50 text-emerald-800' : 'text-slate-400 bg-slate-50'
             }`}
           >
             {t.stepInput}
           </div>
           <div
             className={`p-2 rounded-xl transition-all ${
-              step === 2 ? 'bg-blue-800 text-white shadow-xs' : step > 2 ? 'bg-emerald-50 text-emerald-800' : 'text-slate-400 bg-slate-50'
+              step === 2 ? 'bg-navy text-white shadow-xs' : step > 2 ? 'bg-emerald-50 text-emerald-800' : 'text-slate-400 bg-slate-50'
             }`}
           >
             {t.stepAnalysis}
           </div>
           <div
             className={`p-2 rounded-xl transition-all ${
-              step === 3 ? 'bg-blue-800 text-white shadow-xs' : step > 3 ? 'bg-emerald-50 text-emerald-800' : 'text-slate-400 bg-slate-50'
+              step === 3 ? 'bg-navy text-white shadow-xs' : step > 3 ? 'bg-emerald-50 text-emerald-800' : 'text-slate-400 bg-slate-50'
             }`}
           >
             {t.stepConfirmation}
           </div>
           <div
             className={`p-2 rounded-xl transition-all ${
-              step === 4 ? 'bg-emerald-700 text-white shadow-xs' : 'text-slate-400 bg-slate-50'
+              step === 4 ? 'bg-ai text-white shadow-xs' : 'text-slate-400 bg-slate-50'
             }`}
           >
             {t.stepSuccess}
@@ -379,7 +389,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
               <button
                 type="button"
                 onClick={() => setShowDuplicateModal(false)}
-                className="px-4 py-2 bg-blue-800 text-white rounded-xl text-xs font-bold hover:bg-blue-900 transition-colors"
+                className="px-4 py-2 bg-navy text-white rounded-xl text-xs font-bold hover:bg-navy-dark transition-colors"
               >
                 {language === 'ta' ? 'புதிய புகாராக தொடரவும்' : 'Continue as New Grievance'}
               </button>
@@ -409,7 +419,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                 type="button"
                 onClick={() => setSelectedLanguage('English')}
                 className={`px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium transition-colors ${
-                  selectedLanguage === 'English' ? 'bg-indigo-600 text-white border-transparent' : 'bg-white hover:bg-slate-50 text-slate-900'
+                  selectedLanguage === 'English' ? 'bg-navy text-white border-transparent' : 'bg-white hover:bg-slate-50 text-slate-900'
                 }`}
               >
                 English
@@ -418,7 +428,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                 type="button"
                 onClick={() => setSelectedLanguage('Tamil')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedLanguage === 'Tamil' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border border-slate-200 hover:bg-slate-50 text-slate-900'
+                  selectedLanguage === 'Tamil' ? 'bg-navy text-white shadow-sm' : 'bg-white border border-slate-200 hover:bg-slate-50 text-slate-900'
                 }`}
               >
                 தமிழ் (Tamil)
@@ -448,7 +458,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                 <button
                   type="button"
                   onClick={onOpenVoiceModal}
-                  className="w-20 h-20 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-xl shadow-indigo-200 group transition-all transform active:scale-95"
+                  className="w-20 h-20 bg-navy hover:bg-navy-dark text-white rounded-full flex items-center justify-center shadow-xl shadow-slate-300 group transition-all transform active:scale-95"
                 >
                   <Mic className="w-8 h-8 group-hover:scale-110 transition-transform" />
                 </button>
@@ -473,18 +483,28 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                   type="text"
                   value={citizenName}
                   onChange={(e) => setCitizenName(e.target.value)}
+                  placeholder="Your full name"
                   className="w-full p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-none"
                 />
               </div>
 
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">{t.mobileNumber} *</label>
-                <input
-                  type="text"
-                  value={citizenPhone}
-                  onChange={(e) => setCitizenPhone(e.target.value)}
-                  className="w-full p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-none font-mono"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={citizenPhone}
+                    onChange={(e) => setCitizenPhone(e.target.value)}
+                    readOnly={!!verifiedMobile}
+                    aria-readonly={!!verifiedMobile}
+                    className={`w-full p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-none font-mono ${
+                      verifiedMobile ? 'bg-emerald-50 border-emerald-300 pr-8 cursor-not-allowed' : ''
+                    }`}
+                  />
+                  {verifiedMobile && (
+                    <CheckCircle2 className="w-4 h-4 text-ai absolute right-2.5 top-1/2 -translate-y-1/2" />
+                  )}
+                </div>
               </div>
 
               <div>
@@ -493,6 +513,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                   type="email"
                   value={citizenEmail}
                   onChange={(e) => setCitizenEmail(e.target.value)}
+                  placeholder="Optional"
                   className="w-full p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 focus:outline-none"
                 />
               </div>
@@ -509,7 +530,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                 type="button"
                 onClick={handleDetectGPS}
                 disabled={isLocating}
-                className="text-xs font-bold text-indigo-700 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200 flex items-center space-x-1 transition-all hover:bg-indigo-100"
+                className="text-xs font-bold text-navy hover:text-navy-dark bg-sky-tint px-2.5 py-1 rounded-lg border border-slate-200 flex items-center space-x-1 transition-all hover:bg-blue-100"
               >
                 <MapPin className="w-3.5 h-3.5" />
                 <span>{isLocating ? (language === 'ta' ? 'GPS தேடுகிறது...' : 'Pinning GPS...') : (language === 'ta' ? 'GPS மூலம் கண்டறிக' : 'Auto-Detect via GPS')}</span>
@@ -712,7 +733,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
             <button
               type="button"
               onClick={handleStartAnalysis}
-              className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-md shadow-indigo-950/20 flex items-center space-x-2 transition-all hover:scale-105"
+              className="px-6 py-3 bg-navy hover:bg-navy-dark text-white font-bold text-sm rounded-full shadow-md shadow-slate-300 flex items-center space-x-2 transition-all hover:scale-105"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
               <span>{language === 'ta' ? 'AI பகுப்பாய்வு செய்க' : 'Analyze Grievance with AI'}</span>
@@ -841,10 +862,10 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
             </div>
           </div>
 
-          <div className="bg-indigo-900 rounded-2xl p-6 text-white shadow-xl shadow-indigo-100 flex-1 flex flex-col justify-between">
+          <div className="bg-navy rounded-2xl p-6 text-white shadow-xl shadow-slate-200 flex-1 flex flex-col justify-between">
             <div>
               <h4 className="font-bold text-lg mb-2">Ready to Submit?</h4>
-              <p className="text-indigo-200 text-sm">
+              <p className="text-slate-300 text-sm">
                 AI has successfully classified your grievance. Please confirm the details to receive your tracking ID.
               </p>
             </div>
@@ -853,7 +874,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="flex-1 py-3 bg-indigo-800 hover:bg-indigo-700 rounded-xl font-semibold text-sm transition-colors border border-indigo-700"
+                className="flex-1 py-3 bg-navy-dark hover:bg-slate-800 rounded-xl font-semibold text-sm transition-colors border border-white/20"
               >
                 Modify
               </button>
@@ -861,12 +882,12 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                 type="button"
                 disabled={isSubmitting}
                 onClick={handleConfirmAndRegister}
-                className="flex-1 py-3 bg-white text-indigo-900 hover:bg-indigo-50 rounded-xl font-bold text-sm transition-colors flex items-center justify-center space-x-2"
+                className="flex-1 py-3 bg-ai text-white hover:bg-emerald-600 rounded-xl font-bold text-sm transition-colors flex items-center justify-center space-x-2"
               >
                 {isSubmitting ? (
-                  <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
+                  <RefreshCw className="w-4 h-4 animate-spin text-white" />
                 ) : (
-                  <span>Confirm & Submit</span>
+                  <span>Register Grievance</span>
                 )}
               </button>
             </div>
@@ -891,7 +912,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
           </div>
 
           {/* Grievance ID Banner Card */}
-          <div className="max-w-md mx-auto bg-slate-900 text-white p-5 rounded-2xl shadow-xl border border-slate-800 space-y-2">
+          <div className="max-w-md mx-auto bg-navy-dark text-white p-5 rounded-2xl shadow-xl border border-slate-800 space-y-2">
             <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
               {t.grievanceIdLabel}
             </p>
@@ -908,7 +929,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
             <button
               type="button"
               onClick={() => navigateToTrack(registeredId)}
-              className="w-full sm:w-auto px-6 py-3 bg-blue-800 hover:bg-blue-900 text-white font-bold text-sm rounded-xl shadow-md shadow-blue-900/20 flex items-center justify-center space-x-2 transition-all hover:scale-105"
+              className="w-full sm:w-auto px-6 py-3 bg-navy hover:bg-navy-dark text-white font-bold text-sm rounded-full shadow-md shadow-slate-300 flex items-center justify-center space-x-2 transition-all hover:scale-105"
             >
               <Eye className="w-4 h-4" />
               <span>{t.btnTrackNow}</span>
@@ -922,7 +943,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                 setAiResult(null);
                 setStep(1);
               }}
-              className="w-full sm:w-auto px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm rounded-xl border border-slate-300 transition-colors"
+              className="w-full sm:w-auto px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm rounded-full border border-slate-300 transition-colors"
             >
               {t.btnFileAnother}
             </button>
