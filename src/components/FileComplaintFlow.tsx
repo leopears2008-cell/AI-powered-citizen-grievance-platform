@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import { useApp } from '../context/AppContext';
 import { GrievanceForm } from './GrievanceForm';
-import { ArrowRight, Check, ShieldCheck, Smartphone, KeyRound, FileText, Pencil } from 'lucide-react';
+import { ArrowRight, Check, ShieldCheck, Smartphone, KeyRound, FileText, Pencil, RefreshCw } from 'lucide-react';
 
 interface Props {
   initialTranscript?: string;
@@ -14,10 +16,33 @@ type Stage = 'gate' | 'mobile' | 'otp' | 'form';
 const STAGE_INDEX: Record<Stage, number> = { gate: 0, mobile: 1, otp: 2, form: 3 };
 const STEPS = ['Initiate', 'Mobile Number', 'OTP Verify', 'Register Complaint'];
 
-// Demo OTP. Replace sendOtp()/handleVerify() with real backend calls before production.
-const DEMO_OTP = '123456';
 const RESEND_SECONDS = 30;
 const MAX_ATTEMPTS = 5;
+
+/** Turn a Firebase Auth error into a message a citizen can act on. */
+function otpErrorMessage(err: unknown): string {
+  const code = (err as { code?: string })?.code || '';
+  switch (code) {
+    case 'auth/invalid-phone-number':
+      return 'That mobile number is not valid. Please check and try again.';
+    case 'auth/too-many-requests':
+      return 'Too many attempts. Please wait a few minutes before requesting another OTP.';
+    case 'auth/quota-exceeded':
+      return 'SMS limit reached for now. Please try again later.';
+    case 'auth/captcha-check-failed':
+    case 'auth/missing-client-identifier':
+      return 'Security check failed. Refresh the page and try again.';
+    case 'auth/operation-not-allowed':
+    case 'auth/billing-not-enabled':
+      return 'SMS verification is not enabled for this portal yet. Please contact the administrator.';
+    case 'auth/unauthorized-domain':
+      return 'This website address is not authorised for SMS verification. Please contact the administrator.';
+    case 'auth/network-request-failed':
+      return 'Network error. Check your connection and try again.';
+    default:
+      return 'Could not send the OTP. Please try again.';
+  }
+}
 
 export const FileComplaintFlow: React.FC<Props> = ({ initialTranscript, initialLanguage, onOpenVoiceModal }) => {
   const { showToast } = useApp();
@@ -27,11 +52,28 @@ export const FileComplaintFlow: React.FC<Props> = ({ initialTranscript, initialL
   const [digits, setDigits] = useState<string[]>(Array(6).fill(''));
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
   const [attempts, setAttempts] = useState(0);
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [verifiedMobile, setVerifiedMobile] = useState('');
+
   const boxes = useRef<(HTMLInputElement | null)[]>([]);
+  const verifierRef = useRef<RecaptchaVerifier | null>(null);
+  const confirmationRef = useRef<ConfirmationResult | null>(null);
 
   const validMobile = /^[6-9]\d{9}$/.test(mobile);
   const otp = digits.join('');
+
+  const resetVerifier = () => {
+    try {
+      verifierRef.current?.clear();
+    } catch {
+      // ignore
+    }
+    verifierRef.current = null;
+  };
+
+  // Clean up the invisible reCAPTCHA when leaving the page
+  useEffect(() => resetVerifier, []);
 
   // Resend countdown
   useEffect(() => {
@@ -40,39 +82,69 @@ export const FileComplaintFlow: React.FC<Props> = ({ initialTranscript, initialL
     return () => clearTimeout(id);
   }, [stage, seconds]);
 
-  const sendOtp = () => {
-    // Simulated send. Wire this to your backend SMS/OTP endpoint when available.
-    setDigits(Array(6).fill(''));
-    setSeconds(RESEND_SECONDS);
-    showToast(`Demo OTP sent: ${DEMO_OTP}`, 'info');
+  /** Sends a real SMS OTP through Firebase Phone Authentication. */
+  const sendOtp = async (): Promise<boolean> => {
+    if (!validMobile || sending) return false;
+    setSending(true);
+    try {
+      if (!verifierRef.current) {
+        verifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
+      }
+      confirmationRef.current = await signInWithPhoneNumber(auth, `+91${mobile}`, verifierRef.current);
+      setDigits(Array(6).fill(''));
+      setSeconds(RESEND_SECONDS);
+      showToast(`OTP sent to +91 XXXXXX${mobile.slice(6)}`, 'success');
+      return true;
+    } catch (err) {
+      console.error('OTP send failed:', err);
+      resetVerifier();
+      showToast(otpErrorMessage(err), 'error');
+      return false;
+    } finally {
+      setSending(false);
+    }
   };
 
-  const handleSendOtp = () => {
-    if (!validMobile) return;
-    sendOtp();
-    setAttempts(0);
-    setStage('otp');
-    setTimeout(() => boxes.current[0]?.focus(), 50);
+  const handleSendOtp = async () => {
+    const ok = await sendOtp();
+    if (ok) {
+      setAttempts(0);
+      setStage('otp');
+      setTimeout(() => boxes.current[0]?.focus(), 50);
+    }
   };
 
-  const handleVerify = () => {
-    if (otp.length !== 6) return;
-    if (otp === DEMO_OTP) {
+  const handleVerify = async () => {
+    if (otp.length !== 6 || verifying || !confirmationRef.current) return;
+    setVerifying(true);
+    try {
+      await confirmationRef.current.confirm(otp);
       setVerifiedMobile(`+91 ${mobile}`);
       showToast('Mobile number verified', 'success');
       setStage('form');
-      return;
+    } catch (err) {
+      const code = (err as { code?: string })?.code || '';
+      setDigits(Array(6).fill(''));
+      if (code === 'auth/code-expired') {
+        showToast('This OTP has expired. Please request a new one.', 'error');
+        setSeconds(0);
+      } else if (code === 'auth/invalid-verification-code') {
+        const used = attempts + 1;
+        setAttempts(used);
+        if (used >= MAX_ATTEMPTS) {
+          showToast('Too many incorrect attempts. Please request a new OTP.', 'error');
+          confirmationRef.current = null;
+          setStage('mobile');
+        } else {
+          showToast(`Incorrect OTP. ${MAX_ATTEMPTS - used} attempt(s) left.`, 'error');
+          boxes.current[0]?.focus();
+        }
+      } else {
+        showToast(otpErrorMessage(err), 'error');
+      }
+    } finally {
+      setVerifying(false);
     }
-    const used = attempts + 1;
-    setAttempts(used);
-    setDigits(Array(6).fill(''));
-    if (used >= MAX_ATTEMPTS) {
-      showToast('Too many incorrect attempts. Please request a new OTP.', 'error');
-      setStage('mobile');
-      return;
-    }
-    showToast(`Incorrect OTP. ${MAX_ATTEMPTS - used} attempt(s) left.`, 'error');
-    boxes.current[0]?.focus();
   };
 
   const setDigitAt = (i: number, raw: string) => {
@@ -131,6 +203,9 @@ export const FileComplaintFlow: React.FC<Props> = ({ initialTranscript, initialL
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      {/* Invisible reCAPTCHA anchor required by Firebase Phone Auth */}
+      <div id="recaptcha-container" />
+
       {Stepper}
 
       {/* Step 1: entry gate */}
@@ -147,7 +222,7 @@ export const FileComplaintFlow: React.FC<Props> = ({ initialTranscript, initialL
           </div>
           <ul className="text-left text-xs text-slate-600 space-y-2 bg-slate-50 rounded-xl p-4 border border-slate-200">
             <li className="flex items-center space-x-2"><Smartphone className="w-4 h-4 text-ai" /><span>Enter your mobile number</span></li>
-            <li className="flex items-center space-x-2"><KeyRound className="w-4 h-4 text-ai" /><span>Confirm the 6-digit OTP</span></li>
+            <li className="flex items-center space-x-2"><KeyRound className="w-4 h-4 text-ai" /><span>Confirm the 6-digit OTP sent by SMS</span></li>
             <li className="flex items-center space-x-2"><FileText className="w-4 h-4 text-ai" /><span>Register your grievance</span></li>
           </ul>
           <button
@@ -200,13 +275,25 @@ export const FileComplaintFlow: React.FC<Props> = ({ initialTranscript, initialL
           </div>
           <button
             type="button"
-            disabled={!validMobile}
+            disabled={!validMobile || sending}
             onClick={handleSendOtp}
             className="w-full bg-navy hover:bg-navy-dark disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-sm py-3 rounded-full inline-flex items-center justify-center space-x-2 transition-colors"
           >
-            <span>Send OTP</span>
-            <ArrowRight className="w-4 h-4" />
+            {sending ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>Sending OTP...</span>
+              </>
+            ) : (
+              <>
+                <span>Send OTP</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
+          <p className="text-[11px] text-slate-400 text-center">
+            Standard SMS rates may apply. Protected by reCAPTCHA.
+          </p>
         </div>
       )}
 
@@ -253,20 +340,34 @@ export const FileComplaintFlow: React.FC<Props> = ({ initialTranscript, initialL
             {seconds > 0 ? (
               <>Resend OTP in 00:{String(seconds).padStart(2, '0')}s</>
             ) : (
-              <button type="button" onClick={sendOtp} className="font-semibold text-action hover:underline">
-                Resend OTP
+              <button
+                type="button"
+                disabled={sending}
+                onClick={sendOtp}
+                className="font-semibold text-action hover:underline disabled:opacity-50"
+              >
+                {sending ? 'Sending...' : 'Resend OTP'}
               </button>
             )}
           </p>
 
           <button
             type="button"
-            disabled={otp.length !== 6}
+            disabled={otp.length !== 6 || verifying}
             onClick={handleVerify}
             className="w-full bg-ai hover:bg-emerald-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-sm py-3 rounded-full inline-flex items-center justify-center space-x-2 transition-colors"
           >
-            <span>Verify &amp; Proceed</span>
-            <ArrowRight className="w-4 h-4" />
+            {verifying ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>Verifying...</span>
+              </>
+            ) : (
+              <>
+                <span>Verify &amp; Proceed</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </div>
       )}
