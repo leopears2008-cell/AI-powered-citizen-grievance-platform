@@ -1,12 +1,12 @@
 import React from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp, AppTab } from '../context/AppContext';
 import { Phone, Mail, MapPin } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   const { language, t, setActiveTab, setRole } = useApp();
-  const open = (tab: string, role: 'CITIZEN' | 'OFFICER' | 'ADMIN' = 'CITIZEN') => {
+  const open = (tab: AppTab, role: 'CITIZEN' | 'OFFICER' | 'ADMIN' = 'CITIZEN') => {
     setRole(role);
-    setActiveTab(tab as never);
+    setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const link = 'text-left text-slate-300 hover:text-white transition-colors';
@@ -43,8 +43,8 @@ export const Footer: React.FC = () => {
         <div>
           <h4 className="text-white font-bold mb-3">Departments</h4>
           <ul className="space-y-2">
+            <li><button className={link} onClick={() => open('map')}>Live Map</button></li>
             <li><button className={link} onClick={() => open('directory')}>{t.navDirectory}</button></li>
-            <li><button className={link} onClick={() => open('analytics')}>{t.navAnalytics}</button></li>
             <li><button className={link} onClick={() => open('officer', 'OFFICER')}>{t.roleOfficer}</button></li>
             <li><button className={link} onClick={() => open('admin', 'ADMIN')}>{t.roleAdmin}</button></li>
           </ul>

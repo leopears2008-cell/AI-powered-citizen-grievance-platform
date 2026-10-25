@@ -9,7 +9,6 @@ import { CitizenTracker } from './components/CitizenTracker';
 import { CitizenHistory } from './components/CitizenHistory';
 import { AdminDashboard } from './components/AdminDashboard';
 import { OfficerPortal } from './components/OfficerPortal';
-import { AnalyticsView } from './components/AnalyticsView';
 import { MLADirectory } from './components/MLADirectory';
 import { InteractiveMap } from './components/InteractiveMap';
 import { CivicServicesHub } from './components/CivicServicesHub';
@@ -109,9 +108,10 @@ const MainLayout: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'analytics' && (
+        {/* 'analytics' is retired: any stale link lands on the live map */}
+        {(activeTab === 'map' || activeTab === 'analytics') && (
           <div className="animate-in fade-in duration-300">
-            <AnalyticsView />
+            <InteractiveMap tall />
           </div>
         )}
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { UserRole } from '../types';
+import { UserRole, } from '../types';
+import { AppTab } from '../context/AppContext';
 import { Bell, User, Menu, X, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -23,19 +24,19 @@ export const Header: React.FC = () => {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const go = (tab: string, role: UserRole = 'CITIZEN') => {
+  const go = (tab: AppTab, role: UserRole = 'CITIZEN') => {
     setRole(role);
-    setActiveTab(tab as never);
+    setActiveTab(tab);
     setIsMobileMenuOpen(false);
   };
 
-  const links: { tab: string; label: string; role?: UserRole }[] = [
+  const links: { tab: AppTab; label: string; role?: UserRole }[] = [
     { tab: 'home', label: t.navHome },
     { tab: 'file', label: t.navFileComplaint },
     { tab: 'track', label: t.navTrack },
     { tab: 'history', label: t.navHistory },
+    { tab: 'map', label: language === 'ta' ? 'நேரலை வரைபடம்' : 'Live Map' },
     { tab: 'directory', label: t.navDirectory },
-    { tab: 'analytics', label: t.navAnalytics },
     { tab: 'officer', label: t.roleOfficer, role: 'OFFICER' },
     { tab: 'admin', label: t.roleAdmin, role: 'ADMIN' },
   ];
