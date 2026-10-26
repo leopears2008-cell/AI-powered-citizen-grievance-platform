@@ -17,10 +17,8 @@
 
 /* ------------------------------------------------------------------
    Global full-screen Tamil Nadu Secretariat (Fort St. George) background.
-   Asset: /public/TN.jpg. If missing, only the gradient overlay shows.
-   Implemented once here (no per-page duplication). A fixed pseudo-element
-   is used instead of background-attachment: fixed, which is unreliable
-   on mobile browsers.
+   Asset: /public/TN.jpg. If missing, only the white overlay shows.
+   Defined once on body (no per-page duplication).
    ------------------------------------------------------------------ */
 :root {
   --nivaran-navy: #0b2545;
@@ -34,25 +32,23 @@ html {
 body {
   min-height: 100vh;
   margin: 0;
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
   background-image:
     linear-gradient(
-      135deg,
-      rgba(248, 250, 252, 0.88) 0%,
-      rgba(232, 241, 248, 0.82) 45%,
-      rgba(11, 37, 69, 0.70) 100%
+      rgba(255, 255, 255, 0.72),
+      rgba(255, 255, 255, 0.82)
     ),
     url("/TN.jpg");
   background-size: cover;
-  background-position: center top;
+  background-position: center;
+  background-attachment: fixed;
   background-repeat: no-repeat;
+}
+
+/* background-attachment: fixed is unreliable on touch browsers */
+@media (max-width: 1023px) {
+  body {
+    background-attachment: scroll;
+  }
 }
 
 #root {
