@@ -84,6 +84,55 @@ body::before {
   color: #fff;
 }
 
+/* Homepage hero: text on the left, Secretariat photo on the right */
+#root main section.hero-gradient {
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.96) 0%,
+      rgba(232, 241, 248, 0.85) 50%,
+      rgba(255, 255, 255, 0.10) 100%
+    ),
+    url("/TN.jpg");
+  background-size: cover;
+  background-position: right center;
+  background-repeat: no-repeat;
+}
+
+/* Hero info panel: translucent so the building stays visible behind it */
+#root main section.hero-gradient .lg\:col-span-5 > div {
+  background-image: none;
+  background-color: rgba(11, 37, 69, 0.60);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* Glass cards: homepage service tiles and news cards only.
+   Dashboards, tables and forms stay opaque for readability. */
+#root main button.group,
+#root main article {
+  background-color: rgba(255, 255, 255, 0.90);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.60);
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px rgba(11, 37, 69, 0.10);
+}
+
+/* Stack hero normally on small screens: keep text area readable */
+@media (max-width: 1023px) {
+  #root main section.hero-gradient {
+    background-image:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.96) 0%,
+        rgba(232, 241, 248, 0.90) 100%
+      ),
+      url("/TN.jpg");
+    background-position: center;
+  }
+}
+
 /* Users who prefer reduced transparency get solid, high-contrast surfaces */
 @media (prefers-reduced-transparency: reduce) {
   #root header.sticky {
@@ -93,6 +142,17 @@ body::before {
   }
   #root footer {
     background-color: var(--nivaran-footer);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  #root main section.hero-gradient .lg\:col-span-5 > div {
+    background-color: var(--nivaran-navy);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  #root main button.group,
+  #root main article {
+    background-color: #ffffff;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
