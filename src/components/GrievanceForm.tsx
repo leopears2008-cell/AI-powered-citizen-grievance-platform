@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
 import { AIAnalysisResponse, GrievanceCategory, GrievancePriority, DuplicateMatch } from '../types';
-import { getConstituenciesForDistrict, getMLAForConstituency } from '../data/mlaProfiles';
+import { DISTRICT_NAMES, getConstituenciesForDistrict, getMLAForConstituency } from '../data/mlaProfiles';
 import {
   Mic,
   FileText,
@@ -31,6 +31,20 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
+/** Tamil names shown beside each district in the selector. */
+const DISTRICT_TA: Record<string, string> = {
+  Ariyalur: 'அரியலூர்', Chengalpattu: 'செங்கல்பட்டு', Chennai: 'சென்னை', Coimbatore: 'கோயம்புத்தூர்',
+  Cuddalore: 'கடலூர்', Dharmapuri: 'தருமபுரி', Dindigul: 'திண்டுக்கல்', Erode: 'ஈரோடு',
+  Kallakurichi: 'கள்ளக்குறிச்சி', Kanchipuram: 'காஞ்சிபுரம்', Kanyakumari: 'கன்னியாகுமரி', Karur: 'கரூர்',
+  Krishnagiri: 'கிருஷ்ணகிரி', Madurai: 'மதுரை', Mayiladuthurai: 'மயிலாடுதுறை', Nagapattinam: 'நாகப்பட்டினம்',
+  Namakkal: 'நாமக்கல்', Nilgiris: 'நீலகிரி', Perambalur: 'பெரம்பலூர்', Pudukkottai: 'புதுக்கோட்டை',
+  Ramanathapuram: 'இராமநாதபுரம்', Ranipet: 'இராணிப்பேட்டை', Salem: 'சேலம்', Sivaganga: 'சிவகங்கை',
+  Tenkasi: 'தென்காசி', Thanjavur: 'தஞ்சாவூர்', Theni: 'தேனி', Thoothukudi: 'தூத்துக்குடி',
+  Tiruchirappalli: 'திருச்சிராப்பள்ளி', Tirunelveli: 'திருநெல்வேலி', Tirupathur: 'திருப்பத்தூர்',
+  Tiruppur: 'திருப்பூர்', Tiruvallur: 'திருவள்ளூர்', Tiruvannamalai: 'திருவண்ணாமலை', Tiruvarur: 'திருவாரூர்',
+  Vellore: 'வேலூர்', Viluppuram: 'விழுப்புரம்', Virudhunagar: 'விருதுநகர்',
+};
+
 interface GrievanceFormProps {
   initialTranscript?: string;
   initialLanguage?: string;
@@ -45,7 +59,7 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
   onOpenVoiceModal,
   verifiedMobile,
 }) => {
-  const { language, t, navigateToTrack, showToast, triggerRefresh, user } = useApp();
+  const { language, t, navigateToTrack, showToast, triggerRefresh, user, complaintPrefill, clearComplaintPrefill } = useApp();
 
   // Wizard Step: 1 = Input & Evidence, 2 = AI Scanning Loader, 3 = Citizen Confirmation, 4 = Success
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -62,21 +76,31 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
   const [citizenEmail, setCitizenEmail] = useState('');
 
   // Location details
-  const [district, setDistrict] = useState('Chennai');
-  const [constituency, setConstituency] = useState('Chepauk-Thiruvallikeni');
-  const [address, setAddress] = useState('No. 42, Kamarajar Salai, Triplicane');
-  const [landmark, setLandmark] = useState('Opposite Marina Beach Light House');
-  const [wardNumber, setWardNumber] = useState('Ward 114');
-  const [pincode, setPincode] = useState('600005');
+  // District/constituency may arrive pre-selected from the MLA & District SLA Directory.
+  const [prefilled] = useState(() => !!complaintPrefill);
+  const [district, setDistrict] = useState(complaintPrefill?.district ?? 'Chennai');
+  const [constituency, setConstituency] = useState(complaintPrefill?.constituency ?? 'Chepauk-Thiruvallikeni');
+  const [address, setAddress] = useState(complaintPrefill ? '' : 'No. 42, Kamarajar Salai, Triplicane');
+  const [landmark, setLandmark] = useState(complaintPrefill ? '' : 'Opposite Marina Beach Light House');
+  const [wardNumber, setWardNumber] = useState(complaintPrefill ? '' : 'Ward 114');
+  const [pincode, setPincode] = useState(complaintPrefill ? '' : '600005');
   const [isLocating, setIsLocating] = useState(false);
 
   const availableConstituencies = useMemo(() => getConstituenciesForDistrict(district), [district]);
-  
+  const selectedMla = useMemo(() => getMLAForConstituency(district, constituency), [district, constituency]);
+
+  // Keep the constituency valid for the chosen district.
   useEffect(() => {
-    if (!availableConstituencies.includes(constituency)) {
+    if (availableConstituencies.length > 0 && !availableConstituencies.includes(constituency)) {
       setConstituency(availableConstituencies[0]);
     }
-  }, [district, availableConstituencies, constituency]);
+  }, [availableConstituencies, constituency]);
+
+  // The pre-selection has been consumed into the form state above; clear it so it is not reused later.
+  useEffect(() => {
+    if (complaintPrefill) clearComplaintPrefill();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Attachments
   const [attachments, setAttachments] = useState<
@@ -537,6 +561,16 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
               </button>
             </div>
 
+            {prefilled && (
+              <p className="mb-3 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-medium text-emerald-900" role="status">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-ai" aria-hidden="true" />
+                <span>
+                  {language === 'ta'
+                    ? 'MLA & மாவட்ட SLA கையேட்டிலிருந்து மாவட்டமும் தொகுதியும் முன்கூட்டியே நிரப்பப்பட்டுள்ளன. தேவையெனில் மாற்றலாம்.'
+                    : 'District and constituency were pre-filled from the MLA & District SLA Directory. You can change them below.'}
+                </span>
+              </p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-1">{t.districtLabel} *</label>
@@ -545,103 +579,51 @@ export const GrievanceForm: React.FC<GrievanceFormProps> = ({
                   onChange={(e) => setDistrict(e.target.value)}
                   className="w-full p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none bg-white"
                 >
-                  <option value="Ariyalur">Ariyalur (அரியலூர்)</option>
-                  <option value="Chengalpattu">Chengalpattu (செங்கல்பட்டு)</option>
-                  <option value="Chennai">Chennai (சென்னை)</option>
-                  <option value="Coimbatore">Coimbatore (கோயம்புத்தூர்)</option>
-                  <option value="Cuddalore">Cuddalore (கடலூர்)</option>
-                  <option value="Dharmapuri">Dharmapuri (தருமபுரி)</option>
-                  <option value="Dindigul">Dindigul (திண்டுக்கல்)</option>
-                  <option value="Erode">Erode (ஈரோடு)</option>
-                  <option value="Kallakurichi">Kallakurichi (கள்ளக்குறிச்சி)</option>
-                  <option value="Kanchipuram">Kanchipuram (காஞ்சிபுரம்)</option>
-                  <option value="Kanyakumari">Kanyakumari (கன்னியாகுமரி)</option>
-                  <option value="Karur">Karur (கரூர்)</option>
-                  <option value="Krishnagiri">Krishnagiri (கிருஷ்ணகிரி)</option>
-                  <option value="Madurai">Madurai (மதுரை)</option>
-                  <option value="Mayiladuthurai">Mayiladuthurai (மயிலாடுதுறை)</option>
-                  <option value="Nagapattinam">Nagapattinam (நாகப்பட்டினம்)</option>
-                  <option value="Namakkal">Namakkal (நாமக்கல்)</option>
-                  <option value="Nilgiris">Nilgiris (நீலகிரி)</option>
-                  <option value="Perambalur">Perambalur (பெரம்பலூர்)</option>
-                  <option value="Pudukkottai">Pudukkottai (புதுக்கோட்டை)</option>
-                  <option value="Ramanathapuram">Ramanathapuram (இராமநாதபுரம்)</option>
-                  <option value="Ranipet">Ranipet (இராணிப்பேட்டை)</option>
-                  <option value="Salem">Salem (சேலம்)</option>
-                  <option value="Sivaganga">Sivaganga (சிவகங்கை)</option>
-                  <option value="Tenkasi">Tenkasi (தென்காசி)</option>
-                  <option value="Thanjavur">Thanjavur (தஞ்சாவூர்)</option>
-                  <option value="Theni">Theni (தேனி)</option>
-                  <option value="Thoothukudi">Thoothukudi (தூத்துக்குடி)</option>
-                  <option value="Tiruchirappalli">Tiruchirappalli (திருச்சிராப்பள்ளி)</option>
-                  <option value="Tirunelveli">Tirunelveli (திருநெல்வேலி)</option>
-                  <option value="Tirupathur">Tirupathur (திருப்பத்தூர்)</option>
-                  <option value="Tiruppur">Tiruppur (திருப்பூர்)</option>
-                  <option value="Tiruvallur">Tiruvallur (திருவள்ளூர்)</option>
-                  <option value="Tiruvannamalai">Tiruvannamalai (திருவண்ணாமலை)</option>
-                  <option value="Tiruvarur">Tiruvarur (திருவாரூர்)</option>
-                  <option value="Vellore">Vellore (வேலூர்)</option>
-                  <option value="Viluppuram">Viluppuram (விழுப்புரம்)</option>
-                  <option value="Virudhunagar">Virudhunagar (விருதுநகர்)</option>
+                  {DISTRICT_NAMES.map((d) => (
+                    <option key={d} value={d}>
+                      {d}{DISTRICT_TA[d] ? ` (${DISTRICT_TA[d]})` : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              <div className="relative">
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                  {language === 'ta' ? 'சட்டமன்ற தொகுதி' : 'Constituency (Search)'} *
+              <div>
+                <label htmlFor="constituency-select" className="text-[11px] font-semibold text-slate-600 block mb-1">
+                  {language === 'ta' ? 'சட்டமன்ற தொகுதி' : 'Constituency'} *
                 </label>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
-                  <input
-                    list="constituencies-list"
-                    value={constituency}
-                    onChange={(e) => setConstituency(e.target.value)}
-                    placeholder={language === 'ta' ? 'தொகுதியை தேடுங்கள்...' : 'Search constituency...'}
-                    className="w-full pl-9 p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none bg-white"
-                  />
-                  <datalist id="constituencies-list">
-                    {availableConstituencies.map((c) => {
-                      const mla = getMLAForConstituency(district, c);
-                      const extraSearchTerms = [
-                        ...(mla.pincodes || []),
-                        ...(mla.locations || [])
-                      ].join(', ');
-                      
-                      return (
-                        <option key={c} value={c}>
-                          {mla.name} ({mla.party}) {extraSearchTerms ? `- ${extraSearchTerms}` : ''}
-                        </option>
-                      );
-                    })}
-                  </datalist>
-                </div>
+                <select
+                  id="constituency-select"
+                  value={constituency}
+                  onChange={(e) => setConstituency(e.target.value)}
+                  className="w-full p-2.5 text-xs text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:outline-none bg-white"
+                >
+                  {availableConstituencies.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-xl mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center space-x-3">
-                <img 
-                  src={getMLAForConstituency(district, constituency).avatar} 
-                  alt="MLA Avatar" 
-                  className="w-10 h-10 rounded-full border border-indigo-200 shadow-sm"
-                />
-                <div>
-                  <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider block">
-                    {language === 'ta' ? 'உங்கள் தொகுதி சட்டமன்ற உறுப்பினர்' : 'Your Constituency MLA'}
-                  </span>
-                  <p className="text-sm font-bold text-indigo-950">
-                    {getMLAForConstituency(district, constituency).name} <span className="text-xs text-indigo-700 font-medium">({getMLAForConstituency(district, constituency).party})</span>
-                  </p>
-                  <p className="text-xs text-slate-600 mt-0.5 line-clamp-1">
-                    {getMLAForConstituency(district, constituency).officeAddress}
-                  </p>
-                </div>
+            <div className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-xl mb-4 flex items-center space-x-3">
+              <div aria-hidden="true" className="w-10 h-10 shrink-0 rounded-full border border-indigo-200 bg-white flex items-center justify-center text-indigo-400">
+                <User className="w-5 h-5" />
               </div>
-              <div className="flex sm:flex-col gap-2 sm:gap-1 shrink-0">
-                <a href={`tel:${getMLAForConstituency(district, constituency).phone}`} className="flex items-center space-x-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-800 bg-white px-2 py-1 rounded-md border border-indigo-100 shadow-sm">
-                  <Phone className="w-3 h-3" />
-                  <span>{getMLAForConstituency(district, constituency).phone}</span>
-                </a>
+              <div className="min-w-0">
+                <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider block">
+                  {language === 'ta' ? 'உங்கள் தொகுதி சட்டமன்ற உறுப்பினர்' : 'Your Constituency MLA'}
+                </span>
+                <p className="text-sm font-bold text-indigo-950">
+                  {selectedMla.status === 'Vacant'
+                    ? language === 'ta' ? 'தொகுதி காலியாக உள்ளது' : 'Seat currently vacant'
+                    : selectedMla.name}
+                  {selectedMla.party && (
+                    <span className="text-xs text-indigo-700 font-medium">
+                      {' '}({selectedMla.status === 'Vacant' ? `${language === 'ta' ? 'கடைசியாக' : 'last held'}: ${selectedMla.party}` : selectedMla.party})
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
 
