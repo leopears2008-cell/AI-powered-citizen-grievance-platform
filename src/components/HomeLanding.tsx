@@ -102,21 +102,39 @@ export const HomeLanding: React.FC<Props> = ({ onOpenVoiceModal }) => {
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 border-t border-slate-200">
               {[
-                { icon: Landmark, a: '234', b: 'Constituencies' },
+                { icon: Landmark, a: '234', b: 'Constituencies', to: 'directory' as const },
                 { icon: Building2, a: 'All Departments', b: 'Integrated' },
                 { icon: Clock, a: 'Real-time', b: 'Tracking' },
                 { icon: Bot, a: 'AI-Powered', b: 'Assistance' },
-              ].map((x) => (
-                <div key={x.a} className="flex items-center space-x-2.5 bg-white/80 p-2.5 rounded-xl border border-slate-200">
-                  <span className="w-9 h-9 rounded-full bg-sky-tint text-navy flex items-center justify-center shrink-0">
-                    <x.icon className="w-4 h-4" />
-                  </span>
-                  <div className="leading-tight">
-                    <p className="text-xs font-bold text-navy">{x.a}</p>
-                    <p className="text-[11px] text-slate-500">{x.b}</p>
+              ].map((x) => {
+                const cls = 'flex items-center space-x-2.5 bg-white/80 p-2.5 rounded-xl border border-slate-200';
+                const inner = (
+                  <>
+                    <span className="w-9 h-9 rounded-full bg-sky-tint text-navy flex items-center justify-center shrink-0">
+                      <x.icon className="w-4 h-4" />
+                    </span>
+                    <div className="leading-tight">
+                      <p className="text-xs font-bold text-navy">{x.a}</p>
+                      <p className="text-[11px] text-slate-500">{x.b}</p>
+                    </div>
+                  </>
+                );
+                return x.to ? (
+                  <button
+                    key={x.a}
+                    type="button"
+                    onClick={() => setActiveTab(x.to)}
+                    aria-label="Browse the MLA and District SLA Directory: 234 constituencies"
+                    className={`${cls} text-left transition-colors hover:border-navy hover:bg-sky-tint focus:outline-none focus:ring-2 focus:ring-navy`}
+                  >
+                    {inner}
+                  </button>
+                ) : (
+                  <div key={x.a} className={cls}>
+                    {inner}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
