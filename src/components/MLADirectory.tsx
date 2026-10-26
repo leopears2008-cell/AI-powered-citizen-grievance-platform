@@ -113,7 +113,7 @@ export const MLADirectory: React.FC = () => {
   const fileGrievance = (m: MLAProfile) => {
     startGrievanceFor(m.district, m.constituency);
     showToast(
-      tr(`${plainConstituency(m.constituency)}, ${m.district} pre-selected for your complaint.`, `${plainConstituency(m.constituency)}, ${m.district} உங்கள் புகாருக்காக தேர்தெடுக்கப்பட்டது.`),
+      tr(`${plainConstituency(m.constituency)}, ${m.district} pre-selected for your complaint.`, `${plainConstituency(m.constituency)}, ${m.district} உங்கள் புகாருக்காக தேர்ந்தெடுக்கப்பட்டது.`),
       'info'
     );
   };
@@ -134,7 +134,7 @@ export const MLADirectory: React.FC = () => {
             <p className="mt-1 text-sm text-slate-600 max-w-2xl">
               {tr(
                 'Find your constituency and MLA, check how fast your district is expected to resolve grievances, then file a complaint with your location already selected.',
-                'உங்கள் தொகுதி மற்றும் MLA-வைக் கண்டறிந்து, உங்கள் மாவட்டத்தின் தீர்வு கால அளவைப் பார்த்து, இடம் தேர்தெடுக்கப்பட்ட நிலையில் புகார் அளிக்கவும்.'
+                'உங்கள் தொகுதி மற்றும் MLA-வைக் கண்டறிந்து, உங்கள் மாவட்டத்தின் தீர்வு கால அளவைப் பார்த்து, இடம் தேர்ந்தெடுக்கப்பட்ட நிலையில் புகார் அளிக்கவும்.'
               )}
             </p>
           </div>
@@ -156,7 +156,7 @@ export const MLADirectory: React.FC = () => {
         <div className="inline-flex rounded-full border border-slate-300 bg-slate-50 p-1" role="group" aria-label={tr('Directory view', 'காட்சி')}>
           {([
             ['grid', LayoutGrid, tr(`MLA Directory Grid (${stats.seats})`, `MLA கையேடு (${stats.seats})`)],
-            ['matrix', Table2, tr(`District SLA Matrix (${stats.districts})`, `மாவட்ட SLA அட்டவைணை (${stats.districts})`)],
+            ['matrix', Table2, tr(`District SLA Matrix (${stats.districts})`, `மாவட்ட SLA அட்டவணை (${stats.districts})`)],
           ] as const).map(([key, Icon, label]) => (
             <button
               key={key}
@@ -234,7 +234,7 @@ export const MLADirectory: React.FC = () => {
             <span>
               {tr(
                 `SLA timelines and compliance figures come from the ${SLA_META.source}. Confirm with the district's official portal.`,
-                'SLA கால அளவுகள் மற்றும் இணக்க விகிதங்கள் திட்ட SLA அட்டவைணையிலிருந்து எடுக்கப்பட்டவை. மாவட்ட அதிகாரப்பூர்வ இணையதளத்தில் உறுதிசெய்யவும்.'
+                'SLA கால அளவுகள் மற்றும் இணக்க விகிதங்கள் திட்ட SLA அட்டவணையிலிருந்து எடுக்கப்பட்டவை. மாவட்ட அதிகாரப்பூர்வ இணையதளத்தில் உறுதிசெய்யவும்.'
               )}
             </span>
           </p>
@@ -243,7 +243,7 @@ export const MLADirectory: React.FC = () => {
 
       {view === 'matrix' ? (
         /* ---------- District SLA matrix ---------- */
-        <section className="bg-white rounded-2xl shadow-card border border-slate-200 p-6 sm:p-8 space-y-4" aria-label={tr('District SLA matrix', 'மாவட்ட SLA அட்டவைணை')}>
+        <section className="bg-white rounded-2xl shadow-card border border-slate-200 p-6 sm:p-8 space-y-4" aria-label={tr('District SLA matrix', 'மாவட்ட SLA அட்டவணை')}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-semibold text-slate-700" role="status" aria-live="polite">
               {tr(`${matrixRows.length} of ${stats.districts} districts`, `${stats.districts} மாவட்டங்களில் ${matrixRows.length}`)}
@@ -259,7 +259,7 @@ export const MLADirectory: React.FC = () => {
           </div>
           <div className="overflow-x-auto rounded-xl border border-slate-200">
             <table className="w-full min-w-[860px] text-left text-xs">
-              <caption className="sr-only">{tr('District SLA and escalation matrix', 'மாவட்ட SLA மற்றும் மேல்முறையீட்டு அட்டவைணை')}</caption>
+              <caption className="sr-only">{tr('District SLA and escalation matrix', 'மாவட்ட SLA மற்றும் மேல்முறையீட்டு அட்டவணை')}</caption>
               <thead className="bg-slate-50 text-slate-500 uppercase tracking-wide">
                 <tr>
                   <th scope="col" className="p-3">{tr('District', 'மாவட்டம்')}</th>
@@ -399,7 +399,7 @@ export const MLADirectory: React.FC = () => {
                 {tr(`${results.length} of ${stats.seats} constituencies`, `${stats.seats} தொகுதிகளில் ${results.length}`)}
               </p>
               {filtersActive && (
-                <button type="button" onClick={clearFilters} className="text-xs font-bold text-action hover:underline">{tr('Clear filters', 'வடிக்கட்டிகளை நீக்கு')}</button>
+                <button type="button" onClick={clearFilters} className="text-xs font-bold text-action hover:underline">{tr('Clear filters', 'வடிகட்டிகளை நீக்கு')}</button>
               )}
             </div>
 
@@ -487,8 +487,8 @@ export const MLADirectory: React.FC = () => {
               <div className="rounded-2xl border border-slate-200 bg-white py-12 text-center">
                 <User className="w-12 h-12 text-slate-300 mx-auto mb-3" aria-hidden="true" />
                 <h3 className="text-lg font-semibold text-slate-900 mb-1">{tr('No constituencies found', 'தொகுதிகள் எதுவும் கிடைக்கவில்லை')}</h3>
-                <p className="text-sm text-slate-500 mb-4">{tr('Try a different spelling or clear the filters.', 'வேறு எழுத்துப்பிழையுடன் முயற்சிக்கவும் அல்லது வடிக்கட்டிகளை நீக்கவும்.')}</p>
-                <button type="button" onClick={clearFilters} className="text-sm font-bold text-action hover:underline">{tr('Clear filters', 'வடிக்கட்டிகளை நீக்கு')}</button>
+                <p className="text-sm text-slate-500 mb-4">{tr('Try a different spelling or clear the filters.', 'வேறு எழுத்துப்பிழையுடன் முயற்சிக்கவும் அல்லது வடிகட்டிகளை நீக்கவும்.')}</p>
+                <button type="button" onClick={clearFilters} className="text-sm font-bold text-action hover:underline">{tr('Clear filters', 'வடிகட்டிகளை நீக்கு')}</button>
               </div>
             )}
           </section>
