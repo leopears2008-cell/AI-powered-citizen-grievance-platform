@@ -8,6 +8,12 @@ import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut 
 export type AppLanguage = 'en' | 'ta';
 export type AppTab = 'home' | 'file' | 'track' | 'history' | 'admin' | 'officer' | 'analytics' | 'map' | 'directory';
 
+/** District/constituency chosen elsewhere (e.g. the MLA Directory) to pre-fill the complaint form. */
+export interface ComplaintPrefill {
+  district: string;
+  constituency: string;
+}
+
 interface ToastInfo {
   id: string;
   message: string;
@@ -25,6 +31,9 @@ interface AppContextType {
   trackId: string;
   setTrackId: (id: string) => void;
   navigateToTrack: (id: string) => void;
+  complaintPrefill: ComplaintPrefill | null;
+  startGrievanceFor: (district: string, constituency: string) => void;
+  clearComplaintPrefill: () => void;
   notifications: NotificationItem[];
   unreadCount: number;
   markAsRead: (id: string) => void;
@@ -45,6 +54,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [role, setRole] = useState<UserRole>('CITIZEN');
   const [activeTab, setActiveTab] = useState<AppTab>('home');
   const [trackId, setTrackId] = useState<string>('');
+  const [complaintPrefill, setComplaintPrefill] = useState<ComplaintPrefill | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [toasts, setToasts] = useState<ToastInfo[]>([]);
@@ -96,6 +106,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveTab('track');
   };
 
+  const startGrievanceFor = (district: string, constituency: string) => {
+    setComplaintPrefill({ district, constituency });
+    setRole('CITIZEN');
+    setActiveTab('file');
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const clearComplaintPrefill = () => setComplaintPrefill(null);
+
   const fetchNotifications = async () => {
     try {
       const list = await api.getNotifications();
@@ -129,6 +148,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         trackId,
         setTrackId,
         navigateToTrack,
+        complaintPrefill,
+        startGrievanceFor,
+        clearComplaintPrefill,
         notifications,
         unreadCount,
         markAsRead,

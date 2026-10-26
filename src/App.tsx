@@ -12,10 +12,11 @@ import { OfficerPortal } from './components/OfficerPortal';
 import { MLADirectory } from './components/MLADirectory';
 import { InteractiveMap } from './components/InteractiveMap';
 import { CivicServicesHub } from './components/CivicServicesHub';
-import { CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { plainConstituency } from './data/mlaProfiles';
+import { CheckCircle2, AlertCircle, X, MapPin } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
-  const { activeTab, setActiveTab, toasts, removeToast } = useApp();
+  const { activeTab, setActiveTab, toasts, removeToast, language, complaintPrefill, clearComplaintPrefill } = useApp();
 
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [initialVoiceTranscript, setInitialVoiceTranscript] = useState('');
@@ -75,7 +76,27 @@ const MainLayout: React.FC = () => {
         )}
 
         {activeTab === 'file' && (
-          <div className="animate-in fade-in duration-300">
+          <div className="animate-in fade-in duration-300 space-y-4">
+            {complaintPrefill && (
+              <div
+                role="status"
+                className="max-w-6xl mx-auto flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+              >
+                <p className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 shrink-0 text-ai" aria-hidden="true" />
+                  <span>
+                    {language === 'ta' ? 'புகார் பதிவு:' : 'Filing for'}{' '}
+                    <b>{plainConstituency(complaintPrefill.constituency)}</b>, {complaintPrefill.district}
+                    <span className="hidden sm:inline">
+                      {language === 'ta' ? ' (MLA கையேட்டிலிருந்து)' : ' (from the MLA & District SLA Directory)'}
+                    </span>
+                  </span>
+                </p>
+                <button type="button" onClick={clearComplaintPrefill} className="shrink-0 text-xs font-bold text-emerald-800 hover:underline">
+                  {language === 'ta' ? 'நீக்கு' : 'Clear'}
+                </button>
+              </div>
+            )}
             <FileComplaintFlow
               initialTranscript={initialVoiceTranscript}
               initialLanguage={initialVoiceLang}
