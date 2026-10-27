@@ -6,7 +6,7 @@ import { auth } from '../lib/firebase';
 import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 
 export type AppLanguage = 'en' | 'ta';
-export type AppTab = 'home' | 'file' | 'track' | 'history' | 'admin' | 'officer' | 'analytics' | 'map' | 'directory';
+export type AppTab = 'home' | 'file' | 'track' | 'history' | 'admin' | 'officer' | 'analytics' | 'map' | 'directory' | 'news';
 
 /** District/constituency chosen elsewhere (e.g. the MLA Directory) to pre-fill the complaint form. */
 export interface ComplaintPrefill {

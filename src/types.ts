@@ -177,3 +177,29 @@ export interface AuditLog {
   details: string;
   grievanceId?: string;
 }
+
+// ---- Tamil Nadu Live News (served by GET /api/news/tamil-nadu) ----
+export const NEWS_CATEGORIES = ['breaking', 'government', 'education', 'public-services', 'transport'] as const;
+export type NewsCategory = (typeof NEWS_CATEGORIES)[number];
+export type NewsLanguage = 'en' | 'ta';
+
+export interface NewsItem {
+  id: string;
+  title: string;
+  source: string;
+  /** Always an absolute https URL that was validated server-side. */
+  url: string;
+  /** ISO 8601 timestamp, or null when the feed did not supply a valid date. */
+  publishedAt: string | null;
+  category: NewsCategory;
+}
+
+export interface NewsResponse {
+  category: NewsCategory;
+  language: NewsLanguage;
+  provider: 'google-news-rss';
+  fetchedAt: string;
+  /** True when the upstream feed failed and the last good cached copy is being served. */
+  stale: boolean;
+  items: NewsItem[];
+}
