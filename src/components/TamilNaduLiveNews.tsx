@@ -279,7 +279,7 @@ export const TamilNaduLiveNews: React.FC<Props> = ({ variant = 'home' }) => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-[11px] text-slate-500">
         <p>
           {lang === 'ta'
-            ? 'தலைப்புச் செய்திகள் Google News RSS மூலம் பெறப்படுகின்றன. உள்ளடக்கம் அந்தஅந்த வெளியீட்டாளர்களுக்குச் சொந்தம்.'
+            ? 'தலைப்புச் செய்திகள் Google News RSS மூலம் பெறப்படுகின்றன. உள்ளடக்கம் அந்தந்த வெளியீட்டாளர்களுக்குச் சொந்தம்.'
             : 'Headlines via Google News RSS. Story content belongs to the respective publishers; NivaranAI does not endorse linked articles.'}
         </p>
         {variant === 'home' && (
