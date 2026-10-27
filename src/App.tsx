@@ -12,6 +12,7 @@ import { OfficerPortal } from './components/OfficerPortal';
 import { MLADirectory } from './components/MLADirectory';
 import { InteractiveMap } from './components/InteractiveMap';
 import { CivicServicesHub } from './components/CivicServicesHub';
+import { CitizenGrievanceAssistant } from './components/CitizenGrievanceAssistant';
 import { plainConstituency } from './data/mlaProfiles';
 import { CheckCircle2, AlertCircle, X, MapPin } from 'lucide-react';
 
@@ -144,6 +145,7 @@ const MainLayout: React.FC = () => {
       </main>
 
       <Footer />
+      <CitizenGrievanceAssistant onNavigate={(destination) => setActiveTab(destination)} />
     </div>
   );
 };
