@@ -6,6 +6,11 @@
 -- with Firebase as a third-party auth provider, so auth.jwt() ->> 'sub' is the
 -- Firebase UID. See docs/SUPABASE_MIGRATION.md.
 
+-- SQL-language functions are validated when they are created, and is_admin()
+-- below reads public.admins, which this file creates further down. Skip body
+-- validation so a fresh database (e.g. a Supabase preview branch) can apply it.
+set check_function_bodies = off;
+
 -- ---------------------------------------------------------------------------
 -- Helper functions
 -- ---------------------------------------------------------------------------
