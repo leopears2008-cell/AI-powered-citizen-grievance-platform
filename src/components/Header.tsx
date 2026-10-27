@@ -37,7 +37,7 @@ export const Header: React.FC = () => {
     { tab: 'history', label: t.navHistory },
     { tab: 'map', label: language === 'ta' ? 'நேரலை வரைபடம்' : 'Live Map' },
     { tab: 'directory', label: t.navDirectory },
-    { tab: 'officer', label: t.roleOfficer, role: 'OFFICER' },
+    { tab: 'news', label: language === 'ta' ? 'நேரலைச் செய்திகள்' : 'TN Live News' },
     { tab: 'admin', label: t.roleAdmin, role: 'ADMIN' },
   ];
 
@@ -108,7 +108,7 @@ export const Header: React.FC = () => {
                     {language === 'ta' ? 'அறிவிப்புகள்' : 'Live Notifications'}
                   </span>
                   <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">
-                    {unreadCount} {language === 'ta' ? 'புதியவை' : 'unread'}
+                    {unreadCount} {language === 'ta' ? 'புதியைவை' : 'unread'}
                   </span>
                 </div>
                 <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">

@@ -7,11 +7,30 @@ import {
   AIAnalysisResponse,
   DuplicateMatch,
   GrievanceStatus,
+  NewsCategory,
+  NewsLanguage,
+  NewsResponse,
 } from '../types';
 import { db } from '../lib/firebase';
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
 
 export const api = {
+  // Tamil Nadu live news (server-side Google News RSS adapter with caching)
+  async getTamilNaduNews(
+    category: NewsCategory,
+    language: NewsLanguage,
+    limit: number,
+    signal?: AbortSignal,
+  ): Promise<NewsResponse> {
+    const qs = new URLSearchParams({ category, lang: language, limit: String(limit) });
+    const res = await fetch(`/api/news/tamil-nadu?${qs.toString()}`, { signal });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Live news is temporarily unavailable.' }));
+      throw new Error(err.error || 'Live news is temporarily unavailable.');
+    }
+    return res.json();
+  },
+
   // AI Analysis
   async analyzeComplaint(text: string, languageHint?: string): Promise<AIAnalysisResponse> {
     const res = await fetch('/api/ai/analyze-complaint', {
